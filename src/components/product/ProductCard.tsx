@@ -2,8 +2,8 @@
 
 import Link from 'next/link';
 import { Heart, Star } from 'lucide-react';
-import { Product } from '@/types';
-import { useCart } from '@/context/CartContext';
+import { Product } from '../../types';
+import { useCart } from '../../context/CartContext';
 
 interface ProductCardProps {
   product: Product;
