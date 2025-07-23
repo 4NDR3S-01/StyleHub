@@ -2,7 +2,7 @@
 
 import { Fragment } from 'react';
 import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
+import { useCart } from '../../context/CartContext';
 import Link from 'next/link';
 
 export default function CartSidebar() {
