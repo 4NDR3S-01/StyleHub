@@ -15,11 +15,11 @@ export default function Navbar() {
   const { user, logout } = useAuth();
 
   const navigation = [
-    { name: 'Women', href: '/category/women' },
-    { name: 'Men', href: '/category/men' },
-    { name: 'Accessories', href: '/category/accessories' },
-    { name: 'Shoes', href: '/category/shoes' },
-    { name: 'Sale', href: '/sale' },
+    { name: 'Mujeres', href: '/category/women' },
+    { name: 'Hombres', href: '/category/men' },
+    { name: 'Accesorios', href: '/category/accessories' },
+    { name: 'Zapatos', href: '/category/shoes' },
+    { name: 'Ofertas', href: '/sale' },
   ];
 
   return (
@@ -70,16 +70,16 @@ export default function Navbar() {
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
                     <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      Profile
+                      Perfil
                     </Link>
                     <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                      Orders
+                      Pedidos
                     </Link>
                     <button
                       onClick={logout}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
                     >
-                      Sign Out
+                      Cerrar Sesión
                     </button>
                   </div>
                 </div>

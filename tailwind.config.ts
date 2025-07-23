@@ -11,8 +11,30 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ['var(--font-inter)', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
-        system: ['var(--font-system)', 'system-ui', 'sans-serif'],
+        sans: [
+          'var(--font-inter)',
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'Oxygen',
+          'Ubuntu',
+          'Cantarell',
+          'Fira Sans',
+          'Droid Sans',
+          'Helvetica Neue',
+          'Arial',
+          'sans-serif'
+        ],
+        system: [
+          'system-ui',
+          '-apple-system',
+          'BlinkMacSystemFont',
+          'Segoe UI',
+          'Roboto',
+          'sans-serif'
+        ],
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',

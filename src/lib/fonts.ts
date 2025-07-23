@@ -1,5 +1,4 @@
 import { Inter } from 'next/font/google';
-import localFont from 'next/font/local';
 
 // Configuración de Inter desde Google Fonts con fallbacks robustos
 export const inter = Inter({
@@ -21,22 +20,7 @@ export const inter = Inter({
   ],
   variable: '--font-inter',
   preload: true,
+  weight: ['100', '200', '300', '400', '500', '600', '700', '800', '900'],
+  // Configuración adicional para manejar timeouts
+  adjustFontFallback: true,
 });
-
-// Fuente de sistema como fallback completo
-export const systemFont = localFont({
-  src: [
-    {
-      path: '../../../public/fonts/system-ui.woff2',
-      weight: '400',
-      style: 'normal',
-    },
-  ],
-  variable: '--font-system',
-  display: 'swap',
-  fallback: ['system-ui', 'sans-serif'],
-});
-
-// Clase CSS para usar cuando Inter falle
-export const fontClassName = `${inter.variable} font-sans`;
-export const systemFontClassName = 'font-system';

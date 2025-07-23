@@ -2,6 +2,13 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Fallback para fuentes del sistema si Google Fonts falla */
+@layer base {
+  html {
+    font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+}
+
 :root {
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;

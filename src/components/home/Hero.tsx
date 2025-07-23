@@ -13,27 +13,27 @@ export default function Hero() {
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>
       </div>
 
-      {/* Content */}
+      {/* Contenido */}
       <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
-          Discover Your
-          <span className="block text-amber-400">Perfect Style</span>
+          Descubre Tu{' '}
+          <span className="block text-amber-400">Estilo Perfecto</span>
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-gray-200">
-          Premium fashion that speaks to your individuality. Curated collections for the modern lifestyle.
+          Moda premium que habla de tu individualidad. Colecciones seleccionadas para el estilo de vida moderno.
         </p>
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           <Link
             href="/category/women"
             className="bg-white text-slate-900 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
           >
-            Shop Women
+            Comprar Mujeres
           </Link>
           <Link
             href="/category/men"
             className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300 transform hover:scale-105"
           >
-            Shop Men
+            Comprar Hombres
           </Link>
         </div>
       </div>

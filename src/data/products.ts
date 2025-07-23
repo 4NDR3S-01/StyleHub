@@ -1,27 +1,27 @@
-import { Product, Category } from '@/types';
+import { Product, Category } from '../types';
 
 export const categories: Category[] = [
   {
     id: '1',
-    name: 'Women',
+    name: 'Mujeres',
     image: 'https://images.pexels.com/photos/1036623/pexels-photo-1036623.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1',
     slug: 'women'
   },
   {
     id: '2',
-    name: 'Men',
+    name: 'Hombres',
     image: 'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1',
     slug: 'men'
   },
   {
     id: '3',
-    name: 'Accessories',
+    name: 'Accesorios',
     image: 'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1',
     slug: 'accessories'
   },
   {
     id: '4',
-    name: 'Shoes',
+    name: 'Zapatos',
     image: 'https://images.pexels.com/photos/2048548/pexels-photo-2048548.jpeg?auto=compress&cs=tinysrgb&w=400&h=400&dpr=1',
     slug: 'shoes'
   }
@@ -30,8 +30,8 @@ export const categories: Category[] = [
 export const products: Product[] = [
   {
     id: '1',
-    name: 'Classic White Shirt',
-    description: 'A timeless white button-down shirt made from premium cotton. Perfect for both casual and formal occasions.',
+    name: 'Camisa Blanca Clásica',
+    description: 'Una camisa blanca atemporal de algodón premium. Perfecta tanto para ocasiones casuales como formales.',
     price: 89.99,
     originalPrice: 120.00,
     images: [
@@ -40,7 +40,7 @@ export const products: Product[] = [
     ],
     category: 'women',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    colors: ['White', 'Light Blue', 'Pink'],
+    colors: ['Blanco', 'Azul Claro', 'Rosa'],
     stock: 25,
     rating: 4.8,
     reviews: 142,
@@ -49,8 +49,8 @@ export const products: Product[] = [
   },
   {
     id: '2',
-    name: 'Premium Denim Jacket',
-    description: 'Vintage-inspired denim jacket with a modern fit. Made from sustainable denim with unique wash details.',
+    name: 'Chaqueta de Mezclilla Premium',
+    description: 'Chaqueta de mezclilla de inspiración vintage con ajuste moderno. Hecha de mezclilla sostenible con detalles únicos de lavado.',
     price: 149.99,
     images: [
       'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
@@ -58,7 +58,7 @@ export const products: Product[] = [
     ],
     category: 'women',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    colors: ['Light Blue', 'Dark Blue', 'Black'],
+    colors: ['Azul Claro', 'Azul Oscuro', 'Negro'],
     stock: 18,
     rating: 4.6,
     reviews: 89,
@@ -66,8 +66,8 @@ export const products: Product[] = [
   },
   {
     id: '3',
-    name: 'Luxury Cashmere Sweater',
-    description: 'Ultra-soft cashmere sweater with a relaxed fit. Perfect layering piece for any wardrobe.',
+    name: 'Suéter de Cachemira de Lujo',
+    description: 'Suéter de cachemira ultra suave con ajuste relajado. Pieza perfecta para combinar en cualquier guardarropa.',
     price: 299.99,
     images: [
       'https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
@@ -75,7 +75,7 @@ export const products: Product[] = [
     ],
     category: 'women',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    colors: ['Beige', 'Gray', 'Navy', 'Black'],
+    colors: ['Beige', 'Gris', 'Azul Marino', 'Negro'],
     stock: 12,
     rating: 4.9,
     reviews: 67,
@@ -83,8 +83,8 @@ export const products: Product[] = [
   },
   {
     id: '4',
-    name: 'Men\'s Leather Jacket',
-    description: 'Classic leather jacket with modern styling. Made from genuine leather with premium hardware.',
+    name: 'Chaqueta de Cuero para Hombre',
+    description: 'Chaqueta de cuero clásica con estilo moderno. Hecha de cuero genuino con herrajes premium.',
     price: 399.99,
     images: [
       'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
@@ -92,7 +92,7 @@ export const products: Product[] = [
     ],
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    colors: ['Black', 'Brown', 'Navy'],
+    colors: ['Negro', 'Marrón', 'Azul Marino'],
     stock: 8,
     rating: 4.7,
     reviews: 124,
