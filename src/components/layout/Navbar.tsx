@@ -3,10 +3,10 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { Search, ShoppingBag, User, Menu, X, Heart } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
-import CartSidebar from '@/components/cart/CartSidebar';
-import AuthModal from '@/components/auth/AuthModal';
+import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import CartSidebar from '../cart/CartSidebar';
+import AuthModal from '../auth/AuthModal';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
