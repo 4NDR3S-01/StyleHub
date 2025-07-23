@@ -1,0 +1,49 @@
+import Link from 'next/link';
+
+export default function Hero() {
+  return (
+    <div className="relative h-screen flex items-center justify-center">
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: 'url(https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&dpr=1)',
+        }}
+      >
+        <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4">
+        <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
+          Discover Your
+          <span className="block text-amber-400">Perfect Style</span>
+        </h1>
+        <p className="text-xl md:text-2xl mb-8 text-gray-200">
+          Premium fashion that speaks to your individuality. Curated collections for the modern lifestyle.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link
+            href="/category/women"
+            className="bg-white text-slate-900 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 transition-all duration-300 transform hover:scale-105"
+          >
+            Shop Women
+          </Link>
+          <Link
+            href="/category/men"
+            className="border-2 border-white text-white px-8 py-4 rounded-full font-semibold hover:bg-white hover:text-slate-900 transition-all duration-300 transform hover:scale-105"
+          >
+            Shop Men
+          </Link>
+        </div>
+      </div>
+
+      {/* Scroll Indicator */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
+        </div>
+      </div>
+    </div>
+  );
+}
