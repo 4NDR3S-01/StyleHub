@@ -34,8 +34,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
       setPassword('');
       setName('');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      setError(err instanceof Error ? err.message : 'Ocurrió un error');
     }
+  };
+
+  const getButtonText = () => {
+    if (isLoading) return 'Cargando...';
+    return isLogin ? 'Iniciar Sesión' : 'Crear Cuenta';
   };
 
   return (
@@ -57,10 +62,10 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
         <div className="text-center mb-8">
           <h2 className="text-2xl font-bold text-slate-900 mb-2">
-            {isLogin ? 'Welcome Back' : 'Create Account'}
+            {isLogin ? 'Bienvenido de Vuelta' : 'Crear Cuenta'}
           </h2>
           <p className="text-gray-600">
-            {isLogin ? 'Sign in to your account' : 'Join StyleHub today'}
+            {isLogin ? 'Inicia sesión en tu cuenta' : 'Únete a StyleHub hoy'}
           </p>
         </div>
 
@@ -78,7 +83,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 type="text"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Full Name"
+                placeholder="Nombre Completo"
                 required
                 className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
               />
@@ -103,7 +108,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Password"
+              placeholder="Contraseña"
               required
               className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-slate-500 focus:border-transparent"
             />
@@ -114,13 +119,13 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
             disabled={isLoading}
             className="w-full bg-slate-900 text-white py-3 rounded-lg font-semibold hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? 'Loading...' : (isLogin ? 'Sign In' : 'Create Account')}
+            {getButtonText()}
           </button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-gray-600">
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
+            {isLogin ? "¿No tienes una cuenta? " : "¿Ya tienes una cuenta? "}
             <button
               onClick={() => {
                 setIsLogin(!isLogin);
@@ -128,7 +133,7 @@ export default function AuthModal({ isOpen, onClose }: AuthModalProps) {
               }}
               className="text-slate-900 font-semibold hover:underline"
             >
-              {isLogin ? 'Sign Up' : 'Sign In'}
+              {isLogin ? 'Registrarse' : 'Iniciar Sesión'}
             </button>
           </p>
         </div>

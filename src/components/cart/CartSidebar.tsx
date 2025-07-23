@@ -23,7 +23,7 @@ export default function CartSidebar() {
         <div className="flex h-full flex-col">
           {/* Header */}
           <div className="flex items-center justify-between p-6 border-b">
-            <h2 className="text-xl font-semibold text-slate-900">Shopping Cart</h2>
+            <h2 className="text-xl font-semibold text-slate-900">Carrito de Compras</h2>
             <button
               onClick={closeCart}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
@@ -37,13 +37,13 @@ export default function CartSidebar() {
             {state.items.length === 0 ? (
               <div className="text-center py-12">
                 <ShoppingBag size={64} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500 text-lg">Your cart is empty</p>
+                <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
                 <Link
                   href="/category/women"
                   onClick={closeCart}
                   className="inline-block mt-4 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors"
                 >
-                  Start Shopping
+                  Comenzar a Comprar
                 </Link>
               </div>
             ) : (
@@ -101,7 +101,7 @@ export default function CartSidebar() {
                 onClick={closeCart}
                 className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold text-center block hover:bg-slate-800 transition-colors"
               >
-                Checkout
+                Finalizar Compra
               </Link>
             </div>
           )}
