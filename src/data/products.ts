@@ -70,8 +70,8 @@ export const products: Product[] = [
     description: 'Ultra-soft cashmere sweater with a relaxed fit. Perfect layering piece for any wardrobe.',
     price: 299.99,
     images: [
-      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
-      'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+      'https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
+      'https://images.pexels.com/photos/2235071/pexels-photo-2235071.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
     ],
     category: 'women',
     sizes: ['XS', 'S', 'M', 'L', 'XL'],
@@ -88,7 +88,7 @@ export const products: Product[] = [
     price: 399.99,
     images: [
       'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
-      'https://images.pexels.com/photos/1183266/pexels-photo-1183266.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+      'https://images.pexels.com/photos/2928206/pexels-photo-2928206.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
     ],
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
@@ -106,7 +106,7 @@ export const products: Product[] = [
     originalPrice: 320.00,
     images: [
       'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
-      'https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+      'https://images.pexels.com/photos/2562992/pexels-photo-2562992.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
     ],
     category: 'accessories',
     sizes: ['One Size'],
@@ -124,7 +124,7 @@ export const products: Product[] = [
     price: 129.99,
     images: [
       'https://images.pexels.com/photos/2048548/pexels-photo-2048548.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
-      'https://images.pexels.com/photos/2048548/pexels-photo-2048548.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+      'https://images.pexels.com/photos/2529148/pexels-photo-2529148.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
     ],
     category: 'shoes',
     sizes: ['6', '7', '8', '9', '10', '11', '12'],

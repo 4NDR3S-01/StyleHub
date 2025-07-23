@@ -64,21 +64,21 @@ export default function CartSidebar() {
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.size, item.color)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         <Minus size={16} />
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.size, item.color)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
                     <button
-                      onClick={() => removeFromCart(item.product.id)}
+                      onClick={() => removeFromCart(item.product.id, item.size, item.color)}
                       className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <X size={16} />

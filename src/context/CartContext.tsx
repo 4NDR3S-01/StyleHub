@@ -10,8 +10,8 @@ interface CartState {
 
 type CartAction =
   | { type: 'ADD_ITEM'; payload: { product: Product; size: string; color: string } }
-  | { type: 'REMOVE_ITEM'; payload: string }
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
+  | { type: 'REMOVE_ITEM'; payload: string } // formato: "productId-size-color"
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } } // formato: "productId-size-color"
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_CART' }
   | { type: 'OPEN_CART' }
@@ -21,8 +21,8 @@ const CartContext = createContext<{
   state: CartState;
   dispatch: React.Dispatch<CartAction>;
   addToCart: (product: Product, size: string, color: string) => void;
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, size?: string, color?: string) => void;
+  updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
   clearCart: () => void;
   toggleCart: () => void;
   openCart: () => void;
@@ -42,16 +42,20 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       );
 
       if (existingItem) {
-        return {
-          ...state,
-          items: state.items.map(item =>
-            item.product.id === action.payload.product.id &&
-            item.size === action.payload.size &&
-            item.color === action.payload.color
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          ),
-        };
+        // Verificar stock antes de incrementar
+        if (existingItem.quantity < action.payload.product.stock) {
+          return {
+            ...state,
+            items: state.items.map(item =>
+              item.product.id === action.payload.product.id &&
+              item.size === action.payload.size &&
+              item.color === action.payload.color
+                ? { ...item, quantity: item.quantity + 1 }
+                : item
+            ),
+          };
+        }
+        return state; // No modificar si no hay stock
       }
 
       return {
@@ -68,19 +72,30 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       };
 
     case 'REMOVE_ITEM':
+      const [productId, size, color] = action.payload.split('-');
       return {
         ...state,
-        items: state.items.filter(item => item.product.id !== action.payload),
+        items: state.items.filter(item => {
+          if (size === '' && color === '') {
+            // Remover todos los items del producto
+            return item.product.id !== productId;
+          }
+          // Remover item específico por producto, talla y color
+          return !(item.product.id === productId && 
+                   item.size === size && 
+                   item.color === color);
+        }),
       };
 
     case 'UPDATE_QUANTITY':
       return {
         ...state,
-        items: state.items.map(item =>
-          item.product.id === action.payload.id
+        items: state.items.map(item => {
+          const itemKey = `${item.product.id}-${item.size}-${item.color}`;
+          return itemKey === action.payload.id
             ? { ...item, quantity: action.payload.quantity }
-            : item
-        ),
+            : item;
+        }),
       };
 
     case 'CLEAR_CART':
@@ -119,18 +134,35 @@ export function CartProvider({ children }: { children: ReactNode }) {
   });
 
   const addToCart = (product: Product, size: string, color: string) => {
-    dispatch({ type: 'ADD_ITEM', payload: { product, size, color } });
-  };
-
-  const removeFromCart = (productId: string) => {
-    dispatch({ type: 'REMOVE_ITEM', payload: productId });
-  };
-
-  const updateQuantity = (productId: string, quantity: number) => {
-    if (quantity <= 0) {
-      removeFromCart(productId);
+    // Verificar stock disponible
+    const currentQuantity = state.items.find(
+      item => item.product.id === product.id && 
+               item.size === size && 
+               item.color === color
+    )?.quantity || 0;
+    
+    if (currentQuantity < product.stock) {
+      dispatch({ type: 'ADD_ITEM', payload: { product, size, color } });
     } else {
-      dispatch({ type: 'UPDATE_QUANTITY', payload: { id: productId, quantity } });
+      console.warn('Producto sin stock suficiente');
+    }
+  };
+
+  const removeFromCart = (productId: string, size?: string, color?: string) => {
+    if (size && color) {
+      dispatch({ type: 'REMOVE_ITEM', payload: `${productId}-${size}-${color}` });
+    } else {
+      // Remover todos los items del producto (compatibilidad hacia atrás)
+      dispatch({ type: 'REMOVE_ITEM', payload: `${productId}--` });
+    }
+  };
+
+  const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
+    if (quantity <= 0) {
+      removeFromCart(productId, size, color);
+    } else {
+      const itemId = size && color ? `${productId}-${size}-${color}` : productId;
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { id: itemId, quantity } });
     }
   };
 
