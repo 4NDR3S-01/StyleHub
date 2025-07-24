@@ -1,6 +1,8 @@
 import ProductCard from '../product/ProductCard';
 import { products } from '../../data/products';
 
+// FeaturedProducts.tsx
+// This component displays a grid of featured products with images and links
 export default function FeaturedProducts() {
   const featuredProducts = products.filter(product => product.featured);
 
