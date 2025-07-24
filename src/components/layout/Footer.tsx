@@ -10,7 +10,7 @@ export default function Footer() {
           <div className="space-y-4">
             <h3 className="text-2xl font-bold">StyleHub</h3>
             <p className="text-gray-300">
-              Discover the latest trends in fashion with premium quality clothing and accessories.
+              Descubre las últimas tendencias en moda con ropa y accesorios de calidad premium.
             </p>
             <div className="flex space-x-4">
               <Facebook size={20} className="text-gray-400 hover:text-white cursor-pointer transition-colors" />
@@ -20,45 +20,45 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Shop */}
+          {/* Tienda */}
           <div>
-            <h4 className="font-semibold mb-4">Shop</h4>
+            <h4 className="font-semibold mb-4">Tienda</h4>
             <ul className="space-y-2 text-gray-300">
-              <li><Link href="/category/women" className="hover:text-white transition-colors">Women</Link></li>
-              <li><Link href="/category/men" className="hover:text-white transition-colors">Men</Link></li>
-              <li><Link href="/category/accessories" className="hover:text-white transition-colors">Accessories</Link></li>
-              <li><Link href="/category/shoes" className="hover:text-white transition-colors">Shoes</Link></li>
-              <li><Link href="/sale" className="hover:text-white transition-colors">Sale</Link></li>
+              <li><Link href="/category/women" className="hover:text-white transition-colors">Mujeres</Link></li>
+              <li><Link href="/category/men" className="hover:text-white transition-colors">Hombres</Link></li>
+              <li><Link href="/category/accessories" className="hover:text-white transition-colors">Accesorios</Link></li>
+              <li><Link href="/category/shoes" className="hover:text-white transition-colors">Zapatos</Link></li>
+              <li><Link href="/sale" className="hover:text-white transition-colors">Ofertas</Link></li>
             </ul>
           </div>
 
-          {/* Customer Service */}
+          {/* Atención al Cliente */}
           <div>
-            <h4 className="font-semibold mb-4">Customer Service</h4>
+            <h4 className="font-semibold mb-4">Atención al Cliente</h4>
             <ul className="space-y-2 text-gray-300">
-              <li><Link href="/contact" className="hover:text-white transition-colors">Contact Us</Link></li>
-              <li><Link href="/shipping" className="hover:text-white transition-colors">Shipping Info</Link></li>
-              <li><Link href="/returns" className="hover:text-white transition-colors">Returns</Link></li>
-              <li><Link href="/size-guide" className="hover:text-white transition-colors">Size Guide</Link></li>
-              <li><Link href="/faq" className="hover:text-white transition-colors">FAQ</Link></li>
+              <li><Link href="/contact" className="hover:text-white transition-colors">Contáctanos</Link></li>
+              <li><Link href="/shipping" className="hover:text-white transition-colors">Información de Envío</Link></li>
+              <li><Link href="/returns" className="hover:text-white transition-colors">Devoluciones</Link></li>
+              <li><Link href="/size-guide" className="hover:text-white transition-colors">Guía de Tallas</Link></li>
+              <li><Link href="/faq" className="hover:text-white transition-colors">Preguntas Frecuentes</Link></li>
             </ul>
           </div>
 
-          {/* Company */}
+          {/* Empresa */}
           <div>
-            <h4 className="font-semibold mb-4">Company</h4>
+            <h4 className="font-semibold mb-4">Empresa</h4>
             <ul className="space-y-2 text-gray-300">
-              <li><Link href="/about" className="hover:text-white transition-colors">About Us</Link></li>
-              <li><Link href="/careers" className="hover:text-white transition-colors">Careers</Link></li>
-              <li><Link href="/press" className="hover:text-white transition-colors">Press</Link></li>
-              <li><Link href="/privacy" className="hover:text-white transition-colors">Privacy Policy</Link></li>
-              <li><Link href="/terms" className="hover:text-white transition-colors">Terms of Service</Link></li>
+              <li><Link href="/about" className="hover:text-white transition-colors">Acerca de Nosotros</Link></li>
+              <li><Link href="/careers" className="hover:text-white transition-colors">Carreras</Link></li>
+              <li><Link href="/press" className="hover:text-white transition-colors">Prensa</Link></li>
+              <li><Link href="/privacy" className="hover:text-white transition-colors">Política de Privacidad</Link></li>
+              <li><Link href="/terms" className="hover:text-white transition-colors">Términos de Servicio</Link></li>
             </ul>
           </div>
         </div>
 
         <div className="border-t border-gray-700 mt-12 pt-8 text-center text-gray-400">
-          <p>&copy; 2025 StyleHub. All rights reserved.</p>
+          <p>&copy; 2025 StyleHub. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

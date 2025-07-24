@@ -28,7 +28,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           />
           {product.sale && (
             <div className="absolute top-4 left-4 bg-rose-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
-              Sale
+              Oferta
             </div>
           )}
           <button className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-md opacity-0 group-hover:opacity-100 transition-opacity duration-300 hover:bg-gray-50">
@@ -78,7 +78,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           onClick={handleAddToCart}
           className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition-colors duration-300 transform hover:scale-105"
         >
-          Add to Cart
+          Agregar al Carrito
         </button>
       </div>
     </div>

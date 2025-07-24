@@ -1,30 +1,24 @@
 import './globals.css';
 import type { Metadata } from 'next';
-import { Inter } from 'next/font/google';
 import { CartProvider } from '../context/CartContext';
 import { AuthProvider } from '../context/AuthContext';
 import Navbar from '../components/layout/Navbar';
 import Footer from '../components/layout/Footer';
-
-const inter = Inter({ 
-  subsets: ['latin'],
-  display: 'swap',
-  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif']
-});
+import { inter } from '../lib/fonts';
 
 export const metadata: Metadata = {
-  title: 'StyleHub - Premium Fashion Store',
-  description: 'Discover the latest trends in fashion with StyleHub. Premium quality clothing and accessories.',
+  title: 'StyleHub - Tienda de Moda Premium',
+  description: 'Descubre las últimas tendencias en moda con StyleHub. Ropa y accesorios de calidad premium.',
 };
 
 export default function RootLayout({
   children,
-}: {
+}: Readonly<{
   children: React.ReactNode;
-}) {
+}>) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
+    <html lang="es" className={inter.variable}>
+      <body className="font-sans antialiased">
         <AuthProvider>
           <CartProvider>
             <div className="min-h-screen flex flex-col">
