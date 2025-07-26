@@ -77,6 +77,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         await login(email, password);
       } else {
         await register(email, password, name, surname);
+             setError('Confirma tu correo electrónico para activar tu cuenta.\n¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
       }
       onClose();
       setEmail("");
@@ -85,7 +86,14 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       setSurname("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error");
+      let msg = err instanceof Error ? err.message : "Ocurrió un error";
+      if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
+        msg = "Tu cuenta aún no ha sido verificada. Por favor revisa tu correo y confirma tu cuenta antes de iniciar sesión.";
+      }
+      if (msg.toLowerCase().includes("json object requested, multiple (or no) rows returned")) {
+        msg = "No se pudo iniciar sesión. Verifica tus datos o contacta soporte si el problema persiste.";
+      }
+      setError(msg);
     }
   };
 
@@ -150,7 +158,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         </div>
         {error && (
           <div className="mb-6 text-red-400 text-xs text-center bg-red-900/30 rounded p-3 animate-shake">
-            {error}
+            <span dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
           </div>
         )}
         {isLoading && (
@@ -342,6 +350,9 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
             >
               {isLogin ? "Registrarse" : "Iniciar Sesión"}
             </button>
+          </p>
+          <p className="text-xs mt-4 text-slate-400">
+            ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a>
           </p>
         </div>
       </div>
