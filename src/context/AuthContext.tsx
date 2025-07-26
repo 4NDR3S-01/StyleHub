@@ -2,62 +2,118 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { User } from '@/types';
+import supabase from '../lib/supabaseClient';
 
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string) => Promise<void>;
+  register: (email: string, password: string, name: string, surname: string) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
+  resetPassword: (email: string) => Promise<void>;
+  resendVerification: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      // Mock login - replace with Supabase auth
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) throw new Error(error?.message || 'Login fallido');
+      // Obtener el rol desde la tabla users
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+      if (userError) throw new Error(userError.message);
       setUser({
-        id: '1',
-        email,
-        name: 'John Doe',
-        avatar: 'https://images.pexels.com/photos/771742/pexels-photo-771742.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1'
+        id: data.user.id,
+        email: data.user.email ?? '',
+        name: data.user.user_metadata?.name ?? '',
+        avatar: data.user.user_metadata?.avatar_url ?? '',
+        role: userData?.role ?? 'cliente',
       });
-    } catch (error) {
-      throw new Error('Login failed');
+    } catch (error: any) {
+      throw new Error(error?.message || 'Login fallido');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (email: string, password: string, name: string) => {
+  const register = async (email: string, password: string, name: string, surname: string) => {
     setIsLoading(true);
     try {
-      // Mock register - replace with Supabase auth
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setUser({
-        id: '1',
+      const { data, error } = await supabase.auth.signUp({
         email,
-        name,
+        password,
+        options: { data: { name, surname } }
       });
-    } catch (error) {
-      throw new Error('Registration failed');
+      if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
+      // Insertar el usuario en la tabla users con rol por defecto 'cliente'
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          name,
+          surname,
+          role: 'cliente',
+        });
+      if (dbError) throw new Error(dbError.message);
+      setUser({
+        id: data.user.id,
+        email: data.user.email ?? '',
+        name: name,
+        avatar: '',
+        role: 'cliente',
+      });
+    } catch (error: any) {
+      throw new Error(error?.message || 'Registro fallido');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
+  const resetPassword = async (email: string) => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      if (error) throw new Error(error.message);
+    } catch (error: any) {
+      throw new Error(error?.message || 'No se pudo enviar el correo de recuperación');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resendVerification = async () => {
+    setIsLoading(true);
+    try {
+      if (!user?.email) throw new Error('No hay correo electrónico para reenviar verificación');
+      const { error } = await supabase.auth.resend({ type: 'signup', email: user.email });
+      if (error) throw new Error(error.message);
+    } catch (error: any) {
+      throw new Error(error?.message || 'No se pudo reenviar el correo de verificación');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const contextValue = React.useMemo(() => ({ user, login, register, logout, isLoading, resetPassword, resendVerification }), [user, isLoading]);
+
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, isLoading }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );
