@@ -77,6 +77,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         await login(email, password);
       } else {
         await register(email, password, name, surname);
+             setError('Confirma tu correo electrónico para activar tu cuenta.\n¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
       }
       onClose();
       setEmail("");
@@ -85,7 +86,14 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       setSurname("");
       setConfirmPassword("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ocurrió un error");
+      let msg = err instanceof Error ? err.message : "Ocurrió un error";
+      if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
+        msg = "Tu cuenta aún no ha sido verificada. Por favor revisa tu correo y confirma tu cuenta antes de iniciar sesión.";
+      }
+      if (msg.toLowerCase().includes("json object requested, multiple (or no) rows returned")) {
+        msg = "No se pudo iniciar sesión. Verifica tus datos o contacta soporte si el problema persiste.";
+      }
+      setError(msg);
     }
   };
 
@@ -135,7 +143,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         >
           <X size={24} />
         </button>
-        <div className="bg-gradient-to-r from-slate-900 to-amber-400 py-8 px-8 sm:px-12 rounded-t-2xl text-center mb-8 flex flex-col items-center justify-center">
+        <div className="bg-gradient-to-r from-slate-900 to-red-400 py-8 px-8 sm:px-12 rounded-t-2xl text-center mb-8 flex flex-col items-center justify-center">
           <div className="flex items-center justify-center gap-3 mb-2">
             {showReset ? (
               <Mail size={28} className="text-white drop-shadow" />
@@ -146,15 +154,15 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
             )}
             <h2 className="text-2xl font-bold text-white tracking-tight">{getTitle()}</h2>
           </div>
-          <p className="text-amber-100">{getSubtitle()}</p>
+          <p className="text-red-100">{getSubtitle()}</p>
         </div>
         {error && (
           <div className="mb-6 text-red-400 text-xs text-center bg-red-900/30 rounded p-3 animate-shake">
-            {error}
+            <span dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
           </div>
         )}
         {isLoading && (
-          <div className="mb-6 text-amber-400 text-xs text-center bg-amber-900/30 rounded p-3 animate-pulse">
+          <div className="mb-6 text-red-400 text-xs text-center bg-red-900/30 rounded p-3 animate-pulse">
             Procesando...
           </div>
         )}
@@ -168,20 +176,20 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 onChange={e => setResetEmail(e.target.value)}
                 placeholder="Email"
                 required
-                className="w-full pl-10 pr-4 py-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary transition-all"
+                className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
               />
             </div>
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
+              className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
             >
               {isLoading ? "Enviando..." : "Enviar correo de recuperación"}
             </button>
             {resetMsg && <div className="text-center text-sm mt-3 text-green-400 font-medium animate-fadeIn">{resetMsg}</div>}
             <button
               type="button"
-              className="w-full text-xs text-amber-400 mt-3 hover:underline"
+              className="w-full text-xs text-red-400 mt-3 hover:underline"
               onClick={() => {
                 setShowReset(false);
                 setIsLogin(true);
@@ -206,7 +214,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     placeholder="Nombre"
                     required
                     minLength={2}
-                    className="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
                   />
                 </div>
                 <div className="relative flex-1">
@@ -218,7 +226,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     placeholder="Apellido"
                     required
                     minLength={2}
-                    className="w-full pl-10 pr-4 py-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
                   />
                 </div>
               </div>
@@ -231,7 +239,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Email"
                 required
-                className="w-full pl-10 pr-4 py-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary transition-all"
+                className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
               />
             </div>
             <div className="relative mb-2">
@@ -253,7 +261,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 placeholder="Contraseña"
                 required
                 minLength={6}
-                className="w-full pl-10 pr-12 py-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary transition-all"
+                className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
               />
               <button
                 type="button"
@@ -290,7 +298,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                   placeholder="Confirmar contraseña"
                   required
                   minLength={6}
-                  className="w-full pl-10 pr-12 py-4 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary transition-all"
+                className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
                 />
                 <button
                   type="button"
@@ -306,21 +314,23 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-green-600 text-white py-4 rounded-lg font-semibold hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
+              className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
             >
               {isLogin ? "Iniciar Sesión" : isLoading ? "Cargando..." : "Crear Cuenta"}
             </button>
-            <button
-              type="button"
-              className="w-full text-xs text-amber-400 mt-3 hover:underline"
-              onClick={() => setShowReset(true)}
-            >
-              ¿Olvidaste tu contraseña?
-            </button>
+            {isLogin && (
+              <button
+                type="button"
+                className="w-full text-xs text-red-400 mt-3 hover:underline"
+                onClick={() => setShowReset(true)}
+              >
+                ¿Olvidaste tu contraseña?
+              </button>
+            )}
           </form>
         )}
         <div className="mt-8 text-center pb-2">
-          <p className="text-muted-foreground text-base">
+          <p className="text-slate-400 text-base">
             {isLogin ? "¿No tienes una cuenta? " : "¿Ya tienes una cuenta? "}
             <button
               onClick={() => {
@@ -336,10 +346,13 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 setConfirmPassword("");
                 setPasswordStrength(0);
               }}
-              className="text-primary font-semibold hover:underline focus:outline-none"
+              className="text-slate-300 font-semibold hover:underline focus:outline-none"
             >
               {isLogin ? "Registrarse" : "Iniciar Sesión"}
             </button>
+          </p>
+          <p className="text-xs mt-4 text-slate-400">
+            ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a>
           </p>
         </div>
       </div>

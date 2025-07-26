@@ -46,16 +46,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, surname: string) => {
+  const register = async (email: string, password: string, name: string, surname: string, role: string = 'cliente') => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, surname } }
+        options: { data: { name, surname, role } }
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      // Insertar el usuario en la tabla users con rol por defecto 'cliente'
+      // Insertar el usuario en la tabla users con el rol recibido
       const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -63,7 +63,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           email: data.user.email,
           name,
           surname,
-          role: 'cliente',
+          role,
         });
       if (dbError) throw new Error(dbError.message);
       setUser({
@@ -71,7 +71,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         email: data.user.email ?? '',
         name: name,
         avatar: '',
-        role: 'cliente',
+        role,
       });
     } catch (error: any) {
       throw new Error(error?.message || 'Registro fallido');

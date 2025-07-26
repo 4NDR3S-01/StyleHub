@@ -17,7 +17,7 @@ export default function Hero() {
       <div className="relative z-10 text-center text-white max-w-4xl mx-auto px-4">
         <h1 className="text-4xl md:text-6xl font-bold mb-6 leading-tight">
           Descubre Tu{' '}
-          <span className="block text-amber-400">Estilo Perfecto</span>
+          <span className="block text-red-400">Estilo Perfecto</span>
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-gray-200">
           Moda premium que habla de tu individualidad. Colecciones seleccionadas para el estilo de vida moderno.
