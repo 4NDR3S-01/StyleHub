@@ -57,7 +57,7 @@ export default function AdminDashboard() {
     {
       label: 'Pedidos',
       value: stats.orders,
-      icon: <ShoppingCart size={32} className="text-amber-500" />,
+      icon: <ShoppingCart size={32} className="text-red-400" />,
       href: '/admin/orders',
     },
   ];

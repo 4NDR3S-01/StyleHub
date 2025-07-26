@@ -52,7 +52,7 @@ export default function ProductCard({ product }: ProductCardProps) {
                 size={14}
                 className={`${
                   i < Math.floor(product.rating)
-                    ? 'text-amber-400 fill-current'
+                    ? 'text-red-400 fill-current'
                     : 'text-gray-300'
                 }`}
               />

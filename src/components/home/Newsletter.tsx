@@ -18,7 +18,7 @@ export default function Newsletter() {
     <section className="py-16 bg-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <Mail size={48} className="mx-auto mb-6 text-amber-400" />
+          <Mail size={48} className="mx-auto mb-6 text-red-400" />
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Mantente con Estilo
           </h2>
@@ -41,11 +41,11 @@ export default function Newsletter() {
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Ingresa tu email"
                   required
-                  className="flex-1 px-6 py-3 rounded-full text-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  className="flex-1 px-6 py-3 rounded-full text-slate-900 focus:outline-none focus:ring-2 focus:ring-red-400"
                 />
                 <button
                   type="submit"
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-8 py-3 rounded-full font-semibold transition-colors duration-300"
+                  className="bg-red-400 hover:bg-red-500 text-white px-8 py-3 rounded-full font-semibold transition-colors duration-300"
                 >
                   Suscribirse
                 </button>
