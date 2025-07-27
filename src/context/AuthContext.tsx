@@ -7,7 +7,13 @@ import supabase from '../lib/supabaseClient';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, surname: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    surname: string,
+    role?: string
+  ) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   resetPassword: (email: string) => Promise<void>;
@@ -16,7 +22,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
+export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -35,13 +41,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data?.user) {
           const { data: userDataDb } = await supabase
             .from('users')
-            .select('role')
+            .select('role, surname')
             .eq('id', data.user.id)
             .single();
           setUser({
             id: data.user.id,
             email: data.user.email ?? '',
             name: data.user.user_metadata?.name ?? '',
+            surname: userDataDb?.surname ?? '',
             avatar: data.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
           });
@@ -60,13 +67,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const { data: userDataDb } = await supabase
           .from('users')
-          .select('role')
+          .select('role, surname')
           .eq('id', session.user.id)
           .single();
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name ?? '',
+          surname: userDataDb?.surname ?? '',
           avatar: session.user.user_metadata?.avatar_url ?? '',
           role: userDataDb?.role ?? 'cliente',
         });
@@ -105,13 +113,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
       const { data: userDataDb } = await supabase
         .from('users')
-        .select('role')
+        .select('role, surname')
         .eq('id', data.user.id)
         .single();
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
+        surname: userDataDb?.surname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
       });
@@ -122,46 +131,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-const register = async (
-  email: string,
-  password: string,
-  name: string,
-  surname: string,
-  role: string = 'cliente'
-) => {
-  setIsLoading(true);
-  try {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/confirm-email`,
-        data: { name, surname, role }
-      }
-    });
-
-    if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-
-    const { error: dbError } = await supabase
-      .from('users')
-      .insert({
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    surname: string,
+    role: string = 'cliente'
+  ) => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { name, surname, role } }
+      });
+      if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
+      const { error: dbError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          email: data.user.email,
+          name,
+          surname,
+          role,
+        });
+      if (dbError) throw new Error(dbError.message);
+      setUser({
         id: data.user.id,
-        email: data.user.email,
-        name,
-        surname,
+        email: data.user.email ?? '',
+        name: name,
+        avatar: '',
         role,
       });
-
-    if (dbError) throw new Error(dbError.message);
-
-    // ❌ No iniciar sesión automáticamente
-    // ✅ Deja que el usuario confirme el email primero
-  } catch (error: any) {
-    throw new Error(error?.message || 'Registro fallido');
-  } finally {
-    setIsLoading(false);
-  }
-};
+    } catch (error: any) {
+      throw new Error(error?.message || 'Registro fallido');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const logout = async () => {
     await supabase.auth.signOut();
