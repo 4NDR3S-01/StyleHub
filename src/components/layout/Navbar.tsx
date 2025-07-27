@@ -69,7 +69,7 @@ export default function Navbar() {
                     <User size={20} />
                   </button>
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <Link href="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/perfil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                       Perfil
                     </Link>
                     <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
