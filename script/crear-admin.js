@@ -43,7 +43,7 @@ async function createAdminUser(email, password, name, surname) {
           id: userId,
           email,
           name,
-          surname,
+          lastname,
           role: 'admin'
         }
       ]);
