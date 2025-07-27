@@ -10,20 +10,39 @@ function ConfirmEmailPageContent() {
   const [status, setStatus] = React.useState<'pending'|'success'|'error'|'unauthorized'>('pending');
   const [emailToResend, setEmailToResend] = React.useState<string | null>(null);
   const [resendMsg, setResendMsg] = React.useState<string>("");
+  const [token, setToken] = React.useState<string | null>(null);
+  const [email, setEmail] = React.useState<string | null>(null);
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const email = searchParams.get("email");
-    if (!token || !email) {
+    // Primero intenta obtener de la query
+    let _token = searchParams.get("token");
+    let _email = searchParams.get("email");
+
+    // Si no están, intenta obtener del hash
+    if (!_token || !_email) {
+      if (typeof window !== "undefined" && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+        // Supabase envía access_token y type
+        _token = hashParams.get("access_token");
+        _email = hashParams.get("email");
+        // Si no hay email, intenta obtenerlo del contexto (no siempre está en el hash)
+        if (!_email && hashParams.get("user_metadata.email")) {
+          _email = hashParams.get("user_metadata.email");
+        }
+      }
+    }
+    setToken(_token);
+    setEmail(_email);
+    if (!_token || !_email) {
       setStatus('unauthorized');
       setEmailToResend(null);
       return;
     }
-    setEmailToResend(email);
+    setEmailToResend(_email);
     // Confirmar email con Supabase
     const confirm = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({ type: 'email', token, email });
+        const { error } = await supabase.auth.verifyOtp({ type: 'email', token: _token, email: _email });
         if (error) {
           setStatus('error');
         } else {

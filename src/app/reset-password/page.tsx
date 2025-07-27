@@ -11,8 +11,17 @@ function ResetPasswordPageContent() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-  const token = searchParams.get("token");
-  const email = searchParams.get("email");
+  // Obtener token y email de query o hash
+  let token = searchParams.get("token");
+  let email = searchParams.get("email");
+  if (typeof window !== "undefined" && (!token || !email) && window.location.hash) {
+    const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+    token = hashParams.get("access_token") || token;
+    email = hashParams.get("email") || email;
+    if (!email && hashParams.get("user_metadata.email")) {
+      email = hashParams.get("user_metadata.email");
+    }
+  }
 
   useEffect(() => {
     if (!token || !email) {

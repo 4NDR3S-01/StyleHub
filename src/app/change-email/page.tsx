@@ -9,8 +9,17 @@ function ChangeEmailPageContent() {
   const [status, setStatus] = React.useState<'pending'|'success'|'error'>('pending');
 
   React.useEffect(() => {
-    const token = searchParams.get("token");
-    const email = searchParams.get("email");
+    // Obtener token y email de query o hash
+    let token = searchParams.get("token");
+    let email = searchParams.get("email");
+    if (typeof window !== "undefined" && (!token || !email) && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      token = hashParams.get("access_token") || token;
+      email = hashParams.get("email") || email;
+      if (!email && hashParams.get("user_metadata.email")) {
+        email = hashParams.get("user_metadata.email");
+      }
+    }
     if (!token || !email) {
       setStatus('error');
       return;
