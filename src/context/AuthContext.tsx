@@ -105,18 +105,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
-      const { data: userDataDb } = await supabase
+      // Buscar usuario por id en la tabla users
+      const { data: userDataDb, error: dbError } = await supabase
         .from('users')
-        .select('role, surname')
+        .select('role, surname, name')
         .eq('id', data.user.id)
         .single();
+      if (dbError || !userDataDb) throw new Error('No se encontró el usuario en la base de datos.');
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
-        name: data.user.user_metadata?.name ?? '',
-        surname: userDataDb?.surname ?? '',
+        name: userDataDb.name ?? '',
+        surname: userDataDb.surname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
-        role: userDataDb?.role ?? 'cliente',
+        role: userDataDb.role ?? 'cliente',
       });
     } catch (error: any) {
       throw new Error(error?.message || 'Inicio de sesión fallido');
@@ -140,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         options: { data: { name, surname, role } }
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
+      // Insertar usuario en la tabla users con el id de Auth
       const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -153,8 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
-        name: name,
-        surname: surname,
+        name,
+        surname,
         avatar: '',
         role,
       });
