@@ -2,45 +2,95 @@
 
 import React, { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-
+import { toast } from 'sonner';
 import supabase from "@/lib/supabaseClient";
 
 function ConfirmEmailPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [status, setStatus] = React.useState<'pending'|'success'|'error'>('pending');
+  const [errorMessage, setErrorMessage] = React.useState<string>('');
 
   useEffect(() => {
-    const token = searchParams.get("token");
-    const email = searchParams.get("email");
-    if (!token || !email) {
-      setStatus('error');
-      return;
-    }
-    // Confirmar email con Supabase
-    const confirm = async () => {
+    const confirmEmail = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({ type: 'email', token, email });
-        if (error) {
+        // Obtener los parámetros de la URL de confirmación
+        const token_hash = searchParams.get('token_hash');
+        const type = searchParams.get('type');
+        
+        if (!token_hash || type !== 'email') {
+          setErrorMessage('Parámetros de confirmación inválidos');
           setStatus('error');
-        } else {
-          setStatus('success');
+          return;
         }
-      } catch {
+
+        // Verificar el token de confirmación
+        const { data, error } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: 'email'
+        });
+
+        if (error) {
+          console.error('Error verificando email:', error);
+          setErrorMessage(error.message);
+          setStatus('error');
+          return;
+        }
+
+        if (data?.user) {
+          // Usuario confirmado exitosamente
+          console.log('Usuario confirmado:', data.user);
+          
+          // Verificar si el usuario ya existe en la tabla users
+          const { data: existingUser, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('id', data.user.id)
+            .single();
+
+          if (userError && userError.code === 'PGRST116') {
+            // Usuario no existe en la tabla, crear entrada
+            const { error: insertError } = await supabase
+              .from('users')
+              .insert({
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.user_metadata?.name || '',
+                lastname: data.user.user_metadata?.lastname || '',
+                role: 'cliente',
+                created_at: new Date().toISOString()
+              });
+
+            if (insertError) {
+              console.error('Error creando usuario en BD:', insertError);
+            }
+          }
+
+          setStatus('success');
+          toast.success('¡Email verificado exitosamente!');
+        } else {
+          setErrorMessage('No se pudo verificar el usuario');
+          setStatus('error');
+        }
+      } catch (error: any) {
+        console.error('Error en confirmación:', error);
+        setErrorMessage(error.message || 'Error desconocido');
         setStatus('error');
       }
     };
-    confirm();
+
+    confirmEmail();
   }, [searchParams]);
 
   // Redirección automática tras éxito
   useEffect(() => {
     if (status === 'success') {
       const timeout = setTimeout(() => {
-        window.location.href = '/';
+        router.push('/');
       }, 3000);
       return () => clearTimeout(timeout);
     }
-  }, [status]);
+  }, [status, router]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -63,8 +113,20 @@ function ConfirmEmailPageContent() {
         {status === 'error' && (
           <>
             <h1 className="text-3xl font-bold text-red-400 mb-4">Error al confirmar</h1>
-            <p className="text-slate-700 mb-6">No se pudo verificar tu correo. El enlace puede estar expirado o ya fue usado.<br />Solicita un nuevo correo de verificación o contáctanos.</p>
-            <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
+            <p className="text-slate-700 mb-6">
+              No se pudo verificar tu correo. {errorMessage || 'El enlace puede estar expirado o ya fue usado.'}
+              <br />
+              Solicita un nuevo correo de verificación o contáctanos.
+            </p>
+            <div className="space-y-2">
+              <a href="/register" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block hover:bg-red-500 transition">
+                Registrarse nuevamente
+              </a>
+              <br />
+              <a href="/login" className="btn bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg inline-block hover:bg-gray-500 transition">
+                Ir a iniciar sesión
+              </a>
+            </div>
           </>
         )}
         <p className="text-xs mt-6 text-slate-400">¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a></p>

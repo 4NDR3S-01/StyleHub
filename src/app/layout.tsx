@@ -7,6 +7,7 @@ import { AuthProvider } from "../context/AuthContext";
 import Navbar from "../components/layout/Navbar";
 import Footer from "../components/layout/Footer";
 import { inter } from "../lib/fonts";
+import { Toaster } from "sonner";
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   const pathname = usePathname();
@@ -25,6 +26,11 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
               <main className="flex-1">{children}</main>
               {!isAdmin && <Footer />}
             </div>
+            <Toaster 
+              position="top-right"
+              richColors
+              closeButton
+            />
           </CartProvider>
         </AuthProvider>
       </body>

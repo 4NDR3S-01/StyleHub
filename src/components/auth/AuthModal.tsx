@@ -8,10 +8,11 @@ import supabase from "../../lib/supabaseClient";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultMode?: 'login' | 'register';
 }
 
-export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>) {
-  const [isLogin, setIsLogin] = useState(true);
+export default function AuthModal({ isOpen, onClose, defaultMode = 'login' }: Readonly<AuthModalProps>) {
+  const [isLogin, setIsLogin] = useState(defaultMode === 'login');
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -27,6 +28,15 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const modalRef = useRef<HTMLDivElement>(null);
   const { login, register, isLoading, resetPassword, user } = useAuth();
   const router = useRouter();
+
+  // Resetear el modo cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setIsLogin(defaultMode === 'login');
+      setShowReset(false);
+      setError('');
+    }
+  }, [isOpen, defaultMode]);
 
   useEffect(() => {
     if (isOpen && modalRef.current) {

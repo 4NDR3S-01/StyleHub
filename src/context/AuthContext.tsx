@@ -109,17 +109,49 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
-      const { data: userDataDb } = await supabase
+      
+      if (error) {
+        // Manejar específicamente el error de email no confirmado
+        if (error.message === 'Email not confirmed') {
+          throw new Error('Debes confirmar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        }
+        throw new Error(error.message);
+      }
+      
+      if (!data.user) {
+        throw new Error('Inicio de sesión fallido');
+      }
+
+      // Verificar si el usuario existe en la tabla users
+      const { data: userDataDb, error: dbError } = await supabase
         .from('users')
         .select('role, lastname')
         .eq('id', data.user.id)
         .single();
+
+      if (dbError && dbError.code === 'PGRST116') {
+        // Usuario no existe en la tabla, crear entrada
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: data.user.id,
+            email: data.user.email,
+            name: data.user.user_metadata?.name || '',
+            lastname: data.user.user_metadata?.lastname || '',
+            role: 'cliente',
+            created_at: new Date().toISOString()
+          });
+
+        if (insertError) {
+          console.error('Error creando usuario en BD:', insertError);
+        }
+      }
+
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
-        lastname: userDataDb?.lastname ?? '',
+        lastname: userDataDb?.lastname ?? data.user.user_metadata?.lastname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
       });
@@ -142,6 +174,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (!email || !password || !name || !lastname) {
         throw new Error('Todos los campos son obligatorios.');
       }
+      
       // Registro con metadatos correctos
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -152,12 +185,22 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             name,
             lastname,
             role: "cliente",
-            display_name: name,
+            display_name: `${name} ${lastname}`,
           },
         },
       });
-      if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      // No actualizar display_name manualmente ni iniciar sesión automáticamente
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      if (!data.user) {
+        throw new Error('Error en el registro. Intenta nuevamente.');
+      }
+
+      // No iniciar sesión automáticamente hasta que se confirme el email
+      console.log('Usuario registrado, esperando confirmación de email:', data.user.id);
+      
     } catch (error: any) {
       throw new Error(error?.message || 'Registro fallido');
     } finally {
