@@ -6,7 +6,6 @@ import { useEffect, useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Lock, LogIn, UserPlus } from 'lucide-react';
-import AuthModal from '@/components/auth/AuthModal';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -17,13 +16,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [showUnauthorized, setShowUnauthorized] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
-
-  const openAuthModal = (mode: 'login' | 'register') => {
-    setAuthMode(mode);
-    setIsAuthModalOpen(true);
-  };
 
   useEffect(() => {
     // Si no está cargando y no hay usuario
@@ -86,43 +78,20 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
             <div className="space-y-2">
               {!user ? (
                 <>
-                  <Button onClick={() => openAuthModal('login')} className="w-full">
+                  <Button 
+                    onClick={() => router.push('/login')} 
+                    className="w-full"
+                  >
                     <LogIn className="h-4 w-4 mr-2" />
-                    Iniciar Sesión (Modal)
+                    Iniciar Sesión
                   </Button>
                   <Button 
-                    onClick={() => openAuthModal('register')} 
+                    onClick={() => router.push('/register')} 
                     variant="outline" 
                     className="w-full"
                   >
                     <UserPlus className="h-4 w-4 mr-2" />
-                    Registrarse (Modal)
-                  </Button>
-                  
-                  <div className="relative my-4">
-                    <div className="absolute inset-0 flex items-center">
-                      <div className="w-full border-t border-gray-300" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-white px-2 text-gray-500">O usa páginas dedicadas</span>
-                    </div>
-                  </div>
-                  
-                  <Button 
-                    onClick={() => router.push('/login')} 
-                    variant="secondary" 
-                    className="w-full"
-                  >
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Ir a Página de Login
-                  </Button>
-                  <Button 
-                    onClick={() => router.push('/register')} 
-                    variant="secondary" 
-                    className="w-full"
-                  >
-                    <UserPlus className="h-4 w-4 mr-2" />
-                    Ir a Página de Registro
+                    Registrarse
                   </Button>
                   
                   <Button 
@@ -141,13 +110,6 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
             </div>
           </CardContent>
         </Card>
-        
-        {/* Modal de autenticación */}
-        <AuthModal 
-          isOpen={isAuthModalOpen} 
-          onClose={() => setIsAuthModalOpen(false)}
-          defaultMode={authMode}
-        />
       </div>
     );
   }

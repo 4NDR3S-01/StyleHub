@@ -13,6 +13,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   const pathname = usePathname();
   // Memoiza el valor para evitar renders innecesarios
   const isAdmin = React.useMemo(() => pathname?.startsWith("/admin"), [pathname]);
+  const isAuth = React.useMemo(() => 
+    pathname === "/login" || 
+    pathname === "/register" || 
+    pathname === "/reset-password" || 
+    pathname === "/confirm-email" || 
+    pathname === "/change-email", 
+    [pathname]
+  );
 
   return (
     <html lang="es" className={inter.variable}>
@@ -21,10 +29,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <AuthProvider>
           <CartProvider>
             <div className="min-h-screen flex flex-col">
-              {/* Navbar y Footer solo en rutas públicas */}
-              {!isAdmin && <Navbar />}
+              {/* Navbar y Footer solo en rutas no admin y no auth */}
+              {!isAdmin && !isAuth && <Navbar />}
               <main className="flex-1">{children}</main>
-              {!isAdmin && <Footer />}
+              {!isAdmin && !isAuth && <Footer />}
             </div>
             <Toaster 
               position="top-right"

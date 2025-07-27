@@ -6,11 +6,9 @@ import { Search, ShoppingBag, User, Menu, X, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import CartSidebar from '../cart/CartSidebar';
-import AuthModal from '../auth/AuthModal';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { itemsCount, toggleCart } = useCart();
   const { user, logout } = useAuth();
 
@@ -24,31 +22,53 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-white shadow-sm border-b border-gray-100 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 overflow-hidden shadow-lg sticky top-0 z-50">
+        {/* Animated background patterns */}
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent animate-pulse"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+          <div className="w-full h-full bg-repeat animate-pulse" style={{
+            backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
+          }}></div>
+        </div>
+        
+        {/* Floating geometric shapes */}
+        <div className="absolute top-1 right-1/4 w-6 h-6 bg-white/10 rounded-full animate-bounce delay-1000"></div>
+        <div className="absolute bottom-1 left-1/3 w-4 h-4 bg-red-400/20 rounded-full animate-bounce delay-500"></div>
+        <div className="absolute top-2 left-1/2 w-3 h-3 bg-red-400/30 rounded-full animate-pulse delay-700"></div>
+        
+        <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Mobile menu button */}
             <div className="md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-red-400">StyleHub</span>
+            <Link href="/" className="flex items-center group">
+              <div className="flex items-center">
+                <h1 className="text-2xl font-bold text-white group-hover:text-gray-100 transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg">
+                  Style<span className="text-red-400 animate-pulse">Hub</span>
+                </h1>
+                <div className="ml-2 w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:rotate-12 shadow-lg">
+                  <svg className="w-4 h-4 text-white group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </div>
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-8">
+            <div className="hidden md:flex items-center space-x-6">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="text-gray-700 hover:text-slate-900 transition-colors font-medium"
+                  className="text-white/90 hover:text-white hover:bg-white/20 px-3 py-2 rounded-lg backdrop-blur-md border border-white/10 transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105"
                 >
                   {item.name}
                 </Link>
@@ -56,48 +76,48 @@ export default function Navbar() {
             </div>
 
             {/* Right side icons */}
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+            <div className="flex items-center space-x-3">
+              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
                 <Search size={20} />
               </button>
-              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
                 <Heart size={20} />
               </button>
               {user ? (
                 <div className="relative group">
-                  <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+                  <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
                     <User size={20} />
                   </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-200">
-                    <Link href="/perfil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 border border-white/20">
+                    <Link href="/perfil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
                       Perfil
                     </Link>
-                    <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                    <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
                       Pedidos
                     </Link>
                     <button
                       onClick={logout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
                     >
                       Cerrar Sesión
                     </button>
                   </div>
                 </div>
               ) : (
-                <button
-                  onClick={() => setIsAuthModalOpen(true)}
-                  className="p-2 text-gray-600 hover:text-gray-900 transition-colors"
+                <Link
+                  href="/login"
+                  className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                 >
                   <User size={20} />
-                </button>
+                </Link>
               )}
               <button
                 onClick={toggleCart}
-                className="p-2 text-gray-600 hover:text-gray-900 transition-colors relative"
+                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative"
               >
                 <ShoppingBag size={20} />
                 {itemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1 bg-red-400 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center font-bold animate-pulse">
                     {itemsCount}
                   </span>
                 )}
@@ -108,13 +128,13 @@ export default function Navbar() {
 
         {/* Mobile Navigation */}
         {isMenuOpen && (
-          <div className="md:hidden bg-white border-t border-gray-100">
+          <div className="md:hidden bg-white/10 backdrop-blur-md border-t border-white/20">
             <div className="px-4 py-4 space-y-2">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
                   href={item.href}
-                  className="block py-2 text-gray-700 hover:text-slate-900 transition-colors font-medium"
+                  className="block py-2 px-3 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg transition-all duration-300 font-medium"
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {item.name}
@@ -124,9 +144,7 @@ export default function Navbar() {
           </div>
         )}
       </nav>
-
       <CartSidebar />
-      <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );
 }

@@ -4,6 +4,7 @@ import React, { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { toast } from 'sonner';
 import supabase from "@/lib/supabaseClient";
+import AuthHeader from '@/components/auth/AuthHeader';
 
 function ConfirmEmailPageContent() {
   const searchParams = useSearchParams();
@@ -93,45 +94,78 @@ function ConfirmEmailPageContent() {
   }, [status, router]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        {status === 'pending' && (
-          <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">Verificando correo...</h1>
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mx-auto mb-6"></div>
-            <p className="text-slate-700 mb-6">Estamos confirmando tu cuenta, por favor espera unos segundos.</p>
+    <>
+      <AuthHeader 
+        title="Verificación de Email" 
+        subtitle="Confirmando tu cuenta de StyleHub"
+        showBackButton={false}
+      />
+      
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center border-0">
+          
+          {status === 'pending' && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">Verificando correo...</h1>
+              <p className="text-gray-600 mb-6">Estamos confirmando tu cuenta, por favor espera unos segundos.</p>
+            </>
+          )}
+          
+          {status === 'success' && (
+            <>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Correo confirmado!</h1>
+            <p className="text-gray-600 mb-6">
+              Tu cuenta ha sido activada exitosamente.<br />
+              Ya puedes iniciar sesión y disfrutar de <span className="text-red-400 font-semibold">StyleHub</span>.
+            </p>
+            <a 
+              href="/" 
+              className="inline-block bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+            >
+              Ir al inicio
+            </a>
+            <p className="text-xs text-gray-500 mt-4">Serás redirigido automáticamente...</p>
           </>
         )}
-        {status === 'success' && (
-          <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">¡Correo confirmado!</h1>
-            <p className="text-slate-700 mb-6">Tu cuenta ha sido activada exitosamente.<br />Ya puedes iniciar sesión y disfrutar de StyleHub.</p>
-            <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
-            <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>
-          </>
-        )}
+        
         {status === 'error' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">Error al confirmar</h1>
-            <p className="text-slate-700 mb-6">
-              No se pudo verificar tu correo. {errorMessage || 'El enlace puede estar expirado o ya fue usado.'}
-              <br />
-              Solicita un nuevo correo de verificación o contáctanos.
-            </p>
-            <div className="space-y-2">
-              <a href="/register" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block hover:bg-red-500 transition">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">Error al confirmar</h1>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+              <p className="text-red-600 text-sm">
+                No se pudo verificar tu correo. {errorMessage || 'El enlace puede estar expirado o ya fue usado.'}
+                <br />
+                Solicita un nuevo correo de verificación o contáctanos.
+              </p>
+            </div>
+            <div className="space-y-3">
+              <a 
+                href="/register" 
+                className="block w-full bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+              >
                 Registrarse nuevamente
               </a>
-              <br />
-              <a href="/login" className="btn bg-gray-400 text-white font-semibold px-6 py-3 rounded-lg inline-block hover:bg-gray-500 transition">
+              <a 
+                href="/login" 
+                className="block w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-semibold py-3 rounded-lg transition-all duration-300"
+              >
                 Ir a iniciar sesión
               </a>
             </div>
           </>
         )}
-        <p className="text-xs mt-6 text-slate-400">¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a></p>
+        
+        <p className="text-xs mt-6 text-gray-500">
+          ¿Necesitas ayuda?{' '}
+          <a href="mailto:soporte@stylehub.com" className="text-red-400 hover:text-red-600 transition-colors">
+            Contáctanos
+          </a>
+        </p>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

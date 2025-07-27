@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
+import AuthHeader from '@/components/auth/AuthHeader';
 
 function ResetPasswordPageContent() {
   const [password, setPassword] = useState("");
@@ -67,48 +68,83 @@ function ResetPasswordPageContent() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
-      <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        <h1 className="text-3xl font-bold text-red-400 mb-4">Restablece tu contraseña</h1>
+    <>
+      <AuthHeader 
+        title="Restablecer Contraseña" 
+        subtitle="Crea una nueva contraseña segura"
+        showBackButton={true}
+      />
+      
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full space-y-8">
+          <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center border-0">
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Restablece tu contraseña</h2>
+            <p className="text-gray-600 mb-6">Ingresa tu nueva contraseña</p>
+        
         {success ? (
           <>
-            <p className="text-slate-700 mb-6">¡Contraseña actualizada exitosamente!<br />Serás redirigido al inicio.</p>
-            <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
-            <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>
+            <div className="text-center space-y-4">
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+                <p className="text-green-800 font-semibold">¡Contraseña actualizada exitosamente!</p>
+                <p className="text-green-600 text-sm mt-1">Serás redirigido al inicio en unos segundos.</p>
+              </div>
+              <a 
+                href="/" 
+                className="inline-block bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+              >
+                Ir al inicio
+              </a>
+              <p className="text-xs text-gray-500 mt-2">Serás redirigido automáticamente...</p>
+            </div>
           </>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <input
-              type="password"
-              placeholder="Nueva contraseña"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-100 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400"
-              minLength={8}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Confirmar contraseña"
-              value={confirmPassword}
-              onChange={e => setConfirmPassword(e.target.value)}
-              className="w-full px-4 py-3 border border-slate-300 rounded-lg bg-slate-100 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400"
-              minLength={8}
-              required
-            />
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <input
+                type="password"
+                placeholder="Nueva contraseña"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all duration-200"
+                minLength={8}
+                required
+              />
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="Confirmar contraseña"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all duration-200"
+                minLength={8}
+                required
+              />
+            </div>
             <button
               type="submit"
               disabled={loading || !token || !email}
-              className="w-full bg-red-400 text-white py-3 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow"
+              className="w-full h-12 bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? "Actualizando..." : "Restablecer contraseña"}
             </button>
-            {error && <div className="text-xs text-red-400 mt-2">{error}</div>}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 mt-4">
+                <p className="text-red-600 text-sm">{error}</p>
+              </div>
+            )}
           </form>
         )}
-        <p className="text-xs mt-6 text-slate-400">¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a></p>
+        <p className="text-xs mt-6 text-gray-500">
+          ¿Necesitas ayuda?{' '}
+          <a href="mailto:soporte@stylehub.com" className="text-red-400 hover:text-red-600 transition-colors">
+            Contáctanos
+          </a>
+        </p>
+          </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
