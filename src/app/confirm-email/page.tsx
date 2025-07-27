@@ -3,22 +3,70 @@
 import React, { useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
+import supabase from "@/lib/supabaseClient";
+
 function ConfirmEmailPageContent() {
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const [status, setStatus] = React.useState<'pending'|'success'|'error'>('pending');
 
   useEffect(() => {
-    if (!searchParams.get("success")) {
-      router.replace("/");
+    const token = searchParams.get("token");
+    const email = searchParams.get("email");
+    if (!token || !email) {
+      setStatus('error');
+      return;
     }
-  }, [searchParams, router]);
+    // Confirmar email con Supabase
+    const confirm = async () => {
+      try {
+        const { error } = await supabase.auth.verifyOtp({ type: 'email', token, email });
+        if (error) {
+          setStatus('error');
+        } else {
+          setStatus('success');
+        }
+      } catch {
+        setStatus('error');
+      }
+    };
+    confirm();
+  }, [searchParams]);
+
+  // Redirección automática tras éxito
+  useEffect(() => {
+    if (status === 'success') {
+      const timeout = setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [status]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50">
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        <h1 className="text-3xl font-bold text-red-400 mb-4">¡Correo confirmado!</h1>
-        <p className="text-slate-700 mb-6">Tu cuenta ha sido activada exitosamente.<br />Ya puedes iniciar sesión y disfrutar de StyleHub.</p>
-        <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
+        {status === 'pending' && (
+          <>
+            <h1 className="text-3xl font-bold text-red-400 mb-4">Verificando correo...</h1>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mx-auto mb-6"></div>
+            <p className="text-slate-700 mb-6">Estamos confirmando tu cuenta, por favor espera unos segundos.</p>
+          </>
+        )}
+        {status === 'success' && (
+          <>
+            <h1 className="text-3xl font-bold text-red-400 mb-4">¡Correo confirmado!</h1>
+            <p className="text-slate-700 mb-6">Tu cuenta ha sido activada exitosamente.<br />Ya puedes iniciar sesión y disfrutar de StyleHub.</p>
+            <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
+            <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>
+          </>
+        )}
+        {status === 'error' && (
+          <>
+            <h1 className="text-3xl font-bold text-red-400 mb-4">Error al confirmar</h1>
+            <p className="text-slate-700 mb-6">No se pudo verificar tu correo. El enlace puede estar expirado o ya fue usado.<br />Solicita un nuevo correo de verificación o contáctanos.</p>
+            <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
+          </>
+        )}
         <p className="text-xs mt-6 text-slate-400">¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a></p>
       </div>
     </div>
