@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import supabase from "@/lib/supabaseClient";
 
 function ResetPasswordPageContent() {
@@ -11,14 +11,23 @@ function ResetPasswordPageContent() {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const accessToken = searchParams.get("access_token");
+  const token = searchParams.get("token");
+  const email = searchParams.get("email");
 
   useEffect(() => {
-    if (!accessToken) {
-      setError("Token inválido o expirado. Verifica el enlace de tu correo.");
+    if (!token || !email) {
+      setError("Token o correo inválido. Verifica el enlace de tu correo.");
     }
-  }, [accessToken]);
+  }, [token, email]);
+
+  useEffect(() => {
+    if (success) {
+      const timeout = setTimeout(() => {
+        window.location.href = '/';
+      }, 3000);
+      return () => clearTimeout(timeout);
+    }
+  }, [success]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -35,15 +44,26 @@ function ResetPasswordPageContent() {
       setError("Las contraseñas no coinciden.");
       return;
     }
+    if (!token || !email) {
+      setError("Token o correo inválido.");
+      return;
+    }
     setLoading(true);
-    const { error: supaError } = await supabase.auth.updateUser({ password });
+    // Verifica el token primero
+    const { error: verifyError } = await supabase.auth.verifyOtp({ type: 'recovery', token, email });
+    if (verifyError) {
+      setLoading(false);
+      setError(verifyError.message);
+      return;
+    }
+    // Si la verificación fue exitosa, actualiza la contraseña
+    const { error: updateError } = await supabase.auth.updateUser({ password });
     setLoading(false);
-    if (supaError) {
-      setError(supaError.message);
+    if (updateError) {
+      setError(updateError.message);
       return;
     }
     setSuccess(true);
-    setTimeout(() => router.push("/"), 3000);
   };
 
   return (
@@ -54,6 +74,7 @@ function ResetPasswordPageContent() {
           <>
             <p className="text-slate-700 mb-6">¡Contraseña actualizada exitosamente!<br />Serás redirigido al inicio.</p>
             <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
+            <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>
           </>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -77,7 +98,7 @@ function ResetPasswordPageContent() {
             />
             <button
               type="submit"
-              disabled={loading || !accessToken}
+              disabled={loading || !token || !email}
               className="w-full bg-red-400 text-white py-3 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow"
             >
               {loading ? "Actualizando..." : "Restablecer contraseña"}
