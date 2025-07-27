@@ -11,6 +11,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>) {
+  const [successMsg, setSuccessMsg] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -52,15 +53,24 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
 
   if (!isOpen) return null;
 
+  // Cerrar modal al hacer clic fuera
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccessMsg("");
+    // Validaciones claras y específicas
     if (!email || !password || (!isLogin && (!name || !lastname))) {
-      setError("Todos los campos son obligatorios.");
+      setError("Por favor completa todos los campos requeridos.");
       return;
     }
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      setError("Email inválido.");
+      setError("El correo electrónico no es válido. Verifica el formato.");
       return;
     }
     if (!isLogin && name.length < 2) {
@@ -72,7 +82,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       return;
     }
     if (!isLogin && password !== confirmPassword) {
-      setError("Las contraseñas no coinciden.");
+      setError("Las contraseñas no coinciden. Por favor verifica ambas.");
       return;
     }
     try {
@@ -87,18 +97,26 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         if (!userError && userData?.role === 'admin') {
           router.push('/admin');
         }
+        setError("");
       } else {
         await register(email, password, name, lastname);
-        setError('Confirma tu correo electrónico para activar tu cuenta.<br>¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
+        setSuccessMsg('¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta.<br>Si no recibiste el correo revisa tu bandeja de spam o <a href="mailto:soporte@stylehub.com" class="underline text-red-400">contáctanos</a>.');
+        setError("");
         return;
       }
     } catch (err) {
-      let msg = err instanceof Error ? err.message : "Ocurrió un error";
+      let msg = err instanceof Error ? err.message : "Ocurrió un error inesperado.";
       if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
-        msg = "Tu cuenta aún no ha sido verificada. Por favor revisa tu correo y confirma tu cuenta antes de iniciar sesión.";
+        msg = "Tu cuenta aún no ha sido verificada. Revisa tu correo y confirma tu cuenta antes de iniciar sesión.";
       }
       if (msg.toLowerCase().includes("json object requested, multiple (or no) rows returned")) {
         msg = "No se pudo iniciar sesión. Verifica tus datos o contacta soporte si el problema persiste.";
+      }
+      if (msg.toLowerCase().includes("invalid login credentials")) {
+        msg = "Credenciales incorrectas. Verifica tu correo y contraseña.";
+      }
+      if (msg.toLowerCase().includes("network error")) {
+        msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
       }
       setError(msg);
     }
@@ -107,12 +125,24 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const handleReset = async (e: React.FormEvent) => {
     e.preventDefault();
     setResetMsg("");
+    if (!resetEmail) {
+      setResetMsg("Por favor ingresa tu correo electrónico.");
+      return;
+    }
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(resetEmail)) {
+      setResetMsg("El correo electrónico no es válido. Verifica el formato.");
+      return;
+    }
     try {
       await resetPassword(resetEmail);
-      setResetMsg("Correo de recuperación enviado. Revisa tu bandeja de entrada.");
+      setResetMsg("¡Listo! Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.");
       setResetEmail("");
     } catch (err) {
-      setResetMsg(err instanceof Error ? err.message : "Error al enviar el correo");
+      let msg = err instanceof Error ? err.message : "Error al enviar el correo.";
+      if (msg.toLowerCase().includes("network error")) {
+        msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
+      }
+      setResetMsg(msg);
     }
   };
 
@@ -138,229 +168,259 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-70">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-70 transition-opacity duration-300"
+      onClick={handleOverlayClick}
+      aria-modal="true"
+      role="dialog"
+    >
       <div
         ref={modalRef}
-        className="relative bg-slate-900 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white"
+        className="relative bg-slate-900 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white border border-slate-800"
         style={{ minWidth: "340px", maxWidth: "480px" }}
       >
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
+          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
+          aria-label="Cerrar modal"
         >
           <X size={24} />
         </button>
-        <div className="bg-gradient-to-r from-slate-900 to-red-400 py-8 px-8 sm:px-12 rounded-t-2xl text-center mb-8 flex flex-col items-center justify-center">
-          <div className="flex items-center justify-center gap-3 mb-2">
-            {showReset ? (
-              <Mail size={28} className="text-white drop-shadow" />
-            ) : isLogin ? (
-              <User size={28} className="text-white drop-shadow" />
-            ) : (
-              <Lock size={28} className="text-white drop-shadow" />
-            )}
-            <h2 className="text-2xl font-bold text-white tracking-tight">{getTitle()}</h2>
-          </div>
-          <p className="text-red-100">{getSubtitle()}</p>
-        </div>
-        {error && (
-          <div className="mb-6 text-red-400 text-xs text-center bg-red-900/30 rounded p-3 animate-shake">
-            <span dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
-          </div>
-        )}
-        {isLoading && (
-          <div className="mb-6 text-red-400 text-xs text-center bg-red-900/30 rounded p-3 animate-pulse">
-            Procesando...
-          </div>
-        )}
-        {showReset ? (
-          <form onSubmit={handleReset} className="space-y-6 px-4 sm:px-6 flex flex-col justify-center items-center w-full max-w-sm mx-auto">
-            <div className="relative mb-4 w-full">
-              <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                value={resetEmail}
-                onChange={e => setResetEmail(e.target.value)}
-                placeholder="Email"
-                required
-                className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
-              />
+        <div className="overflow-y-auto max-h-[80vh] px-0 sm:px-0">
+          <div className="bg-gradient-to-r from-slate-900 to-red-400 py-8 px-8 sm:px-12 rounded-t-2xl text-center mb-8 flex flex-col items-center justify-center shadow-lg">
+            <div className="flex items-center justify-center gap-3 mb-2">
+              {showReset ? (
+                <Mail size={28} className="text-white drop-shadow" />
+              ) : isLogin ? (
+                <User size={28} className="text-white drop-shadow" />
+              ) : (
+                <Lock size={28} className="text-white drop-shadow" />
+              )}
+              <h2 className="text-2xl font-bold text-white tracking-tight">{getTitle()}</h2>
             </div>
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
-            >
-              {isLoading ? "Enviando..." : "Enviar correo de recuperación"}
-            </button>
-            {resetMsg && <div className="text-center text-sm mt-3 text-green-400 font-medium animate-fadeIn">{resetMsg}</div>}
-            <button
-              type="button"
-              className="w-full text-xs text-red-400 mt-3 hover:underline"
-              onClick={() => {
-                setShowReset(false);
-                setIsLogin(true);
-                setResetEmail("");
-                setResetMsg("");
-                setError("");
-              }}
-            >
-              Volver a iniciar sesión
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-6 px-4 sm:px-6">
-            {!isLogin && (
-              <div className="flex flex-col sm:flex-row gap-4 mb-2">
-                <div className="relative flex-1">
-                  <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Nombre"
-                    required
-                    minLength={2}
-                    className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
-                  />
-                </div>
-                <div className="relative flex-1">
-                  <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={lastname}
-                    onChange={(e) => setLastname(e.target.value)}
-                    placeholder="Apellido"
-                    required
-                    minLength={2}
-                    className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
-                  />
-                </div>
+            <p className="text-red-100">{getSubtitle()}</p>
+          </div>
+          {error && (
+            <div className="mb-6 flex flex-col items-center justify-center text-center animate-shake">
+              <div className="bg-red-100 border border-red-300 text-red-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
+                <span className="font-semibold text-sm">¡Ups! Ocurrió un error:</span>
+                <div className="mt-1 text-xs" dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
               </div>
-            )}
-            <div className="relative mb-2">
-              <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Email"
-                required
-                className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
-              />
             </div>
-            <div className="relative mb-2">
-              <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <input
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={e => {
-                  setPassword(e.target.value);
-                  if (!isLogin) {
-                    let strength = 0;
-                    if (e.target.value.length >= 8) strength++;
-                    if (/[A-Z]/.test(e.target.value)) strength++;
-                    if (/\d/.test(e.target.value)) strength++;
-                    if (/[^A-Za-z0-9]/.test(e.target.value)) strength++;
-                    setPasswordStrength(strength);
-                  }
-                }}
-                placeholder="Contraseña"
-                required
-                minLength={6}
-                className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
-              />
+          )}
+          {successMsg && (
+            <div className="mb-6 flex flex-col items-center justify-center text-center animate-fadeIn">
+              <div className="bg-green-100 border border-green-300 text-green-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
+                <span className="font-semibold text-sm">¡Registro exitoso!</span>
+                <div className="mt-1 text-xs" dangerouslySetInnerHTML={{ __html: successMsg.replace(/\n/g, '<br />') }} />
+              </div>
+            </div>
+          )}
+          {resetMsg && (
+            <div className="mb-6 flex flex-col items-center justify-center text-center animate-fadeIn">
+              <div className="bg-green-100 border border-green-300 text-green-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
+                <span className="font-semibold text-sm">¡Listo!</span>
+                <div className="mt-1 text-xs">{resetMsg}</div>
+              </div>
+            </div>
+          )}
+          {isLoading && (
+            <div className="mb-6 flex flex-col items-center justify-center text-center animate-pulse">
+              <div className="bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
+                <span className="font-semibold text-sm">Procesando...</span>
+                <div className="mt-1 text-xs">Por favor espera unos segundos.</div>
+              </div>
+            </div>
+          )}
+          {showReset ? (
+            <form onSubmit={handleReset} className="space-y-6 px-4 sm:px-6 flex flex-col justify-center items-center w-full max-w-sm mx-auto">
+              <div className="relative mb-4 w-full">
+                <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={e => setResetEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                  className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
+              >
+                {isLoading ? "Enviando..." : "Enviar correo de recuperación"}
+              </button>
+              {resetMsg && <div className="text-center text-sm mt-3 text-green-400 font-medium animate-fadeIn">{resetMsg}</div>}
               <button
                 type="button"
-                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary"
-                tabIndex={0}
-                onClick={() => setShowPassword((v) => !v)}
-                aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                className="w-full text-xs text-red-400 mt-3 hover:underline"
+                onClick={() => {
+                  setShowReset(false);
+                  setIsLogin(true);
+                  setResetEmail("");
+                  setResetMsg("");
+                  setError("");
+                }}
               >
-                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                Volver a iniciar sesión
               </button>
-            </div>
-            {/* Barra de seguridad de contraseña y recomendaciones solo en registro */}
-            {!isLogin && (
-              <>
-                <div className="w-full h-2 rounded bg-gray-200 mt-3 mb-3">
-                  <div className={`h-2 rounded transition-all duration-300 ${getBarClass()}`}></div>
+            </form>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-6 px-4 sm:px-6">
+              {!isLogin && (
+                <div className="flex flex-col sm:flex-row gap-4 mb-2">
+                  <div className="relative flex-1">
+                    <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Nombre"
+                      required
+                      minLength={2}
+                      className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                    />
+                  </div>
+                  <div className="relative flex-1">
+                    <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                    <input
+                      type="text"
+                      value={lastname}
+                      onChange={(e) => setLastname(e.target.value)}
+                      placeholder="Apellido"
+                      required
+                      minLength={2}
+                      className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                    />
+                  </div>
                 </div>
-                <ul className="text-xs text-gray-500 mb-3 pl-4 list-disc">
-                  <li>Al menos 8 caracteres</li>
-                  <li>Una letra mayúscula</li>
-                  <li>Un número</li>
-                  <li>Un símbolo especial</li>
-                </ul>
-              </>
-            )}
-            {/* Confirmación de contraseña solo en registro */}
-            {!isLogin && (
+              )}
+              <div className="relative mb-2">
+                <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email"
+                  required
+                  className="w-full pl-10 pr-4 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                />
+              </div>
               <div className="relative mb-2">
                 <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  placeholder="Confirmar contraseña"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => {
+                    setPassword(e.target.value);
+                    if (!isLogin) {
+                      let strength = 0;
+                      if (e.target.value.length >= 8) strength++;
+                      if (/[A-Z]/.test(e.target.value)) strength++;
+                      if (/\d/.test(e.target.value)) strength++;
+                      if (/[^A-Za-z0-9]/.test(e.target.value)) strength++;
+                      setPasswordStrength(strength);
+                    }
+                  }}
+                  placeholder="Contraseña"
                   required
                   minLength={6}
-                className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                  className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
                 />
                 <button
                   type="button"
                   className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary"
                   tabIndex={0}
-                  onClick={() => setShowConfirmPassword((v) => !v)}
-                  aria-label={showConfirmPassword ? "Ocultar confirmación" : "Mostrar confirmación"}
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
                 >
-                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
-            )}
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
-            >
-              {isLogin ? "Iniciar Sesión" : isLoading ? "Cargando..." : "Crear Cuenta"}
-            </button>
-            {isLogin && (
+              {/* Barra de seguridad de contraseña y recomendaciones solo en registro */}
+              {!isLogin && (
+                <>
+                  <div className="w-full h-2 rounded bg-gray-200 mt-3 mb-3">
+                    <div className={`h-2 rounded transition-all duration-300 ${getBarClass()}`}></div>
+                  </div>
+                  <ul className="text-xs text-gray-500 mb-3 pl-4 list-disc">
+                    <li>Al menos 8 caracteres</li>
+                    <li>Una letra mayúscula</li>
+                    <li>Un número</li>
+                    <li>Un símbolo especial</li>
+                  </ul>
+                </>
+              )}
+              {/* Confirmación de contraseña solo en registro */}
+              {!isLogin && (
+                <div className="relative mb-2">
+                  <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
+                  <input
+                    type={showConfirmPassword ? "text" : "password"}
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirmar contraseña"
+                    required
+                    minLength={6}
+                  className="w-full pl-10 pr-12 py-4 border border-slate-700 rounded-lg bg-slate-800 text-slate-100 placeholder-slate-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-primary"
+                    tabIndex={0}
+                    onClick={() => setShowConfirmPassword((v) => !v)}
+                    aria-label={showConfirmPassword ? "Ocultar confirmación" : "Mostrar confirmación"}
+                  >
+                    {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
+              )}
               <button
-                type="button"
-                className="w-full text-xs text-red-400 mt-3 hover:underline"
-                onClick={() => setShowReset(true)}
+                type="submit"
+                disabled={isLoading}
+                className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
               >
-                ¿Olvidaste tu contraseña?
+                {isLogin ? "Iniciar Sesión" : isLoading ? "Cargando..." : "Crear Cuenta"}
               </button>
-            )}
-          </form>
-        )}
-        <div className="mt-8 text-center pb-2">
-          <p className="text-slate-400 text-base">
-            {isLogin ? "¿No tienes una cuenta? " : "¿Ya tienes una cuenta? "}
-            <button
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-                setEmail("");
-                setPassword("");
-                setName("");
-                setLastname("");
-                setShowReset(false);
-                setResetEmail("");
-                setResetMsg("");
-                setConfirmPassword("");
-                setPasswordStrength(0);
-              }}
-              className="text-slate-300 font-semibold hover:underline focus:outline-none"
-            >
-              {isLogin ? "Registrarse" : "Iniciar Sesión"}
-            </button>
-          </p>
-          <p className="text-xs mt-4 text-slate-400">
-            ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a>
-          </p>
+              {isLogin && (
+                <button
+                  type="button"
+                  className="w-full text-xs text-red-400 mt-3 hover:underline"
+                  onClick={() => setShowReset(true)}
+                >
+                  ¿Olvidaste tu contraseña?
+                </button>
+              )}
+            </form>
+          )}
+          <div className="mt-8 text-center pb-2">
+            <p className="text-slate-400 text-base">
+              {isLogin ? "¿No tienes una cuenta? " : "¿Ya tienes una cuenta? "}
+              <button
+                onClick={() => {
+                  setIsLogin(!isLogin);
+                  setError("");
+                  setEmail("");
+                  setPassword("");
+                  setName("");
+                  setLastname("");
+                  setShowReset(false);
+                  setResetEmail("");
+                  setResetMsg("");
+                  setConfirmPassword("");
+                  setPasswordStrength(0);
+                }}
+                className="text-slate-300 font-semibold hover:underline focus:outline-none"
+              >
+                {isLogin ? "Registrarse" : "Iniciar Sesión"}
+              </button>
+            </p>
+            <p className="text-xs mt-4 text-slate-400">
+              ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a>
+            </p>
+          </div>
         </div>
       </div>
     </div>
