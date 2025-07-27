@@ -29,6 +29,11 @@ export default function PerfilPage() {
     setMsg('');
     // Sube la imagen a Supabase Storage (ajusta el bucket si es necesario)
     const fileExt = file.name.split('.').pop();
+    if (!user?.id) {
+      setMsg('Usuario no válido, no se puede subir el avatar.');
+      setUploading(false);
+      return;
+    }
     const filePath = `avatars/${user.id}.${fileExt}`;
     const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
     if (uploadError) {
