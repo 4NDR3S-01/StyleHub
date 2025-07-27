@@ -15,7 +15,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
-  const [surname, setSurname] = useState("");
+  const [lastname, setLastname] = useState("");
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -55,7 +55,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
-    if (!email || !password || (!isLogin && (!name || !surname))) {
+    if (!email || !password || (!isLogin && (!name || !lastname))) {
       setError("Todos los campos son obligatorios.");
       return;
     }
@@ -67,7 +67,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       setError("El nombre debe tener al menos 2 caracteres.");
       return;
     }
-    if (!isLogin && surname.length < 2) {
+    if (!isLogin && lastname.length < 2) {
       setError("El apellido debe tener al menos 2 caracteres.");
       return;
     }
@@ -88,15 +88,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           router.push('/admin');
         }
       } else {
-        await register(email, password, name, surname);
-        setError('Confirma tu correo electrónico para activar tu cuenta.\n¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
+        await register(email, password, name, lastname);
+        setError('Confirma tu correo electrónico para activar tu cuenta.<br>¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
+        return;
       }
-      onClose();
-      setEmail("");
-      setPassword("");
-      setName("");
-      setSurname("");
-      setConfirmPassword("");
     } catch (err) {
       let msg = err instanceof Error ? err.message : "Ocurrió un error";
       if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
@@ -233,8 +228,8 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                   <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                   <input
                     type="text"
-                    value={surname}
-                    onChange={(e) => setSurname(e.target.value)}
+                    value={lastname}
+                    onChange={(e) => setLastname(e.target.value)}
                     placeholder="Apellido"
                     required
                     minLength={2}
@@ -351,7 +346,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 setEmail("");
                 setPassword("");
                 setName("");
-                setSurname("");
+                setLastname("");
                 setShowReset(false);
                 setResetEmail("");
                 setResetMsg("");
