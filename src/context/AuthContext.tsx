@@ -142,9 +142,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, surname, role } }
+        options: {
+          emailRedirectTo: `${window.location.origin}/confirm-email`,
+          data: { name, surname, role }
+        }
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
+      // Insertar usuario en la tabla users con el id de Auth
       const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -158,7 +162,8 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
-        name: name,
+        name,
+        surname,
         avatar: '',
         role,
       });
