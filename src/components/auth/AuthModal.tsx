@@ -2,6 +2,8 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useRouter } from "next/navigation";
+import supabase from "../../lib/supabaseClient";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,7 +25,8 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState("");
   const modalRef = useRef<HTMLDivElement>(null);
-  const { login, register, isLoading, resetPassword } = useAuth();
+  const { login, register, isLoading, resetPassword, user } = useAuth();
+  const router = useRouter();
 
   useEffect(() => {
     if (isOpen && modalRef.current) {
@@ -75,9 +78,18 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
     try {
       if (isLogin) {
         await login(email, password);
+        // Consultar el rol directamente tras login
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role')
+          .eq('email', email)
+          .single();
+        if (!userError && userData?.role === 'admin') {
+          router.push('/admin');
+        }
       } else {
         await register(email, password, name, surname);
-             setError('Confirma tu correo electrónico para activar tu cuenta.\n¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
+        setError('Confirma tu correo electrónico para activar tu cuenta.\n¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" class="underline text-red-400">Contáctanos</a>');
       }
       onClose();
       setEmail("");
