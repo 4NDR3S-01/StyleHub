@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import supabase from '../lib/supabaseClient';
 
@@ -18,29 +18,106 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  // Restaurar sesión y escuchar cambios de autenticación
+  useEffect(() => {
+    let timeout: NodeJS.Timeout;
+    const getSession = async () => {
+      setIsLoading(true);
+      let finished = false;
+      let sessionTimeout = setTimeout(() => {
+        if (!finished) {
+          setIsLoading(false);
+          setUser(null); // Forzar user a null si no se restauró
+        }
+      }, 5000); // 5 segundos
+      try {
+        const { data } = await supabase.auth.getUser();
+        if (data?.user) {
+          const { data: userDataDb } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', data.user.id)
+            .single();
+          setUser({
+            id: data.user.id,
+            email: data.user.email ?? '',
+            name: data.user.user_metadata?.name ?? '',
+            avatar: data.user.user_metadata?.avatar_url ?? '',
+            role: userDataDb?.role ?? 'cliente',
+          });
+        } else {
+          setUser(null);
+        }
+      } finally {
+        finished = true;
+        setIsLoading(false);
+        if (sessionTimeout) clearTimeout(sessionTimeout);
+      }
+    };
+    getSession();
+
+    // Listener de cambios de sesión
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      setIsLoading(true);
+      if (session?.user) {
+        const { data: userDataDb } = await supabase
+          .from('users')
+          .select('role')
+          .eq('id', session.user.id)
+          .single();
+        setUser({
+          id: session.user.id,
+          email: session.user.email ?? '',
+          name: session.user.user_metadata?.name ?? '',
+          avatar: session.user.user_metadata?.avatar_url ?? '',
+          role: userDataDb?.role ?? 'cliente',
+        });
+      } else {
+        setUser(null);
+      }
+      setIsLoading(false);
+    });
+
+    // Cierre de sesión por inactividad
+    let inactivityTimeout: NodeJS.Timeout;
+    const resetTimer = () => {
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      inactivityTimeout = setTimeout(() => {
+        logout();
+        alert('Sesión cerrada por inactividad.');
+      }, 1000 * 60 * 60); // 1 hora de inactividad
+    };
+    window.addEventListener('mousemove', resetTimer);
+    window.addEventListener('keydown', resetTimer);
+    resetTimer();
+    return () => {
+      window.removeEventListener('mousemove', resetTimer);
+      window.removeEventListener('keydown', resetTimer);
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      listener?.subscription.unsubscribe();
+    };
+  }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error(error?.message || 'Login fallido');
-      // Obtener el rol desde la tabla users
-      const { data: userData, error: userError } = await supabase
+      if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
+      const { data: userDataDb } = await supabase
         .from('users')
         .select('role')
         .eq('id', data.user.id)
         .single();
-      if (userError) throw new Error(userError.message);
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
-        role: userData?.role ?? 'cliente',
+        role: userDataDb?.role ?? 'cliente',
       });
     } catch (error: any) {
-      throw new Error(error?.message || 'Login fallido');
+      throw new Error(error?.message || 'Inicio de sesión fallido');
     } finally {
       setIsLoading(false);
     }

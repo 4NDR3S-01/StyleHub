@@ -4,6 +4,7 @@ console.log('NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY:', process.env.NEXT_PUBLIC_SU
 const { createClient } = require('@supabase/supabase-js');
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const readline = require('readline');
 
 if (!supabaseUrl || !supabaseKey) {
@@ -23,16 +24,34 @@ async function createAdminUser(email, password, name, surname) {
     return;
   }
   try {
+    // Crear usuario admin
     const { data, error } = await supabase.auth.admin.createUser({
       email,
       password,
       email_confirm: true,
       user_metadata: { name, surname, role: 'admin' }
     });
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
     console.log('Usuario administrador creado:', data.user.email);
+
+    // Insertar en la tabla users
+    const userId = data.user.id;
+    const { error: dbError } = await supabase
+      .from('users')
+      .insert([
+        {
+          id: userId,
+          email,
+          name,
+          surname,
+          role: 'admin'
+        }
+      ]);
+    if (dbError) {
+      console.error('Error insertando en tabla users:', dbError.message);
+    } else {
+      console.log('Usuario insertado en tabla users correctamente.');
+    }
   } catch (err) {
     console.error('Error creando usuario:', err.message || err);
   }
