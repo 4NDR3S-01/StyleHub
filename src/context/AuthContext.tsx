@@ -122,44 +122,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (
-    email: string,
-    password: string,
-    name: string,
-    surname: string,
-    role: string = 'cliente'
-  ) => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { name, surname, role } }
-      });
-      if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
-          name,
-          surname,
-          role,
-        });
-      if (dbError) throw new Error(dbError.message);
-      setUser({
+const register = async (
+  email: string,
+  password: string,
+  name: string,
+  surname: string,
+  role: string = 'cliente'
+) => {
+  setIsLoading(true);
+  try {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/confirm-email`,
+        data: { name, surname, role }
+      }
+    });
+
+    if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
+
+    const { error: dbError } = await supabase
+      .from('users')
+      .insert({
         id: data.user.id,
-        email: data.user.email ?? '',
-        name: name,
-        avatar: '',
+        email: data.user.email,
+        name,
+        surname,
         role,
       });
-    } catch (error: any) {
-      throw new Error(error?.message || 'Registro fallido');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+
+    if (dbError) throw new Error(dbError.message);
+
+    // ❌ No iniciar sesión automáticamente
+    // ✅ Deja que el usuario confirme el email primero
+  } catch (error: any) {
+    throw new Error(error?.message || 'Registro fallido');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const logout = async () => {
     await supabase.auth.signOut();
