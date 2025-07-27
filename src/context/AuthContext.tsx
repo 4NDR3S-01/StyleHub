@@ -103,7 +103,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       window.removeEventListener('keydown', resetTimer);
       listener?.subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
