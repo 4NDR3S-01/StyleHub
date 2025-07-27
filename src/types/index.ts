@@ -1,4 +1,4 @@
-export interface Product {
+export interface productos {
   id: string;
   name: string;
   description: string;
@@ -16,7 +16,7 @@ export interface Product {
 }
 
 export interface CartItem {
-  product: Product;
+  producto: productos;
   quantity: number;
   size: string;
   color: string;
@@ -31,7 +31,7 @@ export interface User {
   role: string;
 }
 
-export interface Category {
+export interface categorias {
   id: string;
   name: string;
   image: string;

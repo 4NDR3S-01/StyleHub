@@ -49,36 +49,36 @@ export default function CartSidebar() {
             ) : (
               <div className="space-y-6">
                 {state.items.map((item) => (
-                  <div key={`${item.product.id}-${item.size}-${item.color}`} className="flex items-center space-x-4">
+                  <div key={`${item.producto.id}-${item.size}-${item.color}`} className="flex items-center space-x-4">
                     <img
-                      src={item.product.images[0]}
-                      alt={item.product.name}
+                      src={item.producto.images[0]}
+                      alt={item.producto.name}
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                     <div className="flex-1">
-                      <h3 className="font-semibold text-slate-900">{item.product.name}</h3>
+                      <h3 className="font-semibold text-slate-900">{item.producto.name}</h3>
                       <p className="text-sm text-gray-500">
                         Size: {item.size} | Color: {item.color}
                       </p>
-                      <p className="font-semibold text-lg">${item.product.price.toFixed(2)}</p>
+                      <p className="font-semibold text-lg">${item.producto.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.size, item.color)}
+                        onClick={() => updateQuantity(item.producto.id, item.quantity - 1, item.size, item.color)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         <Minus size={16} />
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.size, item.color)}
+                        onClick={() => updateQuantity(item.producto.id, item.quantity + 1, item.size, item.color)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
                     <button
-                      onClick={() => removeFromCart(item.product.id, item.size, item.color)}
+                      onClick={() => removeFromCart(item.producto.id, item.size, item.color)}
                       className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <X size={16} />

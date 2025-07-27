@@ -2,11 +2,11 @@
 
 import Link from 'next/link';
 import { Heart, Star } from 'lucide-react';
-import { Product } from '../../types';
+import { productos } from '../../types';
 import { useCart } from '../../context/CartContext';
 
 interface ProductCardProps {
-  product: Product;
+  product: productos;
 }
 
 export default function ProductCard({ product }: ProductCardProps) {

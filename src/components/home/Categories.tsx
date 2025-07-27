@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { categories } from '../../data/products';
+import { categories } from '../../data/Categorias';
 
 // Categories.tsx
 // This component displays a grid of product categories with images and links

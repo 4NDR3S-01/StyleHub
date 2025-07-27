@@ -2,7 +2,7 @@
 
 "use client";
 import React, { useState } from "react";
-import { products } from "../../../data/products";
+import { Productos } from "../../../data/Productos";
 import ProductCard from "../../../components/product/ProductCard";
 
 const subCategories = [
@@ -26,7 +26,7 @@ const subCategoryKeywords: Record<string, string[]> = {
 
 export default function MenCategoryPage() {
   const [selectedSub, setSelectedSub] = useState<string>("");
-  const menProducts = products.filter((product) => product.category === "men");
+  const menProducts = Productos.filter((product) => product.category === "men");
 
   // Filtrado por subcategoría
   const filteredProducts = selectedSub

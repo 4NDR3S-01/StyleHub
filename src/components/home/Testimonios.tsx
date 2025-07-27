@@ -1,6 +1,6 @@
 import { Star } from 'lucide-react';
 
-const testimonials = [
+const Testimonios = [
   {
     id: 1,
     name: 'Sarah Johnson',
@@ -38,7 +38,7 @@ export default function Testimonials() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {testimonials.map((testimonial) => (
+          {Testimonios.map((testimonial) => (
             <div
               key={testimonial.id}
               className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
