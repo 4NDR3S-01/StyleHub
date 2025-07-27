@@ -35,13 +35,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (data?.user) {
           const { data: userDataDb } = await supabase
             .from('users')
-            .select('role')
+            .select('role, surname')
             .eq('id', data.user.id)
             .single();
           setUser({
             id: data.user.id,
             email: data.user.email ?? '',
             name: data.user.user_metadata?.name ?? '',
+            surname: userDataDb?.surname ?? '',
             avatar: data.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
           });
@@ -60,13 +61,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (session?.user) {
         const { data: userDataDb } = await supabase
           .from('users')
-          .select('role')
+          .select('role, surname')
           .eq('id', session.user.id)
           .single();
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name ?? '',
+          surname: userDataDb?.surname ?? '',
           avatar: session.user.user_metadata?.avatar_url ?? '',
           role: userDataDb?.role ?? 'cliente',
         });
@@ -105,13 +107,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
       const { data: userDataDb } = await supabase
         .from('users')
-        .select('role')
+        .select('role, surname')
         .eq('id', data.user.id)
         .single();
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
+        surname: userDataDb?.surname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
       });
@@ -151,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: data.user.id,
         email: data.user.email ?? '',
         name: name,
+        surname: surname,
         avatar: '',
         role,
       });
