@@ -11,7 +11,7 @@ interface AuthContextType {
     email: string,
     password: string,
     name: string,
-    surname: string,
+    lastname: string,
     role?: string
   ) => Promise<void>;
   logout: () => void;
@@ -41,14 +41,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         if (data?.user) {
           const { data: userDataDb } = await supabase
             .from('users')
-            .select('role, surname')
+            .select('role, lastname')
             .eq('id', data.user.id)
             .single();
           setUser({
             id: data.user.id,
             email: data.user.email ?? '',
             name: data.user.user_metadata?.name ?? '',
-            surname: userDataDb?.surname ?? '',
+            lastname: userDataDb?.lastname ?? '',
             avatar: data.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
           });
@@ -67,14 +67,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (session?.user) {
         const { data: userDataDb } = await supabase
           .from('users')
-          .select('role, surname')
+          .select('role, lastname')
           .eq('id', session.user.id)
           .single();
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name ?? '',
-          surname: userDataDb?.surname ?? '',
+          lastname: userDataDb?.lastname ?? '',
           avatar: session.user.user_metadata?.avatar_url ?? '',
           role: userDataDb?.role ?? 'cliente',
         });
@@ -112,14 +112,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
       const { data: userDataDb } = await supabase
         .from('users')
-        .select('role, surname')
+        .select('role, lastname')
         .eq('id', data.user.id)
         .single();
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
-        surname: userDataDb?.surname ?? '',
+        lastname: userDataDb?.lastname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
       });
@@ -134,39 +134,30 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     email: string,
     password: string,
     name: string,
-    surname: string,
+    lastname: string,
     role: string = 'cliente'
   ) => {
     setIsLoading(true);
     try {
+      if (!email || !password || !name || !lastname) {
+        throw new Error('Todos los campos son obligatorios.');
+      }
+      // Registro con metadatos correctos
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/confirm-email`,
-          data: { name, surname, role }
-        }
+          data: {
+            name,
+            lastname,
+            role: "cliente",
+            display_name: name,
+          },
+        },
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      // Insertar usuario en la tabla users con el id de Auth
-      const { error: dbError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          email: data.user.email,
-          name,
-          surname,
-          role,
-        });
-      if (dbError) throw new Error(dbError.message);
-      setUser({
-        id: data.user.id,
-        email: data.user.email ?? '',
-        name,
-        surname,
-        avatar: '',
-        role,
-      });
+      // No actualizar display_name manualmente ni iniciar sesión automáticamente
     } catch (error: any) {
       throw new Error(error?.message || 'Registro fallido');
     } finally {
