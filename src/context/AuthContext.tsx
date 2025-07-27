@@ -114,7 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Buscar usuario por id en la tabla users
       const { data: userDataDb, error: dbError } = await supabase
         .from('users')
-        .select('role')
+        .select('role, surname')
         .eq('id', data.user.id)
         .single();
       if (dbError || !userDataDb) throw new Error('No se encontró el usuario en la base de datos.');
@@ -122,6 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
+        surname: userDataDb?.surname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb.role ?? 'cliente',
       });
@@ -165,6 +166,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: data.user.id,
         email: data.user.email ?? '',
         name: name,
+        surname: surname,
         avatar: '',
         role,
       });
