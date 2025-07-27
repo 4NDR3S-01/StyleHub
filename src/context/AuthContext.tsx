@@ -7,7 +7,13 @@ import supabase from '../lib/supabaseClient';
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
-  register: (email: string, password: string, name: string, surname: string) => Promise<void>;
+  register: (
+    email: string,
+    password: string,
+    name: string,
+    surname: string,
+    role?: string
+  ) => Promise<void>;
   logout: () => void;
   isLoading: boolean;
   resetPassword: (email: string) => Promise<void>;
@@ -139,7 +145,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { name, surname, role } }
+        options: {
+          emailRedirectTo: `${window.location.origin}/confirm-email`,
+          data: { name, surname, role }
+        }
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
       // Insertar usuario en la tabla users con el id de Auth
