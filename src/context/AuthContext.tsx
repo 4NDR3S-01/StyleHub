@@ -16,33 +16,33 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  // Restaurar sesión y escuchar cambios de autenticación
+
   useEffect(() => {
-    let timeout: NodeJS.Timeout;
-    const getSession = async () => {
+    let sessionTimeout: NodeJS.Timeout | null = null;
+    let inactivityTimeout: NodeJS.Timeout | null = null;
+
+    const restoreSession = async () => {
       setIsLoading(true);
-      let finished = false;
-      let sessionTimeout = setTimeout(() => {
-        if (!finished) {
-          setIsLoading(false);
-          setUser(null); // Forzar user a null si no se restauró
-        }
-      }, 5000); // 5 segundos
+      sessionTimeout = setTimeout(() => {
+        setUser(null);
+        setIsLoading(false);
+      }, 2500);
       try {
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
           const { data: userDataDb } = await supabase
             .from('users')
-            .select('role')
+            .select('role, surname')
             .eq('id', data.user.id)
             .single();
           setUser({
             id: data.user.id,
             email: data.user.email ?? '',
             name: data.user.user_metadata?.name ?? '',
+            surname: userDataDb?.surname ?? '',
             avatar: data.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
           });
@@ -50,26 +50,25 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           setUser(null);
         }
       } finally {
-        finished = true;
-        setIsLoading(false);
         if (sessionTimeout) clearTimeout(sessionTimeout);
+        setIsLoading(false);
       }
     };
-    getSession();
+    restoreSession();
 
-    // Listener de cambios de sesión
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setIsLoading(true);
       if (session?.user) {
         const { data: userDataDb } = await supabase
           .from('users')
-          .select('role')
+          .select('role, surname')
           .eq('id', session.user.id)
           .single();
         setUser({
           id: session.user.id,
           email: session.user.email ?? '',
           name: session.user.user_metadata?.name ?? '',
+          surname: userDataDb?.surname ?? '',
           avatar: session.user.user_metadata?.avatar_url ?? '',
           role: userDataDb?.role ?? 'cliente',
         });
@@ -79,24 +78,26 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       setIsLoading(false);
     });
 
-    // Cierre de sesión por inactividad
-    let inactivityTimeout: NodeJS.Timeout;
     const resetTimer = () => {
       if (inactivityTimeout) clearTimeout(inactivityTimeout);
-      inactivityTimeout = setTimeout(() => {
-        logout();
+      inactivityTimeout = setTimeout(async () => {
+        await logout();
         alert('Sesión cerrada por inactividad.');
-      }, 1000 * 60 * 60); // 1 hora de inactividad
+      }, 1000 * 60 * 60);
     };
+
     window.addEventListener('mousemove', resetTimer);
     window.addEventListener('keydown', resetTimer);
     resetTimer();
+
     return () => {
+      if (sessionTimeout) clearTimeout(sessionTimeout);
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
       window.removeEventListener('mousemove', resetTimer);
       window.removeEventListener('keydown', resetTimer);
-      if (inactivityTimeout) clearTimeout(inactivityTimeout);
       listener?.subscription.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const login = async (email: string, password: string) => {
@@ -106,13 +107,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
       const { data: userDataDb } = await supabase
         .from('users')
-        .select('role')
+        .select('role, surname')
         .eq('id', data.user.id)
         .single();
       setUser({
         id: data.user.id,
         email: data.user.email ?? '',
         name: data.user.user_metadata?.name ?? '',
+        surname: userDataDb?.surname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
       });
@@ -123,7 +125,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   };
 
-  const register = async (email: string, password: string, name: string, surname: string, role: string = 'cliente') => {
+  const register = async (
+    email: string,
+    password: string,
+    name: string,
+    surname: string,
+    role: string = 'cliente'
+  ) => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.auth.signUp({
@@ -132,7 +140,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         options: { data: { name, surname, role } }
       });
       if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      // Insertar el usuario en la tabla users con el rol recibido
       const { error: dbError } = await supabase
         .from('users')
         .insert({
@@ -147,6 +154,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         id: data.user.id,
         email: data.user.email ?? '',
         name: name,
+        surname: surname,
         avatar: '',
         role,
       });
@@ -187,7 +195,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   };
 
-  const contextValue = React.useMemo(() => ({ user, login, register, logout, isLoading, resetPassword, resendVerification }), [user, isLoading]);
+  const contextValue = React.useMemo(
+    () => ({ user, login, register, logout, isLoading, resetPassword, resendVerification }),
+    [user, isLoading]
+  );
 
   return (
     <AuthContext.Provider value={contextValue}>
