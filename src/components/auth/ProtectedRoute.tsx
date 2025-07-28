@@ -16,8 +16,14 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [showUnauthorized, setShowUnauthorized] = useState(false);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   useEffect(() => {
+    // Solo mostrar el loading en la carga inicial
+    if (!isLoading && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true);
+    }
+
     // Si no está cargando y no hay usuario
     if (!isLoading && !user) {
       setShowUnauthorized(true);
@@ -34,10 +40,10 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     if (!isLoading && user && (!requireAdmin || user.role === 'admin')) {
       setShowUnauthorized(false);
     }
-  }, [user, isLoading, requireAdmin]);
+  }, [user, isLoading, requireAdmin, hasInitiallyLoaded]);
 
-  // Mostrar loading mientras se verifica la autenticación
-  if (isLoading) {
+  // Solo mostrar loading en la carga inicial
+  if (isLoading && !hasInitiallyLoaded) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
