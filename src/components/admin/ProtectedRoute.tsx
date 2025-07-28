@@ -3,8 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, isLoading } = useAuth();
+export default function ProtectedRoute({ children }: { readonly children: React.ReactNode }) {  const { user, isLoading } = useAuth();
   const router = useRouter();
   const [hasChecked, setHasChecked] = useState(false);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);

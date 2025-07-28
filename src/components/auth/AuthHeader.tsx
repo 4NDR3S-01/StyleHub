@@ -11,7 +11,7 @@ interface AuthHeaderProps {
   showBackButton?: boolean;
 }
 
-export default function AuthHeader({ title, subtitle, showBackButton = true }: AuthHeaderProps) {
+export default function AuthHeader({ title, subtitle, showBackButton = true }: Readonly<AuthHeaderProps>) {
   const router = useRouter();
 
   const handleBackNavigation = () => {

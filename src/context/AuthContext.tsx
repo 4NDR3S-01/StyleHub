@@ -63,7 +63,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     restoreSession();
 
     const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      setIsLoading(true);
+      // Solo mostrar loading durante la transición inicial, no en cada cambio
       if (session?.user) {
         const { data: userDataDb } = await supabase
           .from('users')
@@ -85,6 +85,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       } else {
         setUser(null);
       }
+      // Solo marcar como loaded después de procesar la sesión
       setIsLoading(false);
     });
 
