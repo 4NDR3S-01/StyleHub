@@ -36,8 +36,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
         <div className="flex flex-col items-center gap-4 p-8 rounded-xl shadow-lg bg-white/90 border border-gray-200">
-          <span className="text-red-400 text-xl font-bold tracking-wide">Verificando sesión...</span>
-          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400"></div>
+          <span className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent text-xl font-bold tracking-wide drop-shadow-lg">Verificando sesión...</span>
+          <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-[#ff6f61]"></div>
         </div>
       </div>
     );

@@ -9,8 +9,17 @@ function ChangeEmailPageContent() {
   const [status, setStatus] = React.useState<'pending'|'success'|'error'>('pending');
 
   React.useEffect(() => {
-    const token = searchParams.get("token");
-    const email = searchParams.get("email");
+    // Obtener token y email de query o hash
+    let token = searchParams.get("token");
+    let email = searchParams.get("email");
+    if (typeof window !== "undefined" && (!token || !email) && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      token = hashParams.get("access_token") || token;
+      email = hashParams.get("email") || email;
+      if (!email && hashParams.get("user_metadata.email")) {
+        email = hashParams.get("user_metadata.email");
+      }
+    }
     if (!token || !email) {
       setStatus('error');
       return;
@@ -18,7 +27,11 @@ function ChangeEmailPageContent() {
     // Confirmar cambio de email con Supabase
     const confirm = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({ type: 'email_change', token, email });
+        const { error } = await supabase.auth.verifyOtp({
+          type: 'email_change',
+          token: token!,
+          email: email!
+        });
         if (error) {
           setStatus('error');
         } else {
@@ -46,14 +59,14 @@ function ChangeEmailPageContent() {
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
         {status === 'pending' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">Verificando cambio...</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">Verificando cambio...</h1>
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mx-auto mb-6"></div>
             <p className="text-slate-700 mb-6">Estamos confirmando el cambio de correo, por favor espera unos segundos.</p>
           </>
         )}
         {status === 'success' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">¡Correo actualizado!</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">¡Correo actualizado!</h1>
             <p className="text-slate-700 mb-6">Tu correo ha sido cambiado exitosamente.<br />Ya puedes usar tu nuevo email para iniciar sesión.</p>
             <a href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</a>
             <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>

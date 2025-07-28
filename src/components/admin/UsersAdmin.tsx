@@ -46,7 +46,7 @@ export default function UsersAdmin() {
             <p className="text-slate-500 text-sm">Gestión de usuarios registrados en StyleHub</p>
           </div>
         </div>
-        <button className="bg-red-400 hover:bg-red-500 text-white font-semibold px-5 py-2 rounded-lg shadow transition flex items-center gap-2">
+        <button className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#d7263d] hover:to-[#ff6f61] text-white font-semibold px-5 py-2 rounded-lg shadow transition flex items-center gap-2 drop-shadow-lg">
           <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
           </svg>

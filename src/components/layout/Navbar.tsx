@@ -51,8 +51,8 @@ export default function Navbar() {
             {/* Logo */}
             <Link href="/" className="flex items-center group">
               <div className="flex items-center">
-                <h1 className="text-2xl font-bold text-white group-hover:text-gray-100 transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg">
-                  Style<span className="text-red-400 animate-pulse">Hub</span>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg group-hover:scale-105 transition-all duration-300 transform">
+                  StyleHub
                 </h1>
                 <div className="ml-2 w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:rotate-12 shadow-lg">
                   <svg className="w-4 h-4 text-white group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">

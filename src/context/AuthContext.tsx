@@ -51,6 +51,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
             lastname: userDataDb?.lastname ?? '',
             avatar: data.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
+            user_metadata: {
+              name: data.user.user_metadata?.name,
+              avatar_url: data.user.user_metadata?.avatar_url,
+            },
           });
         } else {
           setUser(null);
@@ -77,6 +81,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           lastname: userDataDb?.lastname ?? '',
           avatar: session.user.user_metadata?.avatar_url ?? '',
           role: userDataDb?.role ?? 'cliente',
+          user_metadata: {
+            name: session.user.user_metadata?.name,
+            avatar_url: session.user.user_metadata?.avatar_url,
+          },
         });
       } else {
         setUser(null);
@@ -154,6 +162,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         lastname: userDataDb?.lastname ?? data.user.user_metadata?.lastname ?? '',
         avatar: data.user.user_metadata?.avatar_url ?? '',
         role: userDataDb?.role ?? 'cliente',
+        user_metadata: {
+          name: data.user.user_metadata?.name,
+          avatar_url: data.user.user_metadata?.avatar_url,
+        },
       });
     } catch (error: any) {
       throw new Error(error?.message || 'Inicio de sesión fallido');
