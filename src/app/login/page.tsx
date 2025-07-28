@@ -92,7 +92,7 @@ export default function LoginPage() {
         subtitle="Bienvenido de vuelta a StyleHub"
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           {/* Formulario */}
           <Card className="shadow-2xl border-0 bg-white/90 backdrop-blur-sm">
@@ -119,7 +119,7 @@ export default function LoginPage() {
                           <Mail className="absolute left-3 top-3 h-5 w-5 text-gray-400" />
                           <Input 
                             placeholder="tu@email.com" 
-                            className="pl-12 h-12 border-gray-200 bg-white/50 focus:border-red-400 focus:ring-red-400 transition-all duration-200"
+                            className="pl-12 h-12 border-gray-200 bg-white/50 focus:border-[#d7263d] focus:ring-[#d7263d] transition-all duration-200"
                             type="email"
                             {...field} 
                           />
@@ -143,13 +143,13 @@ export default function LoginPage() {
                           <Input
                             type={showPassword ? 'text' : 'password'}
                             placeholder="Tu contraseña"
-                            className="pl-12 pr-12 h-12 border-gray-200 bg-white/50 focus:border-red-400 focus:ring-red-400 transition-all duration-200"
+                            className="pl-12 pr-12 h-12 border-gray-200 bg-white/50 focus:border-[#d7263d] focus:ring-[#d7263d] transition-all duration-200"
                             {...field}
                           />
                           <button
                             type="button"
                             onClick={() => setShowPassword(!showPassword)}
-                            className="absolute right-3 top-3 text-gray-400 hover:text-red-400 transition-colors"
+                            className="absolute right-3 top-3 text-gray-400 hover:text-[#d7263d] transition-colors"
                           >
                             {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                           </button>
@@ -164,7 +164,7 @@ export default function LoginPage() {
                 <div className="text-right">
                   <Link 
                     href="/reset-password" 
-                    className="text-sm text-red-400 hover:text-red-600 font-medium transition-colors"
+                    className="text-sm text-[#d7263d] hover:text-[#ff6f61] font-medium transition-colors"
                   >
                     ¿Olvidaste tu contraseña?
                   </Link>
@@ -173,7 +173,7 @@ export default function LoginPage() {
                 {/* Botón de login */}
                 <Button 
                   type="submit" 
-                  className="w-full h-12 bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg" 
+                  className="w-full h-12 bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#ff5a4d] hover:via-[#c01e2a] hover:to-[#1a1a1a] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg" 
                   disabled={isLoading}
                 >
                   {isLoading ? 'Iniciando sesión...' : 'Iniciar Sesión'}
@@ -203,7 +203,7 @@ export default function LoginPage() {
             <div className="mt-6 text-center space-y-4">
               <p className="text-sm text-gray-600">
                 ¿No tienes una cuenta?{' '}
-                <Link href="/register" className="text-red-400 hover:text-red-600 font-semibold transition-colors">
+                <Link href="/register" className="text-[#d7263d] hover:text-[#ff6f61] font-semibold transition-colors">
                   Regístrate aquí
                 </Link>
               </p>
@@ -212,11 +212,11 @@ export default function LoginPage() {
               
               <p className="text-xs text-gray-500 mt-6">
                 Al iniciar sesión, aceptas nuestros{' '}
-                <Link href="/terminos" className="text-red-400 hover:text-red-600 transition-colors">
+                <Link href="/terminos" className="text-[#d7263d] hover:text-[#ff6f61] transition-colors">
                   Términos de Servicio
                 </Link>{' '}
                 y{' '}
-                <Link href="/privacidad" className="text-red-400 hover:text-red-600 transition-colors">
+                <Link href="/privacidad" className="text-[#d7263d] hover:text-[#ff6f61] transition-colors">
                   Política de Privacidad
                 </Link>
               </p>

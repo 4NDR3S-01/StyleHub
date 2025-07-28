@@ -101,7 +101,7 @@ function ConfirmEmailPageContent() {
         showBackButton={false}
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center border-0">
           
@@ -117,11 +117,11 @@ function ConfirmEmailPageContent() {
               <h1 className="text-3xl font-bold text-gray-900 mb-2">¡Correo confirmado!</h1>
             <p className="text-gray-600 mb-6">
               Tu cuenta ha sido activada exitosamente.<br />
-              Ya puedes iniciar sesión y disfrutar de <span className="text-red-400 font-semibold">StyleHub</span>.
+              Ya puedes iniciar sesión y disfrutar de <span className="text-[#d7263d] font-semibold">StyleHub</span>.
             </p>
             <a 
               href="/" 
-              className="inline-block bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+              className="inline-block bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#ff5a4a] hover:via-[#c41f2a] hover:to-[#1a1518] text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
             >
               Ir al inicio
             </a>
@@ -142,7 +142,7 @@ function ConfirmEmailPageContent() {
             <div className="space-y-3">
               <a 
                 href="/register" 
-                className="block w-full bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                className="block w-full bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#ff5a4a] hover:via-[#c41f2a] hover:to-[#1a1518] text-white font-semibold py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
               >
                 Registrarse nuevamente
               </a>
@@ -158,7 +158,7 @@ function ConfirmEmailPageContent() {
         
         <p className="text-xs mt-6 text-gray-500">
           ¿Necesitas ayuda?{' '}
-          <a href="mailto:soporte@stylehub.com" className="text-red-400 hover:text-red-600 transition-colors">
+          <a href="mailto:soporte@stylehub.com" className="text-[#d7263d] hover:text-[#ff6f61] transition-colors">
             Contáctanos
           </a>
         </p>

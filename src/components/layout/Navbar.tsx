@@ -33,8 +33,8 @@ export default function Navbar() {
         
         {/* Floating geometric shapes */}
         <div className="absolute top-1 right-1/4 w-6 h-6 bg-white/10 rounded-full animate-bounce delay-1000"></div>
-        <div className="absolute bottom-1 left-1/3 w-4 h-4 bg-red-400/20 rounded-full animate-bounce delay-500"></div>
-        <div className="absolute top-2 left-1/2 w-3 h-3 bg-red-400/30 rounded-full animate-pulse delay-700"></div>
+        <div className="absolute bottom-1 left-1/3 w-4 h-4 bg-gradient-to-br from-[#ff6f61]/20 to-[#d7263d]/20 rounded-full animate-bounce delay-500"></div>
+        <div className="absolute top-2 left-1/2 w-3 h-3 bg-[#d7263d]/30 rounded-full animate-pulse delay-700"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -54,11 +54,6 @@ export default function Navbar() {
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg group-hover:scale-105 transition-all duration-300 transform">
                   StyleHub
                 </h1>
-                <div className="ml-2 w-8 h-8 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:rotate-12 shadow-lg">
-                  <svg className="w-4 h-4 text-white group-hover:scale-110 transition-transform duration-300" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                  </svg>
-                </div>
               </div>
             </Link>
 

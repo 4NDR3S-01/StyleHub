@@ -53,8 +53,8 @@ export default function AuthHeader({ title, subtitle, showBackButton = true }: A
       
       {/* Floating geometric shapes */}
       <div className="absolute top-2 right-1/4 w-8 h-8 bg-white/10 rounded-full animate-bounce delay-1000"></div>
-      <div className="absolute bottom-2 left-1/3 w-6 h-6 bg-red-400/20 rounded-full animate-bounce delay-500"></div>
-      <div className="absolute top-3 left-1/2 w-4 h-4 bg-red-400/30 rounded-full animate-pulse delay-700"></div>
+      <div className="absolute bottom-2 left-1/3 w-6 h-6 bg-gradient-to-br from-[#ff6f61]/20 to-[#d7263d]/20 rounded-full animate-bounce delay-500"></div>
+      <div className="absolute top-3 left-1/2 w-4 h-4 bg-[#d7263d]/30 rounded-full animate-pulse delay-700"></div>
       
       <div className="relative z-10 w-full px-2 sm:px-4 py-4">
         <div className="flex items-center justify-between">
@@ -77,15 +77,15 @@ export default function AuthHeader({ title, subtitle, showBackButton = true }: A
           <div className="flex items-center pr-6">
             <Link href="/" className="flex items-center group">
               <div className="text-right">
-                <h1 className="text-xl font-bold text-white group-hover:text-gray-100 transition-all duration-300 transform group-hover:scale-105 drop-shadow-lg">
-                  Style<span className="text-red-400 animate-pulse">Hub</span>
+                <h1 className="text-xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent group-hover:scale-105 transition-all duration-300 transform drop-shadow-lg">
+                  StyleHub
                 </h1>
                 <p className="text-sm text-gray-200/90 -mt-1 font-light tracking-wide group-hover:text-white transition-colors duration-300">
                   Autenticación
                 </p>
               </div>
-              <div className="ml-3 w-10 h-10 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:bg-white/30 transition-all duration-300 group-hover:rotate-12 shadow-lg">
-                <Home className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-300" />
+              <div className="ml-3 w-10 h-10 bg-gradient-to-br from-[#ff6f61]/30 via-[#d7263d]/20 to-[#2d2327]/30 backdrop-blur-md rounded-full flex items-center justify-center group-hover:from-[#ff6f61]/40 group-hover:via-[#d7263d]/30 group-hover:to-[#2d2327]/40 transition-all duration-300 group-hover:rotate-12 shadow-lg border border-white/20">
+                <Home className="w-5 h-5 text-white group-hover:scale-110 transition-transform duration-300 drop-shadow-sm" />
               </div>
             </Link>
           </div>

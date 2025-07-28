@@ -84,7 +84,7 @@ function ResetPasswordPageContent() {
         showBackButton={true}
       />
       
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-red-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-orange-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
         <div className="max-w-md w-full space-y-8">
           <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-2xl p-8 text-center border-0">
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Restablece tu contraseña</h2>
@@ -99,7 +99,7 @@ function ResetPasswordPageContent() {
               </div>
               <a 
                 href="/" 
-                className="inline-block bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
+                className="inline-block bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#ff5a4a] hover:via-[#c41f2a] hover:to-[#1a1518] text-white font-semibold px-8 py-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg"
               >
                 Ir al inicio
               </a>
@@ -114,7 +114,7 @@ function ResetPasswordPageContent() {
                 placeholder="Nueva contraseña"
                 value={password}
                 onChange={e => setPassword(e.target.value)}
-                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all duration-200"
+                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#d7263d] focus:ring-2 focus:ring-[#d7263d] transition-all duration-200"
                 minLength={8}
                 required
               />
@@ -125,7 +125,7 @@ function ResetPasswordPageContent() {
                 placeholder="Confirmar contraseña"
                 value={confirmPassword}
                 onChange={e => setConfirmPassword(e.target.value)}
-                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-400 transition-all duration-200"
+                className="w-full h-12 px-4 py-3 border border-gray-200 rounded-lg bg-white/50 text-gray-800 placeholder-gray-400 focus:outline-none focus:border-[#d7263d] focus:ring-2 focus:ring-[#d7263d] transition-all duration-200"
                 minLength={8}
                 required
               />
@@ -133,7 +133,7 @@ function ResetPasswordPageContent() {
             <button
               type="submit"
               disabled={loading || !token || !email}
-              className="w-full h-12 bg-gradient-to-r from-red-400 to-pink-400 hover:from-red-500 hover:to-pink-500 text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              className="w-full h-12 bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] hover:from-[#ff5a4a] hover:via-[#c41f2a] hover:to-[#1a1518] text-white font-semibold rounded-lg transition-all duration-300 transform hover:scale-[1.02] shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? "Actualizando..." : "Restablecer contraseña"}
             </button>
@@ -146,7 +146,7 @@ function ResetPasswordPageContent() {
         )}
         <p className="text-xs mt-6 text-gray-500">
           ¿Necesitas ayuda?{' '}
-          <a href="mailto:soporte@stylehub.com" className="text-red-400 hover:text-red-600 transition-colors">
+          <a href="mailto:soporte@stylehub.com" className="text-[#d7263d] hover:text-[#ff6f61] transition-colors">
             Contáctanos
           </a>
         </p>
