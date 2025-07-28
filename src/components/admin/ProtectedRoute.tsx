@@ -6,33 +6,29 @@ import { useEffect, useState } from 'react';
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
-  const [showUnauthorized, setShowUnauthorized] = useState(false);
+  const [hasChecked, setHasChecked] = useState(false);
 
   useEffect(() => {
-    // Si no está cargando y no hay usuario, muestra acceso denegado y redirige
-    if (!isLoading && !user) {
-      setShowUnauthorized(true);
-      const timeout = setTimeout(() => {
+    // Solo verificar una vez cuando termine de cargar
+    if (!isLoading && !hasChecked) {
+      setHasChecked(true);
+      
+      // Si no hay usuario, redirigir al inicio
+      if (!user) {
         router.replace('/');
-      }, 2000);
-      return () => clearTimeout(timeout);
-    }
-    // Si no está cargando, hay usuario, pero el rol no es admin, muestra acceso denegado y redirige
-    if (!isLoading && user && user.role !== 'admin') {
-      setShowUnauthorized(true);
-      const timeout = setTimeout(() => {
+        return;
+      }
+      
+      // Si el usuario no es admin, redirigir al inicio
+      if (user.role !== 'admin') {
         router.replace('/');
-      }, 2000);
-      return () => clearTimeout(timeout);
+        return;
+      }
     }
-    // Si está cargando o el usuario existe pero el rol aún no está definido, no muestra nada (loader)
-    if (isLoading || (user && typeof user.role === 'undefined')) {
-      setShowUnauthorized(false);
-    }
-  }, [isLoading, user, router]);
+  }, [isLoading, user, router, hasChecked]);
 
-  // Loader profesional y full screen
-  if (isLoading || (user && typeof user.role === 'undefined')) {
+  // Mostrar loader mientras verifica
+  if (isLoading || !hasChecked) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
         <div className="flex flex-col items-center gap-4 p-8 rounded-xl shadow-lg bg-white/90 border border-gray-200">
@@ -43,22 +39,18 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  // Mensaje de acceso denegado, también full screen
-  if (showUnauthorized) {
-    return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
-        <div className="flex flex-col items-center gap-4 p-8 rounded-xl shadow-lg bg-white/90 border border-red-400">
-          <span className="text-red-400 text-xl font-bold tracking-wide">Acceso denegado</span>
-          <span className="text-gray-700 text-base">Será redirigido al inicio...</span>
-        </div>
-      </div>
-    );
-  }
-
-  // Solo si está autenticado y es admin
+  // Solo renderizar contenido si el usuario es admin
   if (user && user.role === 'admin') {
     return <>{children}</>;
   }
-  // Si no está autenticado o no es admin, no renderiza nada (previene flicker)
-  return null;
+
+  // Si llegamos aquí, el usuario no está autorizado (se está redirigiendo)
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
+      <div className="flex flex-col items-center gap-4 p-8 rounded-xl shadow-lg bg-white/90 border border-red-400">
+        <span className="text-red-400 text-xl font-bold tracking-wide">Acceso denegado</span>
+        <span className="text-gray-700 text-base">Redirigiendo...</span>
+      </div>
+    </div>
+  );
 }

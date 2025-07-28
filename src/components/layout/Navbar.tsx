@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Search, ShoppingBag, User, Menu, X, Heart } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
@@ -9,8 +9,24 @@ import CartSidebar from '../cart/CartSidebar';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const { itemsCount, toggleCart } = useCart();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
+
+  // Cerrar menú al hacer clic fuera
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    if (isUserMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [isUserMenuOpen]);
 
   const navigation = [
     { name: 'Mujeres', href: '/category/women' },
@@ -22,7 +38,7 @@ export default function Navbar() {
 
   return (
     <>
-      <nav className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 overflow-hidden shadow-lg sticky top-0 z-50">
+      <nav className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 overflow-hidden shadow-lg sticky top-0 z-[9998]">
         {/* Animated background patterns */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent animate-pulse"></div>
         <div className="absolute top-0 left-0 w-full h-full opacity-10">
@@ -78,33 +94,64 @@ export default function Navbar() {
               <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
                 <Heart size={20} />
               </button>
-              {user ? (
-                <div className="relative group">
-                  <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+              {!isLoading && user ? (
+                <div ref={userMenuRef} className="relative" style={{ zIndex: 99999, isolation: 'isolate', transform: 'translateZ(0)' }}>
+                  <button 
+                    onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                    className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                  >
                     <User size={20} />
                   </button>
-                  <div className="absolute right-0 mt-2 w-48 bg-white/95 backdrop-blur-md rounded-xl shadow-2xl py-2 z-50 invisible group-hover:visible opacity-0 group-hover:opacity-100 transition-all duration-300 border border-white/20">
-                    <Link href="/perfil" className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
-                      Perfil
-                    </Link>
-                    <Link href="/orders" className="block px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors">
-                      Pedidos
-                    </Link>
-                    <button
-                      onClick={logout}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors"
-                    >
-                      Cerrar Sesión
-                    </button>
-                  </div>
+                  {/* Menú desplegable controlado por estado */}
+                  {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white shadow-2xl rounded-xl py-2 z-[99999] transition-all duration-300 border border-gray-200"
+                         style={{ transform: 'translateZ(0)', isolation: 'isolate' }}>
+                      <Link 
+                        href="/perfil" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#ff6f61]/10 hover:text-[#d7263d] transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Perfil
+                      </Link>
+                      <Link 
+                        href="/orders" 
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#ff6f61]/10 hover:text-[#d7263d] transition-colors"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        Pedidos
+                      </Link>
+                      {user.role === 'admin' && (
+                        <Link 
+                          href="/admin" 
+                          className="block px-4 py-2 text-sm text-gray-700 hover:bg-[#ff6f61]/10 hover:text-[#d7263d] transition-colors"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          Panel Admin
+                        </Link>
+                      )}
+                      <button
+                        onClick={() => {
+                          logout();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[#ff6f61]/10 hover:text-[#d7263d] transition-colors"
+                      >
+                        Cerrar Sesión
+                      </button>
+                    </div>
+                  )}
                 </div>
-              ) : (
+              ) : !isLoading ? (
                 <Link
                   href="/login"
                   className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
                 >
                   <User size={20} />
                 </Link>
+              ) : (
+                <div className="p-2 text-white/50 rounded-lg backdrop-blur-md border border-white/20">
+                  <User size={20} />
+                </div>
               )}
               <button
                 onClick={toggleCart}

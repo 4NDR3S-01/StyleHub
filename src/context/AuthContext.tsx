@@ -24,18 +24,12 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Iniciar en true para verificar sesión
 
   useEffect(() => {
-    let sessionTimeout: NodeJS.Timeout | null = null;
     let inactivityTimeout: NodeJS.Timeout | null = null;
 
     const restoreSession = async () => {
-      setIsLoading(true);
-      sessionTimeout = setTimeout(() => {
-        setUser(null);
-        setIsLoading(false);
-      }, 2500);
       try {
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
@@ -59,8 +53,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         } else {
           setUser(null);
         }
+      } catch (error) {
+        console.error('Error restaurando sesión:', error);
+        setUser(null);
       } finally {
-        if (sessionTimeout) clearTimeout(sessionTimeout);
         setIsLoading(false);
       }
     };
@@ -105,7 +101,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     resetTimer();
 
     return () => {
-      if (sessionTimeout) clearTimeout(sessionTimeout);
       if (inactivityTimeout) clearTimeout(inactivityTimeout);
       window.removeEventListener('mousemove', resetTimer);
       window.removeEventListener('keydown', resetTimer);

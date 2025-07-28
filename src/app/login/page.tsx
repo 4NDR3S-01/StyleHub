@@ -67,7 +67,27 @@ export default function LoginPage() {
     try {
       await login(data.email, data.password);
       toast.success('¡Bienvenido de vuelta!');
-      router.push('/');
+      
+      // Esperar un momento para que el contexto se actualice con el usuario
+      setTimeout(async () => {
+        try {
+          // Realizar consulta a la base de datos para obtener el rol
+          const { data: userData } = await supabase
+            .from('users')
+            .select('role')
+            .eq('email', data.email)
+            .single();
+          
+          if (userData?.role === 'admin') {
+            router.push('/admin');
+          } else {
+            router.push('/');
+          }
+        } catch (error) {
+          // Si hay error obteniendo el rol, redirigir al inicio por defecto
+          router.push('/');
+        }
+      }, 500);
     } catch (error: any) {
       console.error('Error iniciando sesión:', error);
       
