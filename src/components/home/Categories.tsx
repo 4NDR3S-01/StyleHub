@@ -1,6 +1,8 @@
 import Link from 'next/link';
-import { categories } from '../../data/products';
+import { categories } from '../../data/Categorias';
 
+// Categories.tsx
+// This component displays a grid of product categories with images and links
 export default function Categories() {
   return (
     <section className="py-16 bg-gray-50">

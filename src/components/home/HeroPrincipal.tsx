@@ -1,6 +1,6 @@
 import Link from 'next/link';
 
-export default function Hero() {
+export default function HeroPrincipal() {
   return (
     <div className="relative h-screen flex items-center justify-center">
       {/* Background Image */}

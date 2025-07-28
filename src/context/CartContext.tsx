@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { CartItem, Product } from '@/types';
+import { CartItem, productos } from '@/types';
 
 interface CartState {
   items: CartItem[];
@@ -9,7 +9,7 @@ interface CartState {
 }
 
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: { product: Product; size: string; color: string } }
+  | { type: 'ADD_ITEM'; payload: { product: productos; size: string; color: string } }
   | { type: 'REMOVE_ITEM'; payload: string } // formato: "productId-size-color"
   | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } } // formato: "productId-size-color"
   | { type: 'CLEAR_CART' }
@@ -20,7 +20,7 @@ type CartAction =
 const CartContext = createContext<{
   state: CartState;
   dispatch: React.Dispatch<CartAction>;
-  addToCart: (product: Product, size: string, color: string) => void;
+  addToCart: (product: productos, size: string, color: string) => void;
   removeFromCart: (productId: string, size?: string, color?: string) => void;
   updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
   clearCart: () => void;
@@ -36,7 +36,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case 'ADD_ITEM':
       const existingItem = state.items.find(
         item => 
-          item.product.id === action.payload.product.id && 
+          item.producto.id === action.payload.product.id && 
           item.size === action.payload.size && 
           item.color === action.payload.color
       );
@@ -47,7 +47,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           return {
             ...state,
             items: state.items.map(item =>
-              item.product.id === action.payload.product.id &&
+              item.producto.id === action.payload.product.id &&
               item.size === action.payload.size &&
               item.color === action.payload.color
                 ? { ...item, quantity: item.quantity + 1 }
@@ -63,7 +63,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         items: [
           ...state.items,
           {
-            product: action.payload.product,
+            producto: action.payload.product,
             quantity: 1,
             size: action.payload.size,
             color: action.payload.color,
@@ -78,10 +78,10 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         items: state.items.filter(item => {
           if (size === '' && color === '') {
             // Remover todos los items del producto
-            return item.product.id !== productId;
+            return item.producto.id !== productId;
           }
           // Remover item específico por producto, talla y color
-          return !(item.product.id === productId && 
+          return !(item.producto.id === productId && 
                    item.size === size && 
                    item.color === color);
         }),
@@ -91,7 +91,7 @@ function cartReducer(state: CartState, action: CartAction): CartState {
       return {
         ...state,
         items: state.items.map(item => {
-          const itemKey = `${item.product.id}-${item.size}-${item.color}`;
+          const itemKey = `${item.producto.id}-${item.size}-${item.color}`;
           return itemKey === action.payload.id
             ? { ...item, quantity: action.payload.quantity }
             : item;
@@ -133,10 +133,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     isOpen: false,
   });
 
-  const addToCart = (product: Product, size: string, color: string) => {
+  const addToCart = (product: productos, size: string, color: string) => {
     // Verificar stock disponible
     const currentQuantity = state.items.find(
-      item => item.product.id === product.id && 
+      item => item.producto.id === product.id && 
                item.size === size && 
                item.color === color
     )?.quantity || 0;
@@ -184,7 +184,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const itemsCount = state.items.reduce((total, item) => total + item.quantity, 0);
   const totalPrice = state.items.reduce(
-    (total, item) => total + item.product.price * item.quantity,
+    (total, item) => total + item.producto.price * item.quantity,
     0
   );
 

@@ -1,4 +1,4 @@
-export interface Product {
+export interface productos {
   id: string;
   name: string;
   description: string;
@@ -30,7 +30,7 @@ export interface ProductVariant {
 }
 
 export interface CartItem {
-  product: Product;
+  producto: productos;
   quantity: number;
   size: string;
   color: string;
@@ -62,7 +62,7 @@ export interface Address {
   country: string;
 }
 
-export interface Category {
+export interface categorias {
   id: string;
   name: string;
   image: string;

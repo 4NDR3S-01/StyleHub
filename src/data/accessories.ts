@@ -1,6 +1,6 @@
-import { Product } from '../types';
+import { productos } from '../types';
 
-export const accessoriesProducts: Product[] = [
+export const accessoriesProducts: productos[] = [
   {
     id: '1',
     name: 'Reloj Elegante Plateado',
