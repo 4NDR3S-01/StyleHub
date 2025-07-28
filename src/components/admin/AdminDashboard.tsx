@@ -57,7 +57,7 @@ export default function AdminDashboard() {
     {
       label: 'Pedidos',
       value: stats.orders,
-      icon: <ShoppingCart size={32} className="text-red-400" />,
+      icon: <ShoppingCart size={32} className="text-[#ff6f61] drop-shadow-lg" />,
       href: '/admin/orders',
     },
   ];
@@ -68,11 +68,13 @@ export default function AdminDashboard() {
         <a
           key={card.label}
           href={card.href}
-          className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center hover:shadow-xl transition-shadow border border-gray-100 group"
+          className="bg-white rounded-2xl shadow-lg px-8 py-7 flex flex-col items-center justify-center hover:shadow-xl transition-shadow border border-gray-100 group min-h-[170px]"
         >
-          {card.icon}
-          <span className="mt-4 text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{card.value}</span>
-          <span className="mt-2 text-lg text-gray-600">{card.label}</span>
+          <div className="flex flex-col items-center justify-center w-full">
+            <div className="mb-3">{card.icon}</div>
+            <span className="text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors mb-1 break-words">{card.value}</span>
+            <span className="text-base text-gray-600 font-medium text-center break-words">{card.label}</span>
+          </div>
         </a>
       ))}
     </div>

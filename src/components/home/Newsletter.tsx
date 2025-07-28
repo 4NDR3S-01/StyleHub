@@ -18,10 +18,10 @@ export default function Newsletter() {
     <section className="py-16 bg-slate-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-          <Mail size={48} className="mx-auto mb-6 text-red-400" />
-          <h2 className="text-3xl md:text-4xl font-bold mb-4">
-            Mantente con Estilo
-          </h2>
+          <Mail size={48} className="mx-auto mb-6 text-red-500 drop-shadow-lg" />
+        <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">
+          Mantente con Estilo
+        </h2>
           <p className="text-gray-300 text-lg mb-8 max-w-2xl mx-auto">
             Suscríbete a nuestro boletín y sé el primero en conocer las nuevas colecciones, ofertas exclusivas y consejos de estilo
           </p>
@@ -45,7 +45,7 @@ export default function Newsletter() {
                 />
                 <button
                   type="submit"
-                  className="bg-red-400 hover:bg-red-500 text-white px-8 py-3 rounded-full font-semibold transition-colors duration-300"
+                  className="bg-[#ff6f61] hover:bg-[#d7263d] text-white px-8 py-3 rounded-full font-semibold transition-colors duration-300 shadow-lg border border-[#ff6f61]"
                 >
                   Suscribirse
                 </button>

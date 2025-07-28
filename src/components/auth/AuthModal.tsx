@@ -11,7 +11,21 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>) {
+  // Renderizado de icono principal
+  function renderMainIcon() {
+    if (showReset) return <Mail size={28} className="text-white drop-shadow" />;
+    if (isLogin) return <User size={28} className="text-white drop-shadow" />;
+    return <Lock size={28} className="text-white drop-shadow" />;
+  }
+
+  // Renderizado de texto del botón principal
+  function getMainButtonText() {
+    if (isLogin) return "Iniciar Sesión";
+    if (isLoading) return "Cargando...";
+    return "Crear Cuenta";
+  }
   const [successMsg, setSuccessMsg] = useState("");
+  const [infoMsg, setInfoMsg] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,6 +39,12 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const [showReset, setShowReset] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetMsg, setResetMsg] = useState("");
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendMsg, setResendMsg] = useState("");
+  // Referencias para mensajes y primer input
+  const errorRef = useRef<HTMLDivElement>(null);
+  const infoRef = useRef<HTMLDivElement>(null);
+  const successRef = useRef<HTMLDivElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
   const { login, register, isLoading, resetPassword, user } = useAuth();
   const router = useRouter();
@@ -37,6 +57,13 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       }, 100);
     }
   }, [isOpen, isLogin, showReset]);
+
+  // Enfocar mensaje relevante cuando aparece
+  useEffect(() => {
+    if (error && errorRef.current) errorRef.current.focus();
+    else if (infoMsg && infoRef.current) infoRef.current.focus();
+    else if (successMsg && successRef.current) successRef.current.focus();
+  }, [error, infoMsg, successMsg]);
 
   useEffect(() => {
     if (!isLogin && password) {
@@ -57,6 +84,21 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       onClose();
+      // Limpiar estados al cerrar
+      setError("");
+      setSuccessMsg("");
+      setInfoMsg("");
+      setResendMsg("");
+      setResendLoading(false);
+      setShowReset(false);
+      setResetEmail("");
+      setResetMsg("");
+      setEmail("");
+      setPassword("");
+      setName("");
+      setLastname("");
+      setConfirmPassword("");
+      setPasswordStrength(0);
     }
   };
 
@@ -64,6 +106,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
     e.preventDefault();
     setError("");
     setSuccessMsg("");
+    setInfoMsg("");
     // Validaciones claras y específicas
     if (!email || !password || (!isLogin && (!name || !lastname))) {
       setError("Por favor completa todos los campos requeridos.");
@@ -94,20 +137,30 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           .select('role')
           .eq('email', email)
           .single();
-        if (!userError && userData?.role === 'admin') {
-          router.push('/admin');
-        }
         setError("");
+        setInfoMsg("");
+        setSuccessMsg('¡Inicio de sesión exitoso! Bienvenido a StyleHub. Serás redirigido al inicio...');
+        setTimeout(() => {
+          if (!userError && userData?.role === 'admin') {
+            router.push('/admin');
+          } else {
+            router.push('/');
+          }
+          setSuccessMsg("");
+          onClose();
+        }, 1800);
       } else {
         await register(email, password, name, lastname);
         setSuccessMsg('¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta.<br>Si no recibiste el correo revisa tu bandeja de spam o <a href="mailto:soporte@stylehub.com" class="underline text-red-400">contáctanos</a>.');
         setError("");
+        setInfoMsg("");
         return;
       }
     } catch (err) {
       let msg = err instanceof Error ? err.message : "Ocurrió un error inesperado.";
       if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
-        msg = "Tu cuenta aún no ha sido verificada. Revisa tu correo y confirma tu cuenta antes de iniciar sesión.";
+        setInfoMsg("Primero debes verificar tu correo electrónico. Revisa tu bandeja de entrada y confirma tu cuenta antes de iniciar sesión.");
+        msg = "";
       }
       if (msg.toLowerCase().includes("json object requested, multiple (or no) rows returned")) {
         msg = "No se pudo iniciar sesión. Verifica tus datos o contacta soporte si el problema persiste.";
@@ -117,6 +170,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
       }
       if (msg.toLowerCase().includes("network error")) {
         msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
+      }
+      if (msg.toLowerCase().includes("already registered")) {
+        setInfoMsg("Este correo ya está registrado. Si no recibiste el correo de confirmación, revisa tu bandeja de spam o solicita un nuevo correo.");
+        msg = "";
       }
       setError(msg);
     }
@@ -169,66 +226,154 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900 bg-opacity-70 transition-opacity duration-300"
+      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-[#1a1a1a]/80 transition-opacity duration-500"
       onClick={handleOverlayClick}
       aria-modal="true"
       role="dialog"
     >
       <div
         ref={modalRef}
-        className="relative bg-slate-900 rounded-2xl w-full max-w-lg mx-4 shadow-2xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white border border-slate-800"
+        className="relative bg-gradient-to-br from-[#2d2327] via-[#2d2327] to-[#1a1a1a] rounded-3xl w-full max-w-lg mx-4 shadow-3xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white border border-[#d7263d]/30 scale-95 transition-transform duration-300"
         style={{ minWidth: "340px", maxWidth: "480px" }}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-400 transition-colors focus:outline-none focus:ring-2 focus:ring-red-400"
-          aria-label="Cerrar modal"
-        >
-          <X size={24} />
-        </button>
-        <div className="overflow-y-auto max-h-[80vh] px-0 sm:px-0">
-          <div className="bg-gradient-to-r from-slate-900 to-red-400 py-8 px-8 sm:px-12 rounded-t-2xl text-center mb-8 flex flex-col items-center justify-center shadow-lg">
-            <div className="flex items-center justify-center gap-3 mb-2">
-              {showReset ? (
-                <Mail size={28} className="text-white drop-shadow" />
-              ) : isLogin ? (
-                <User size={28} className="text-white drop-shadow" />
-              ) : (
-                <Lock size={28} className="text-white drop-shadow" />
-              )}
-              <h2 className="text-2xl font-bold text-white tracking-tight">{getTitle()}</h2>
+        <div className="relative">
+          <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] rounded-t-3xl z-0 blur-[2px]" />
+          <button
+            type="button"
+            tabIndex={0}
+            onClick={e => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="absolute top-5 right-5 p-2 text-white hover:text-[#ff6f61] transition-colors focus:outline-none focus:ring-2 focus:ring-[#ff6f61] z-20 rounded-full bg-[#2d2327]/60 shadow-lg"
+            aria-label="Cerrar modal"
+            autoFocus
+          >
+            <X size={26} />
+          </button>
+          <div className="relative flex flex-col items-center justify-center pt-8 pb-6 px-8 sm:px-12 z-10">
+            <div className="flex flex-col items-center justify-center gap-2 mb-2">
+              <span className="rounded-full bg-[#ff6f61]/10 p-3 shadow-lg border border-[#ff6f61]/20">
+                {renderMainIcon()}
+              </span>
+              <h2 className="text-2xl font-extrabold text-white tracking-tight drop-shadow-lg mb-1">{getTitle()}</h2>
+              <p className="text-base text-white/80 font-medium mt-0 mb-0 drop-shadow px-4 text-center leading-relaxed">{getSubtitle()}</p>
             </div>
-            <p className="text-red-100">{getSubtitle()}</p>
           </div>
-          {error && (
-            <div className="mb-6 flex flex-col items-center justify-center text-center animate-shake">
-              <div className="bg-red-100 border border-red-300 text-red-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
-                <span className="font-semibold text-sm">¡Ups! Ocurrió un error:</span>
-                <div className="mt-1 text-xs" dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
+        </div>
+        <div className="overflow-y-auto max-h-[80vh] px-0 sm:px-0 mt-2">
+          {error?.trim() && (
+            <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
+              <div ref={errorRef} tabIndex={-1} role="alert" aria-live="assertive" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#d7263d] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+                <span className="font-semibold text-base flex items-center gap-3 mb-2">
+                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><X size={18} className="text-white"/></span>
+                  <span className="text-white">¡Ups! Ocurrió un error:</span>
+                </span>
+                <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
+              </div>
+            </div>
+          )}
+          {infoMsg && (
+            <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
+              <div ref={infoRef} tabIndex={-1} role="status" aria-live="polite" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+                <span className="font-semibold text-base flex items-center gap-3 mb-2">
+                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><Mail size={18} className="text-white"/></span>
+                  <span className="text-white">Información:</span>
+                </span>
+                <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: infoMsg.replace(/\n/g, '<br />') }} />
+                {/* Mostrar botón de reenviar si el mensaje indica que el correo no está confirmado y es login */}
+                {isLogin && infoMsg.toLowerCase().includes("verificar tu correo") && (
+                  <div className="mt-4">
+                    <button
+                      type="button"
+                      aria-label="Reenviar correo de confirmación"
+                      disabled={resendLoading}
+                      className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#ff6f61]"
+                      onClick={async () => {
+                        setResendLoading(true);
+                        setResendMsg("");
+                        try {
+                          const { error } = await supabase.auth.resend({ type: "signup", email });
+                          if (error) {
+                            setResendMsg("No se pudo reenviar el correo. Intenta de nuevo o contáctanos.");
+                          } else {
+                            setResendMsg("¡Correo de confirmación reenviado! Revisa tu bandeja de entrada y spam.");
+                          }
+                        } catch {
+                          setResendMsg("Ocurrió un error inesperado. Intenta más tarde.");
+                        }
+                        setResendLoading(false);
+                      }}
+                    >
+                      {resendLoading ? <span aria-live="polite">Enviando...</span> : <span>Reenviar correo de confirmación</span>}
+                    </button>
+                    {resendMsg && (
+                      <div className={`mt-3 text-sm font-medium animate-fadeIn ${resendMsg.includes("¡Correo") ? "text-green-400" : "text-red-400"}`} role="alert" aria-live="assertive">
+                        {resendMsg}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
           {successMsg && (
-            <div className="mb-6 flex flex-col items-center justify-center text-center animate-fadeIn">
-              <div className="bg-green-100 border border-green-300 text-green-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
-                <span className="font-semibold text-sm">¡Registro exitoso!</span>
-                <div className="mt-1 text-xs" dangerouslySetInnerHTML={{ __html: successMsg.replace(/\n/g, '<br />') }} />
+            <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
+              <div ref={successRef} tabIndex={-1} role="status" aria-live="polite" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+                <span className="font-semibold text-base flex items-center gap-3 mb-2">
+                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><User size={18} className="text-white"/></span>
+                  <span className="text-white">¡Registro exitoso!</span>
+                </span>
+                <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: successMsg.replace(/\n/g, '<br />') }} />
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    aria-label="Reenviar correo de confirmación"
+                    disabled={resendLoading}
+                    className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#ff6f61]"
+                    onClick={async () => {
+                      setResendLoading(true);
+                      setResendMsg("");
+                      try {
+                        const { error } = await supabase.auth.resend({ type: "signup", email });
+                        if (error) {
+                          setResendMsg("No se pudo reenviar el correo. Intenta de nuevo o contáctanos.");
+                        } else {
+                          setResendMsg("¡Correo de confirmación reenviado! Revisa tu bandeja de entrada y spam.");
+                        }
+                      } catch {
+                        setResendMsg("Ocurrió un error inesperado. Intenta más tarde.");
+                      }
+                      setResendLoading(false);
+                    }}
+                  >
+                    {resendLoading ? <span aria-live="polite">Enviando...</span> : <span>Reenviar correo de confirmación</span>}
+                  </button>
+                  {resendMsg && (
+                    <div className={`mt-3 text-sm font-medium animate-fadeIn ${resendMsg.includes("¡Correo") ? "text-green-400" : "text-red-400"}`} role="alert" aria-live="assertive">
+                      {resendMsg}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
           {resetMsg && (
-            <div className="mb-6 flex flex-col items-center justify-center text-center animate-fadeIn">
-              <div className="bg-green-100 border border-green-300 text-green-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
-                <span className="font-semibold text-sm">¡Listo!</span>
-                <div className="mt-1 text-xs">{resetMsg}</div>
+            <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
+              <div className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl">
+                <span className="font-semibold text-base flex items-center gap-3 mb-2">
+                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><Lock size={18} className="text-white"/></span>
+                  <span className="text-white">¡Listo!</span>
+                </span>
+                <div className="mt-2 text-sm text-white">{resetMsg}</div>
               </div>
             </div>
           )}
           {isLoading && (
-            <div className="mb-6 flex flex-col items-center justify-center text-center animate-pulse">
-              <div className="bg-yellow-100 border border-yellow-300 text-yellow-700 rounded-lg px-4 py-3 w-full max-w-sm shadow">
-                <span className="font-semibold text-sm">Procesando...</span>
-                <div className="mt-1 text-xs">Por favor espera unos segundos.</div>
+            <div className="mb-8 flex flex-col items-center justify-center text-center animate-bounceIn">
+              <div className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl">
+                <span className="font-semibold text-base text-white mb-2 flex items-center gap-2"><User size={18} className="text-white"/> Procesando...</span>
+                <div className="mt-2 text-sm text-white">Por favor espera unos segundos.</div>
               </div>
             </div>
           )}
@@ -248,14 +393,14 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
+                className="w-full bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white py-4 rounded-xl font-semibold hover:scale-[1.03] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
               >
                 {isLoading ? "Enviando..." : "Enviar correo de recuperación"}
               </button>
               {resetMsg && <div className="text-center text-sm mt-3 text-green-400 font-medium animate-fadeIn">{resetMsg}</div>}
               <button
                 type="button"
-                className="w-full text-xs text-red-400 mt-3 hover:underline"
+                className="w-full text-xs text-[#ff6f61] mt-3 hover:underline hover:text-[#d7263d] transition-colors"
                 onClick={() => {
                   setShowReset(false);
                   setIsLogin(true);
@@ -380,14 +525,14 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-red-400 text-white py-4 rounded-lg font-semibold hover:bg-red-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
+                className="w-full bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white py-4 rounded-xl font-semibold hover:scale-[1.03] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
               >
-                {isLogin ? "Iniciar Sesión" : isLoading ? "Cargando..." : "Crear Cuenta"}
+                {getMainButtonText()}
               </button>
               {isLogin && (
                 <button
                   type="button"
-                  className="w-full text-xs text-red-400 mt-3 hover:underline"
+                  className="w-full text-xs text-[#ff6f61] mt-3 hover:underline hover:text-[#d7263d] transition-colors"
                   onClick={() => setShowReset(true)}
                 >
                   ¿Olvidaste tu contraseña?
@@ -412,13 +557,13 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                   setConfirmPassword("");
                   setPasswordStrength(0);
                 }}
-                className="text-slate-300 font-semibold hover:underline focus:outline-none"
+                className="text-[#ff6f61] font-semibold hover:underline hover:text-[#d7263d] transition-colors focus:outline-none"
               >
                 {isLogin ? "Registrarse" : "Iniciar Sesión"}
               </button>
             </p>
-            <p className="text-xs mt-4 text-slate-400">
-              ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-red-400">Contáctanos</a>
+            <p className="text-xs mt-4 text-[#ff6f61]">
+              ¿Necesitas ayuda? <a href="mailto:soporte@stylehub.com" className="underline text-[#ff6f61] hover:text-[#d7263d] transition-colors">Contáctanos</a>
             </p>
           </div>
         </div>
