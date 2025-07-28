@@ -42,7 +42,7 @@ function ConfirmEmailPageContent() {
     // Confirmar email con Supabase
     const confirm = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({ type: 'email', token: _token, email: _email });
+        const { error } = await supabase.auth.verifyOtp({ type: 'email', token: _token!, email: _email! });
         if (error) {
           setStatus('error');
         } else {
