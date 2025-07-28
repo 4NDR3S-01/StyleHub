@@ -17,11 +17,22 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
   const router = useRouter();
   const [showUnauthorized, setShowUnauthorized] = useState(false);
   const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
+  const [showingLoader, setShowingLoader] = useState(false);
 
   useEffect(() => {
-    // Solo mostrar el loading en la carga inicial
+    // Marcar como cargado inicialmente después de un delay
     if (!isLoading && !hasInitiallyLoaded) {
       setHasInitiallyLoaded(true);
+      setShowingLoader(false);
+    }
+
+    // Solo mostrar loader en la primera carga real
+    if (isLoading && !hasInitiallyLoaded && !showingLoader) {
+      const timer = setTimeout(() => {
+        setShowingLoader(true);
+      }, 500); // Solo mostrar después de 500ms
+
+      return () => clearTimeout(timer);
     }
 
     // Si no está cargando y no hay usuario
@@ -40,10 +51,10 @@ export function ProtectedRoute({ children, requireAdmin = false }: ProtectedRout
     if (!isLoading && user && (!requireAdmin || user.role === 'admin')) {
       setShowUnauthorized(false);
     }
-  }, [user, isLoading, requireAdmin, hasInitiallyLoaded]);
+  }, [user, isLoading, requireAdmin, hasInitiallyLoaded, showingLoader]);
 
-  // Solo mostrar loading en la carga inicial
-  if (isLoading && !hasInitiallyLoaded) {
+  // Solo mostrar loading si realmente es necesario
+  if (isLoading && !hasInitiallyLoaded && showingLoader) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

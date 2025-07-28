@@ -6,7 +6,7 @@ import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { CheckoutFormSimple } from '@/components/checkout/CheckoutFormSimple';
 import { OrderSummary } from '@/components/checkout/OrderSummary';
-import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { ProtectedCheckout } from '@/components/checkout/ProtectedCheckout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { ArrowLeft } from 'lucide-react';
@@ -37,7 +37,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <ProtectedRoute>
+    <ProtectedCheckout>
       <div className="min-h-screen bg-gray-50 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
@@ -76,6 +76,6 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-    </ProtectedRoute>
+    </ProtectedCheckout>
   );
 }

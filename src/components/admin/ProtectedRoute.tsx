@@ -7,10 +7,16 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const { user, isLoading } = useAuth();
   const router = useRouter();
   const [hasChecked, setHasChecked] = useState(false);
+  const [hasInitiallyLoaded, setHasInitiallyLoaded] = useState(false);
 
   useEffect(() => {
-    // Solo verificar una vez cuando termine de cargar
-    if (!isLoading && !hasChecked) {
+    // Solo marcar como cargado inicialmente una vez
+    if (!isLoading && !hasInitiallyLoaded) {
+      setHasInitiallyLoaded(true);
+    }
+
+    // Solo verificar una vez cuando termine de cargar por primera vez
+    if (!isLoading && hasInitiallyLoaded && !hasChecked) {
       setHasChecked(true);
       
       // Si no hay usuario, redirigir al inicio
@@ -25,10 +31,10 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
         return;
       }
     }
-  }, [isLoading, user, router, hasChecked]);
+  }, [isLoading, user, router, hasChecked, hasInitiallyLoaded]);
 
-  // Mostrar loader mientras verifica
-  if (isLoading || !hasChecked) {
+  // Solo mostrar loader en la carga inicial
+  if (isLoading && !hasInitiallyLoaded) {
     return (
       <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-300">
         <div className="flex flex-col items-center gap-4 p-8 rounded-xl shadow-lg bg-white/90 border border-gray-200">
