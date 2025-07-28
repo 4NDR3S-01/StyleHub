@@ -34,6 +34,7 @@ export default function MenCategoryPage() {
   const menProducts = Productos.filter((product) => product.category === "men");
 
   // Filtrado por subcategoría
+  // Generar productos de ejemplo para mostrar muchas tarjetas
   const filteredProducts = selectedSub
     ? menProducts.filter((product) => {
         const keywords = subCategoryKeywords[selectedSub] || [];
@@ -106,13 +107,23 @@ export default function MenCategoryPage() {
         </div>
       </div>
 
-      {/* Recomendaciones personalizadas */}
+      {/* Grid tipo H&M */}
       <div className="w-full max-w-6xl mb-12">
         <h2 className="text-2xl font-bold mb-4 text-blue-700">Recomendaciones para ti</h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
           {filteredProducts.length > 0 ? (
             filteredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
+              <div key={product.id} className="group relative flex flex-col items-center justify-center">
+                <img
+                  src={product.images[0]}
+                  alt={product.name}
+                  className="w-full aspect-square object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+                <div className="absolute bottom-0 left-0 right-0 bg-white/90 opacity-0 group-hover:opacity-100 transition-opacity duration-300 p-3 text-center">
+                  <span className="block font-semibold text-gray-900 text-base">{product.name}</span>
+                  <span className="block text-blue-700 font-bold text-lg">${product.price.toFixed(2)}</span>
+                </div>
+              </div>
             ))
           ) : (
             <p className="col-span-full text-center text-gray-500">No hay productos para esta categoría.</p>
