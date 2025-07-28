@@ -264,9 +264,15 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         <div className="overflow-y-auto max-h-[80vh] px-0 sm:px-0 mt-2">
           {error?.trim() && (
             <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
-              <div ref={errorRef} tabIndex={-1} role="alert" aria-live="assertive" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#d7263d] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+              <div
+                ref={errorRef}
+                tabIndex={-1}
+                role="alert"
+                aria-live="assertive"
+                className="bg-gradient-to-br from-red-700 via-red-500/90 to-red-400/80 border border-red-500 rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none"
+              >
                 <span className="font-semibold text-base flex items-center gap-3 mb-2">
-                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><X size={18} className="text-white"/></span>
+                  <span className="rounded-full bg-red-500 p-2 shadow-lg"><X size={18} className="text-white"/></span>
                   <span className="text-white">¡Ups! Ocurrió un error:</span>
                 </span>
                 <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, '<br />') }} />
@@ -275,9 +281,15 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           )}
           {infoMsg && (
             <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
-              <div ref={infoRef} tabIndex={-1} role="status" aria-live="polite" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+              <div
+                ref={infoRef}
+                tabIndex={-1}
+                role="status"
+                aria-live="polite"
+                className="bg-gradient-to-br from-blue-700 via-blue-500/90 to-blue-400/80 border border-blue-500 rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none"
+              >
                 <span className="font-semibold text-base flex items-center gap-3 mb-2">
-                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><Mail size={18} className="text-white"/></span>
+                  <span className="rounded-full bg-blue-500 p-2 shadow-lg"><Mail size={18} className="text-white"/></span>
                   <span className="text-white">Información:</span>
                 </span>
                 <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: infoMsg.replace(/\n/g, '<br />') }} />
@@ -288,7 +300,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                       type="button"
                       aria-label="Reenviar correo de confirmación"
                       disabled={resendLoading}
-                      className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#ff6f61]"
+                      className="bg-gradient-to-r from-blue-500 via-blue-400 to-blue-300 text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-blue-400"
                       onClick={async () => {
                         setResendLoading(true);
                         setResendMsg("");
@@ -319,9 +331,15 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           )}
           {successMsg && (
             <div className="mb-8 flex flex-col items-center justify-center text-center animate-fadeInDown">
-              <div ref={successRef} tabIndex={-1} role="status" aria-live="polite" className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+              <div
+                ref={successRef}
+                tabIndex={-1}
+                role="status"
+                aria-live="polite"
+                className="bg-gradient-to-br from-green-700 via-green-500/90 to-green-400/80 border border-green-500 rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none"
+              >
                 <span className="font-semibold text-base flex items-center gap-3 mb-2">
-                  <span className="rounded-full bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] p-2 shadow-lg"><User size={18} className="text-white"/></span>
+                  <span className="rounded-full bg-green-500 p-2 shadow-lg"><User size={18} className="text-white"/></span>
                   <span className="text-white">¡Registro exitoso!</span>
                 </span>
                 <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: successMsg.replace(/\n/g, '<br />') }} />
@@ -330,7 +348,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     type="button"
                     aria-label="Reenviar correo de confirmación"
                     disabled={resendLoading}
-                    className="bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#ff6f61]"
+                    className="bg-gradient-to-r from-green-500 via-green-400 to-green-300 text-white px-5 py-3 rounded-lg font-semibold shadow hover:scale-[1.04] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-400"
                     onClick={async () => {
                       setResendLoading(true);
                       setResendMsg("");
@@ -371,9 +389,9 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           )}
           {isLoading && (
             <div className="mb-8 flex flex-col items-center justify-center text-center animate-bounceIn">
-              <div className="bg-gradient-to-br from-[#2d2327] via-[#d7263d]/80 to-[#ff6f61]/40 border border-[#ff6f61] rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl">
-                <span className="font-semibold text-base text-white mb-2 flex items-center gap-2"><User size={18} className="text-white"/> Procesando...</span>
-                <div className="mt-2 text-sm text-white">Por favor espera unos segundos.</div>
+              <div className="bg-gradient-to-br from-yellow-400 via-yellow-300/90 to-yellow-200/80 border border-yellow-400 rounded-xl px-5 py-5 w-full max-w-sm shadow-4xl outline-none">
+                <span className="font-semibold text-base text-yellow-900 mb-2 flex items-center gap-2"><User size={18} className="text-yellow-900"/> Procesando...</span>
+                <div className="mt-2 text-sm text-yellow-900">Por favor espera unos segundos.</div>
               </div>
             </div>
           )}
