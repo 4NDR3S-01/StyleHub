@@ -39,7 +39,7 @@ export default function Navbar() {
 
             {/* Logo */}
             <Link href="/" className="flex items-center">
-              <span className="text-2xl font-bold text-red-400">StyleHub</span>
+              <span className="text-2xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg">StyleHub</span>
             </Link>
 
             {/* Desktop Navigation */}

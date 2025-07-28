@@ -8,7 +8,7 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div className="space-y-4">
-            <h3 className="text-2xl font-bold">StyleHub</h3>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg">StyleHub</h3>
             <p className="text-gray-300">
               Descubre las últimas tendencias en moda con ropa y accesorios de calidad premium.
             </p>

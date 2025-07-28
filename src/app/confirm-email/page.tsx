@@ -82,21 +82,21 @@ function ConfirmEmailPageContent() {
       <div className="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
         {status === 'unauthorized' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">Acceso denegado</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">Acceso denegado</h1>
             <p className="text-slate-700 mb-6">No tienes permiso para acceder a esta página.<br />Utiliza el enlace de confirmación enviado a tu correo.</p>
             <Link href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</Link>
           </>
         )}
         {status === 'pending' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">Verificando correo...</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">Verificando correo...</h1>
             <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mx-auto mb-6"></div>
             <p className="text-slate-700 mb-6">Estamos confirmando tu cuenta, por favor espera unos segundos.</p>
           </>
         )}
         {status === 'success' && (
           <>
-            <h1 className="text-3xl font-bold text-red-400 mb-4">¡Correo confirmado!</h1>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">¡Correo confirmado!</h1>
             <p className="text-slate-700 mb-6">Tu cuenta ha sido activada exitosamente.<br />Ya puedes iniciar sesión y disfrutar de StyleHub.</p>
             <Link href="/" className="btn bg-red-400 text-white font-semibold px-6 py-3 rounded-lg inline-block mt-4 hover:bg-red-500 transition">Ir al inicio</Link>
             <span className="block text-xs text-slate-400 mt-2">Serás redirigido automáticamente...</span>

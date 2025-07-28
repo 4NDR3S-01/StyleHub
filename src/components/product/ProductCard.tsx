@@ -27,7 +27,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
           />
           {product.sale && (
-            <div className="absolute top-4 left-4 bg-rose-500 text-white px-3 py-1 rounded-full text-sm font-semibold">
+            <div className="absolute top-4 left-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-sm font-bold drop-shadow-lg border border-yellow-300 shadow-lg animate-pulse">
               Oferta
             </div>
           )}
@@ -50,11 +50,11 @@ export default function ProductCard({ product }: ProductCardProps) {
               <Star
                 key={i}
                 size={14}
-                className={`${
+                className={
                   i < Math.floor(product.rating)
-                    ? 'text-red-400 fill-current'
+                    ? 'text-yellow-400 fill-yellow-400'
                     : 'text-gray-300'
-                }`}
+                }
               />
             ))}
           </div>
@@ -76,7 +76,11 @@ export default function ProductCard({ product }: ProductCardProps) {
 
         <button
           onClick={handleAddToCart}
-          className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold hover:bg-slate-800 transition-colors duration-300 transform hover:scale-105"
+          className={`w-full py-3 rounded-xl font-semibold transition-colors duration-300 transform hover:scale-105 shadow-lg
+            ${product.sale
+              ? 'bg-yellow-400 text-yellow-900 hover:bg-yellow-500 border border-yellow-300'
+              : 'bg-[#ff6f61] hover:bg-[#d7263d] text-white border border-[#ff6f61]'}
+          `}
         >
           Agregar al Carrito
         </button>
