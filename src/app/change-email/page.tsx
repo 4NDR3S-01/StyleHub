@@ -27,7 +27,11 @@ function ChangeEmailPageContent() {
     // Confirmar cambio de email con Supabase
     const confirm = async () => {
       try {
-        const { error } = await supabase.auth.verifyOtp({ type: 'email_change', token, email });
+        const { error } = await supabase.auth.verifyOtp({
+          type: 'email_change',
+          token: token!,
+          email: email!
+        });
         if (error) {
           setStatus('error');
         } else {
