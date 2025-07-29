@@ -50,7 +50,7 @@ export default function MenCategoryPage() {
   const [selectedSub, setSelectedSub] = useState<string>("");
   const menProducts = Productos.filter((product) => product.category === "men");
 
-  // Filtrado por subcategoría
+  // Filtrado por subcategoría.
   // Generar productos de ejemplo para mostrar muchas tarjetas
   let filteredProducts = selectedSub
     ? menProducts.filter((product) => {
