@@ -122,8 +122,6 @@ export default function SubcategoriesAdmin() {
     }
   }
 
-  // Debug: mostrar subcategorías en consola
-  console.log('Subcategorías cargadas:', subcategories);
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -209,13 +207,8 @@ export default function SubcategoriesAdmin() {
             ))}
             {subcategories.length === 0 && (
               <tr>
-                <td colSpan={3} className="text-center py-8 text-gray-400">
-                  No hay subcategorías
-                  <div className="mt-2 text-xs text-red-500">
-                    {/* Ayuda visual para depuración */}
-                    ¿Seguro que tienes subcategorías en la base de datos? Revisa la consola del navegador para ver los datos cargados.<br />
-                    Si ves un array vacío, revisa el servicio <code>getSubcategories</code> y los datos en la tabla <code>categories</code>.
-                  </div>
+                <td colSpan={3} className="px-4 py-4 text-center text-gray-500">
+                  No hay subcategorías.
                 </td>
               </tr>
             )}

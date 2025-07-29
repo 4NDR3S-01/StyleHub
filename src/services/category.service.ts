@@ -5,7 +5,7 @@ export async function getSubcategories(search = '') {
   let query = supabase
     .from('categories')
     .select('id, name, parent_id')
-    .neq('parent_id', null);
+    .not('parent_id', 'is', null);
   if (search) {
     query = query.ilike('name', `%${search}%`);
   }
