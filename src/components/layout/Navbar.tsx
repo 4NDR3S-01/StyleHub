@@ -7,6 +7,7 @@ import { useCart } from '../../context/CartContext';
 import { useAuth } from '../../context/AuthContext';
 import CartSidebar from '../cart/CartSidebar';
 import AuthModal from '../auth/AuthModal';
+import UserAvatar from '../ui/UserAvatar';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -90,9 +91,11 @@ export default function Navbar() {
                     {/* Header del usuario */}
                     <div className="px-4 py-3 border-b border-gray-200/50">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-[#ff6f61] via-[#e84855] to-[#d7263d] rounded-full flex items-center justify-center shadow-lg">
-                          <User size={18} className="text-white" />
-                        </div>
+                        <UserAvatar 
+                          src={user.avatar} 
+                          name={user.name || 'Usuario'} 
+                          size="md" 
+                        />
                         <div>
                           <p className="text-sm font-semibold text-gray-800">{user.name || 'Usuario'}</p>
                           <p className="text-xs text-gray-500">{user.email}</p>

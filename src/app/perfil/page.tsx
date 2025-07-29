@@ -4,6 +4,7 @@
 import { useState, useRef } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import supabase from '../../lib/supabaseClient';
+import UserAvatar from '../../components/ui/UserAvatar';
 
 export default function PerfilPage() {
   const { user, isLoading } = useAuth();
@@ -54,12 +55,13 @@ export default function PerfilPage() {
     <div className="max-w-xl mx-auto p-8 bg-white rounded-lg shadow-lg mt-10">
       <h1 className="text-3xl font-bold mb-8 text-center">Mi perfil</h1>
       <div className="flex flex-col items-center mb-8">
-        <div className="relative w-32 h-32 mb-4 group">
-          <img
-            src={avatar || '/default-avatar.png'}
-            alt="Avatar"
-            className="w-32 h-32 rounded-full object-cover border-4 border-blue-200 shadow"
-            onError={e => (e.currentTarget.src = '/default-avatar.png')}
+        <div className="relative mb-4 group">
+          <UserAvatar
+            src={avatar}
+            name={user?.name || 'Usuario'}
+            size="xl"
+            className="border-4 border-blue-200 shadow cursor-pointer"
+            onClick={() => fileInputRef.current?.click()}
           />
           <button
             type="button"
