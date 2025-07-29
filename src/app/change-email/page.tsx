@@ -27,13 +27,16 @@ function ChangeEmailPageContent() {
       setShowResend(true);
       return;
     }
+    // Ahora token y email son string garantizado, forzamos el tipo
+    const realToken = token as string;
+    const realEmail = email as string;
     // Confirmar cambio de email con Supabase
     const confirm = async () => {
       try {
         const { error } = await supabase.auth.verifyOtp({
           type: 'email_change',
-          token,
-          email
+          token: realToken,
+          email: realEmail
         });
         if (error) {
           setStatus('error');

@@ -67,14 +67,13 @@ export const Productos: productos[] = [
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Negro', 'Marrón', 'Azul Marino'],
     color: 'Negro',
-    size: 'L',
     stock: 8,
     rating: 4.7,
     reviews: 124,
     featured: true
   },
   {
-    id: 7,
+    id: '7',
     name: 'Camisa Casual Hombre',
     description: 'Camisa de algodón, perfecta para el día a día.',
     price: 59.99,
@@ -84,15 +83,13 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Blanco', 'Azul'],
-    color: 'Blanco',
     size: 'M',
-    stock: 15,
     rating: 4.5,
     reviews: 80,
     featured: false
   },
   {
-    id: 8,
+    id: '8',
     name: 'Jeans Slim Hombre',
     description: 'Jeans azul oscuro, corte slim, ideal para cualquier ocasión.',
     price: 79.99,
@@ -110,7 +107,7 @@ export const Productos: productos[] = [
     featured: false
   },
   {
-    id: 9,
+    id: '9',
     name: 'Polo Básico Hombre',
     description: 'Polo básico de algodón, disponible en varios colores.',
     price: 39.99,
@@ -120,7 +117,6 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Negro', 'Blanco', 'Gris'],
-    color: 'Gris',
     size: 'M',
     stock: 30,
     rating: 4.3,

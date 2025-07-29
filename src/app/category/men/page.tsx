@@ -52,30 +52,36 @@ export default function MenCategoryPage() {
 
   // Filtrado por subcategoría.
   // Generar productos de ejemplo para mostrar muchas tarjetas
+
+  // Corregir filtrado por subcategoría: si no hay keywords, filtrar por subcategoría exacta
   let filteredProducts = selectedSub
     ? menProducts.filter((product) => {
         const keywords = subCategoryKeywords[selectedSub] || [];
-        return keywords.some((kw) =>
-          product.name.toLowerCase().includes(kw)
-        );
+        if (keywords.length > 0) {
+          return keywords.some((kw) =>
+            product.name?.toLowerCase().includes(kw)
+          );
+        }
+        // Si no hay keywords, filtra por subcategoría exacta en el producto
+        return product.category === selectedSub;
       })
     : menProducts;
 
   // Filtros adicionales
   if (colorFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.colors?.some((c: string) => c.toLowerCase() === colorFilter.toLowerCase())
+      product.color?.toLowerCase() === colorFilter.toLowerCase()
     );
   }
   if (sizeFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.sizes?.map((s: string) => s.toLowerCase()).includes(sizeFilter.toLowerCase())
+      product.size?.toLowerCase() === sizeFilter.toLowerCase()
     );
   }
   if (priceFilter) {
-    if (priceFilter === "low") filteredProducts = filteredProducts.filter((product) => product.price < 50);
-    if (priceFilter === "medium") filteredProducts = filteredProducts.filter((product) => product.price >= 50 && product.price < 100);
-    if (priceFilter === "high") filteredProducts = filteredProducts.filter((product) => product.price >= 100);
+    if (priceFilter === "low") filteredProducts = filteredProducts.filter((product) => Number(product.price) < 50);
+    if (priceFilter === "medium") filteredProducts = filteredProducts.filter((product) => Number(product.price) >= 50 && Number(product.price) < 100);
+    if (priceFilter === "high") filteredProducts = filteredProducts.filter((product) => Number(product.price) >= 100);
   }
 
   return (
@@ -203,18 +209,22 @@ export default function MenCategoryPage() {
                   {/* Ícono de favorito */}
                   <button
                     className={`absolute top-4 right-4 z-10 p-2 rounded-full bg-white shadow hover:bg-red-100 transition`}
-                    onClick={() => setFavorites(favorites.includes(Number(product.id)) ? favorites.filter(f => f !== Number(product.id)) : [...favorites, Number(product.id)])}
+                    onClick={() => setFavorites(favorites.includes(product.id) ? favorites.filter(f => f !== product.id) : [...favorites, product.id])}
                     aria-label="Favorito"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill={favorites.includes(Number(product.id)) ? "#e53e3e" : "none"} viewBox="0 0 24 24" stroke="#e53e3e" className="w-6 h-6">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
                     </svg>
                   </button>
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-full h-80 object-cover"
-                  />
+                  {product.images?.[0] ? (
+                    <img
+                      src={product.images[0]}
+                      alt={product.name}
+                      className="w-full h-80 object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-80 flex items-center justify-center bg-gray-100 text-gray-400">Sin imagen</div>
+                  )}
                   <div className="p-5 flex-1 flex flex-col justify-center items-center">
                     <h3 className="font-bold text-lg mb-1 text-gray-900 text-center">{product.name}</h3>
                   </div>

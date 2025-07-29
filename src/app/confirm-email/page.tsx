@@ -28,6 +28,7 @@ function ConfirmEmailPageContent() {
     }
     setToken(_token);
     setEmail(_email);
+
     if (!_token) {
       setStatus('unauthorized');
       setEmailToResend(null);
@@ -35,12 +36,16 @@ function ConfirmEmailPageContent() {
     }
     if (_email) setEmailToResend(_email);
 
+    // Forzar a string porque ya validamos que no es null
+    const safeToken = _token as string;
+    const safeEmail = _email as string;
+
     // Confirmar email con Supabase
     const confirm = async () => {
       try {
-        // Puede que el email no esté, Supabase lo requiere pero a veces igual funciona solo con token
+        // Supabase requiere email y token como string
         if (_email) {
-          const { error } = await supabase.auth.verifyOtp({ type: 'email', token: _token, email: _email });
+          const { error } = await supabase.auth.verifyOtp({ type: 'email', token: safeToken, email: safeEmail });
           if (error) {
             setStatus('error');
           } else {
