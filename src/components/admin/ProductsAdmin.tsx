@@ -49,9 +49,7 @@ export default function ProductsAdmin() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -68,11 +66,6 @@ export default function ProductsAdmin() {
     featured: false,
     sale: false
   });
-  const [categoryFormData, setCategoryFormData] = useState({
-    name: '',
-    slug: '',
-    description: ''
-  });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -85,16 +78,6 @@ export default function ProductsAdmin() {
 
   const handleCheckboxChange = (field: 'featured' | 'sale', checked: boolean) => {
     setFormData(prev => ({ ...prev, [field]: checked }));
-  };
-
-  const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setCategoryFormData(prev => ({ 
-      ...prev, 
-      [name]: value,
-      // Auto-generar slug desde el nombre
-      slug: name === 'name' ? value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '') : prev.slug
-    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -138,16 +121,6 @@ export default function ProductsAdmin() {
     setIsModalOpen(true);
   };
 
-  const openEditCategoryModal = (category: Category) => {
-    setEditingCategory(category);
-    setCategoryFormData({
-      name: category.name,
-      slug: category.slug,
-      description: category.description || ''
-    });
-    setIsCategoryModalOpen(true);
-  };
-
   const resetProductModal = () => {
     setEditingProduct(null);
     setFormData({
@@ -166,15 +139,6 @@ export default function ProductsAdmin() {
     });
     setSelectedImage(null);
     setImagePreview(null);
-  };
-
-  const resetCategoryModal = () => {
-    setEditingCategory(null);
-    setCategoryFormData({
-      name: '',
-      slug: '',
-      description: ''
-    });
   };
 
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
@@ -328,64 +292,6 @@ export default function ProductsAdmin() {
     if (!error && data) setCategories(data);
   };
 
-  const handleCategorySubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!categoryFormData.name.trim()) {
-      toast({
-        title: 'Error',
-        description: 'El nombre de la categoría es requerido',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    setSubmitting(true);
-    
-    try {
-      let result;
-      if (editingCategory) {
-        // Actualizar categoría existente
-        result = await supabase
-          .from('categories')
-          .update(categoryFormData)
-          .eq('id', editingCategory.id)
-          .select();
-      } else {
-        // Insertar nueva categoría
-        result = await supabase
-          .from('categories')
-          .insert([categoryFormData])
-          .select();
-      }
-
-      if (result.error) {
-        toast({
-          title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
-          description: result.error.message,
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      toast({
-        title: `Categoría ${editingCategory ? 'actualizada' : 'guardada'} exitosamente!`,
-        variant: 'default',
-      });
-      setIsCategoryModalOpen(false);
-      resetCategoryModal();
-      fetchCategories();
-    } catch (error: any) {
-      toast({
-        title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
-        description: error?.message || 'Error desconocido',
-        variant: 'destructive',
-      });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const deleteProduct = async (productId: string) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
       try {
@@ -418,191 +324,127 @@ export default function ProductsAdmin() {
     }
   };
 
-  const deleteCategory = async (categoryId: string) => {
-    if (window.confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
-      try {
-        const { error } = await supabase
-          .from('categories')
-          .delete()
-          .eq('id', categoryId);
-
-        if (error) {
-          toast({
-            title: 'Error al eliminar la categoría',
-            description: error.message,
-            variant: 'destructive',
-          });
-          return;
-        }
-
-        toast({
-          title: 'Categoría eliminada exitosamente!',
-          variant: 'default',
-        });
-        fetchCategories();
-      } catch (error: any) {
-        toast({
-          title: 'Error al eliminar la categoría',
-          description: error?.message || 'Error desconocido',
-          variant: 'destructive',
-        });
-      }
-    }
-  };
-
   useEffect(() => {
     fetchProducts();
     fetchCategories();
   }, []);
 
   return (
-    <div>
-      <div className="mb-6 flex gap-3">
+    <div >
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
         <Button 
           onClick={() => {
             resetProductModal();
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2"
+          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg"
         >
           <Plus size={20} />
-          Añadir Producto
-        </Button>
-        <Button 
-          onClick={() => {
-            resetCategoryModal();
-            setIsCategoryModalOpen(true);
-          }}
-          variant="outline"
-          className="flex items-center gap-2"
-        >
-          <Plus size={20} />
-          Añadir Categoría
+          Add Product
         </Button>
       </div>
 
-      {/* Sección de Categorías */}
-      <div className="mb-8">
-        <h2 className="text-xl font-semibold mb-4">Gestión de Categorías</h2>
-        {categories.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {categories.map(category => (
-              <div key={category.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                <h3 className="font-medium text-lg mb-2">{category.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">Slug: {category.slug}</p>
-                {category.description && (
-                  <p className="text-sm text-gray-500 mb-3">{category.description}</p>
+      {loading ? (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">Cargando productos...</p>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">No hay productos registrados.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {products.map(prod => (
+            <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+              {/* Imagen del producto */}
+              <div className="aspect-square bg-gray-100 relative h-80">
+                {prod.images && prod.images[0] ? (
+                  <img 
+                    src={prod.images[0]} 
+                    alt={prod.name} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-gray-400 text-lg">Sin imagen</span>
+                  </div>
                 )}
-                <div className="flex gap-2">
+                
+                {/* Badges de destacado y oferta */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                  {prod.featured && (
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                      Destacado
+                    </span>
+                  )}
+                  {prod.sale && (
+                    <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                      Oferta
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Contenido del card */}
+              <div className="p-6">
+                <h3 className="font-semibold text-gray-900 mb-3 text-lg truncate">{prod.name}</h3>
+                
+                {/* Precio */}
+                <div className="mb-4">
+                  <span className="text-xl font-bold text-gray-900">${prod.price}</span>
+                  {prod.original_price && prod.original_price > prod.price && (
+                    <span className="text-sm text-gray-500 line-through ml-2">
+                      ${prod.original_price}
+                    </span>
+                  )}
+                </div>
+
+                {/* Etiquetas */}
+                {prod.tags && prod.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {prod.tags.slice(0, 2).map((tag, index) => (
+                      <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                    {prod.tags.length > 2 && (
+                      <span className="text-sm text-gray-500">+{prod.tags.length - 2}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex gap-3">
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => openEditCategoryModal(category)}
-                    className="flex items-center gap-1"
+                    onClick={() => openEditProductModal(prod)}
+                    className="flex-1 flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 py-3"
                   >
-                    <Edit size={14} />
-                    Editar
+                    <Edit size={16} />
+                    Edit Product
                   </Button>
                   <Button
                     size="sm"
-                    variant="destructive"
-                    onClick={() => deleteCategory(category.id)}
-                    className="flex items-center gap-1"
+                    variant="outline"
+                    onClick={() => deleteProduct(prod.id)}
+                    className="px-4 py-3 text-red-600 border-red-200 hover:bg-red-50"
                   >
-                    <Trash2 size={14} />
-                    Eliminar
+                    <Trash2 size={16} />
                   </Button>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-gray-500 mb-6">No hay categorías creadas aún.</p>
-        )}
-      </div>
-
-      {/* Sección de Productos */}
-      <div>
-        <h2 className="text-xl font-semibold mb-4">Gestión de Productos</h2>
-        {loading ? (
-          <p>Cargando productos...</p>
-        ) : (
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">Imagen</th>
-              <th className="p-2">Nombre</th>
-              <th className="p-2">Precio</th>
-              <th className="p-2">Etiquetas</th>
-              <th className="p-2">Destacado</th>
-              <th className="p-2">Oferta</th>
-              <th className="p-2">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(prod => (
-              <tr key={prod.id} className="border-t">
-                <td className="p-2">
-                  {prod.images && prod.images[0] ? (
-                    <img src={prod.images[0]} alt={prod.name} className="w-12 h-12 object-cover rounded" />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-xs text-gray-500">Sin imagen</span>
-                    </div>
-                  )}
-                </td>
-                <td className="p-2">{prod.name}</td>
-                <td className="p-2">${prod.price}</td>
-                <td className="p-2">
-                  {prod.tags && prod.tags.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
-                      {prod.tags.slice(0, 3).map((tag, index) => (
-                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          {tag}
-                        </span>
-                      ))}
-                      {prod.tags.length > 3 && (
-                        <span className="text-xs text-gray-500">+{prod.tags.length - 3} más</span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400 text-sm">Sin etiquetas</span>
-                  )}
-                </td>
-                <td className="p-2">{prod.featured ? 'Sí' : 'No'}</td>
-                <td className="p-2">{prod.sale ? 'Sí' : 'No'}</td>
-                <td className="p-2">
-                  <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => openEditProductModal(prod)}
-                      className="p-2"
-                    >
-                      <Edit size={16} />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => deleteProduct(prod.id)}
-                      className="p-2"
-                    >
-                      <Trash2 size={16} />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        )}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md mx-auto">
+        <DialogContent className="max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              {editingProduct ? 'Editar Producto' : 'Añadir Nuevo Producto'}
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
               <button
                 onClick={() => {
                   setIsModalOpen(false);
@@ -617,31 +459,31 @@ export default function ProductsAdmin() {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">Nombre del Producto</Label>
+              <Label htmlFor="name">Product Name</Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Ingresa el nombre del producto"
+                placeholder="Enter product name"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="description">Descripción</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Describe el producto"
+                placeholder="Describe the product"
                 rows={3}
               />
             </div>
 
             <div>
-              <Label htmlFor="image">Imagen del Producto</Label>
+              <Label htmlFor="image">Product Image</Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="relative">
@@ -670,10 +512,10 @@ export default function ProductsAdmin() {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                       <Upload size={24} className="mx-auto text-gray-400 mb-2" />
                       <p className="text-sm text-gray-500">
-                        Haz clic para subir una imagen
+                        Click to upload an image
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        PNG, JPG, GIF hasta 10MB
+                        PNG, JPG, GIF up to 10MB
                       </p>
                     </div>
                   </div>
@@ -683,7 +525,7 @@ export default function ProductsAdmin() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Precio *</Label>
+                <Label htmlFor="price">Price *</Label>
                 <Input
                   id="price"
                   name="price"
@@ -697,7 +539,7 @@ export default function ProductsAdmin() {
               </div>
               
               <div>
-                <Label htmlFor="original_price">Precio Original</Label>
+                <Label htmlFor="original_price">Original Price</Label>
                 <Input
                   id="original_price"
                   name="original_price"
@@ -711,10 +553,10 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="category_id">Categoría *</Label>
+              <Label htmlFor="category_id">Category *</Label>
               <Select onValueChange={handleSelectChange} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
+                  <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map(category => (
@@ -727,26 +569,26 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="brand">Marca</Label>
+              <Label htmlFor="brand">Brand</Label>
               <Input
                 id="brand"
                 name="brand"
                 value={formData.brand}
                 onChange={handleInputChange}
-                placeholder="Marca del producto"
+                placeholder="Product brand"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="gender">Género</Label>
+                <Label htmlFor="gender">Gender</Label>
                 <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona género" />
+                    <SelectValue placeholder="Select gender" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hombre">Hombre</SelectItem>
-                    <SelectItem value="mujer">Mujer</SelectItem>
+                    <SelectItem value="hombre">Men</SelectItem>
+                    <SelectItem value="mujer">Women</SelectItem>
                     <SelectItem value="unisex">Unisex</SelectItem>
                   </SelectContent>
                 </Select>
@@ -759,39 +601,39 @@ export default function ProductsAdmin() {
                   name="material"
                   value={formData.material}
                   onChange={handleInputChange}
-                  placeholder="Material del producto"
+                  placeholder="Product material"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="season">Temporada</Label>
+                <Label htmlFor="season">Season</Label>
                 <Select onValueChange={(value) => setFormData(prev => ({ ...prev, season: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Selecciona temporada" />
+                    <SelectValue placeholder="Select season" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="primavera">Primavera</SelectItem>
-                    <SelectItem value="verano">Verano</SelectItem>
-                    <SelectItem value="otoño">Otoño</SelectItem>
-                    <SelectItem value="invierno">Invierno</SelectItem>
-                    <SelectItem value="todo el año">Todo el año</SelectItem>
+                    <SelectItem value="primavera">Spring</SelectItem>
+                    <SelectItem value="verano">Summer</SelectItem>
+                    <SelectItem value="otoño">Fall</SelectItem>
+                    <SelectItem value="invierno">Winter</SelectItem>
+                    <SelectItem value="todo el año">All Year</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div>
-                <Label htmlFor="tags">Etiquetas</Label>
+                <Label htmlFor="tags">Tags</Label>
                 <Input
                   id="tags"
                   name="tags"
                   value={formData.tags}
                   onChange={handleInputChange}
-                  placeholder="casual, elegante, deportivo, cómodo..."
+                  placeholder="casual, elegant, sporty, comfortable..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Separa las etiquetas con comas
+                  Separate tags with commas
                 </p>
               </div>
             </div>
@@ -803,7 +645,7 @@ export default function ProductsAdmin() {
                   checked={formData.featured}
                   onCheckedChange={(checked) => handleCheckboxChange('featured', checked as boolean)}
                 />
-                <Label htmlFor="featured">Producto Destacado</Label>
+                <Label htmlFor="featured">Featured Product</Label>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -812,13 +654,13 @@ export default function ProductsAdmin() {
                   checked={formData.sale}
                   onCheckedChange={(checked) => handleCheckboxChange('sale', checked as boolean)}
                 />
-                <Label htmlFor="sale">En Oferta</Label>
+                <Label htmlFor="sale">On Sale</Label>
               </div>
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? (editingProduct ? 'Actualizando...' : 'Guardando...') : (editingProduct ? 'Actualizar Producto' : 'Guardar Producto')}
+              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={submitting}>
+                {submitting ? (editingProduct ? 'Updating...' : 'Saving...') : (editingProduct ? 'Update Product' : 'Save Product')}
               </Button>
               <Button 
                 type="button" 
@@ -830,84 +672,7 @@ export default function ProductsAdmin() {
                 className="flex-1"
                 disabled={submitting}
               >
-                Cancelar
-              </Button>
-            </div>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Modal para crear categorías */}
-      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
-        <DialogContent className="max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              {editingCategory ? 'Editar Categoría' : 'Crear Nueva Categoría'}
-              <button
-                onClick={() => {
-                  setIsCategoryModalOpen(false);
-                  resetCategoryModal();
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
-            </DialogTitle>
-          </DialogHeader>
-          
-          <form onSubmit={handleCategorySubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="category_name">Nombre de la Categoría</Label>
-              <Input
-                id="category_name"
-                name="name"
-                value={categoryFormData.name}
-                onChange={handleCategoryInputChange}
-                placeholder="Ej: Ropa para hombres"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="category_description">Descripción</Label>
-              <Textarea
-                id="category_description"
-                name="description"
-                value={categoryFormData.description}
-                onChange={handleCategoryInputChange}
-                placeholder="Describe la categoría"
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="category_slug">Slug (se genera automáticamente)</Label>
-              <Input
-                id="category_slug"
-                name="slug"
-                value={categoryFormData.slug}
-                onChange={handleCategoryInputChange}
-                placeholder="ropa-para-hombres"
-                disabled
-                className="bg-gray-100"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? (editingCategory ? 'Actualizando...' : 'Guardando...') : (editingCategory ? 'Actualizar Categoría' : 'Crear Categoría')}
-              </Button>
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsCategoryModalOpen(false);
-                  resetCategoryModal();
-                }}
-                className="flex-1"
-                disabled={submitting}
-              >
-                Cancelar
+                Cancel
               </Button>
             </div>
           </form>
