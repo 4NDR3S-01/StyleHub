@@ -1,7 +1,8 @@
+import OrdersAdmin  from '@/components/admin/OrdersAdmin';
 export default function AdminOrdersPage() {
   return (
     <div>
-      <p>Gestión de pedidos próximamente...</p>
+      <OrdersAdmin />
     </div>
   );
 }

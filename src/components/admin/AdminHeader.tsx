@@ -74,19 +74,20 @@ export default function AdminHeader({ onOpenSidebar }: Props) {
   const openMenu = useCallback(() => {
     if (triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
-      const menuWidth = 224; // w-56 = 14rem
+      const menuWidth = 224;
       const padding = 16;
-      let left = rect.left + window.scrollX;
+      let left = rect.left;
       if (left + menuWidth + padding > window.innerWidth) {
         left = window.innerWidth - menuWidth - padding;
       }
       setMenuPos({
-        top: rect.bottom + window.scrollY + 8,
+        top: rect.bottom + 8,
         left,
       });
       setMenuOpen(true);
     }
   }, []);
+
 
   // Cerrar menú cuando: click fuera o tecla ESC
   useEffect(() => {

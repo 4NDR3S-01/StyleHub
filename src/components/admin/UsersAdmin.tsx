@@ -226,7 +226,7 @@ export default function UsersAdmin() {
                         <td className="p-3 font-semibold text-slate-800">{user.lastname}</td>
                         <td className="p-3 text-slate-600 whitespace-nowrap">{user.email}</td>
                         <td className="p-3 capitalize text-white">
-                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.role === 'admin' ? 'bg-gradient-to-r from-red-500 to-pink-400' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}>{user.role}</span>
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.role === 'admin' ? 'bg-gradient-to-r from-red-400 via-red-700 to-[#2d2327]' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}>{user.role}</span>
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
@@ -250,27 +250,34 @@ export default function UsersAdmin() {
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md mx-auto">
-          <DialogHeader>
-            <DialogTitle>{editingUser ? 'Editar usuario' : 'Agregar usuario'}</DialogTitle>
+        <DialogContent className="max-w-md mx-auto rounded-2xl bg-white shadow-2xl border border-red-100 p-0">
+          <DialogHeader className="px-8 pt-8 pb-2">
+            <DialogTitle className="text-2xl font-extrabold text-red-700 mb-1">
+              {editingUser ? 'Editar usuario' : 'Agregar usuario'}
+            </DialogTitle>
+            <p className="text-slate-500 text-sm mb-2">
+              {editingUser ? 'Modifica los datos del usuario seleccionado.' : 'Completa los datos para crear un nuevo usuario.'}
+            </p>
           </DialogHeader>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <Label htmlFor="name">Nombre</Label>
-              <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
+          <form onSubmit={handleSubmit} className="space-y-5 px-8 pb-8 pt-2">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="name" className="text-slate-700 font-semibold">Nombre</Label>
+                <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required className="mt-1 border-slate-300 focus:border-pink-400 focus:ring-pink-200" />
+              </div>
+              <div>
+                <Label htmlFor="lastname" className="text-slate-700 font-semibold">Apellido</Label>
+                <Input id="lastname" name="lastname" value={formData.lastname} onChange={handleInputChange} required className="mt-1 border-slate-300 focus:border-pink-400 focus:ring-pink-200" />
+              </div>
             </div>
             <div>
-              <Label htmlFor="lastname">Apellido</Label>
-              <Input id="lastname" name="lastname" value={formData.lastname} onChange={handleInputChange} required />
+              <Label htmlFor="email" className="text-slate-700 font-semibold">Email</Label>
+              <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} className="mt-1 border-slate-300 focus:border-pink-400 focus:ring-pink-200 bg-slate-100 disabled:opacity-70" />
             </div>
             <div>
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} required disabled={!!editingUser} />
-            </div>
-            <div>
-              <Label htmlFor="role">Rol</Label>
+              <Label htmlFor="role" className="text-slate-700 font-semibold">Rol</Label>
               <Select onValueChange={handleRoleChange} value={formData.role}>
-                <SelectTrigger>
+                <SelectTrigger className="mt-1 border-slate-300 focus:border-pink-400 focus:ring-pink-200">
                   <SelectValue placeholder="Selecciona un rol" />
                 </SelectTrigger>
                 <SelectContent>
@@ -279,7 +286,7 @@ export default function UsersAdmin() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex gap-3 pt-4">
+            <div className="flex gap-3 pt-6">
               {(() => {
                 let buttonText;
                 if (submitting) {
@@ -288,12 +295,12 @@ export default function UsersAdmin() {
                   buttonText = editingUser ? 'Actualizar usuario' : 'Guardar usuario';
                 }
                 return (
-                  <Button type="submit" className="flex-1" disabled={submitting}>
+                  <Button type="submit" className="flex-1 bg-red-600 text-white font-bold shadow hover:bg-red-700 transition-colors text-base disabled:opacity-60" disabled={submitting}>
                     {buttonText}
                   </Button>
                 );
               })()}
-              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="flex-1" disabled={submitting}>
+              <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="flex-1 border-slate-300 hover:bg-slate-100" disabled={submitting}>
                 Cancelar
               </Button>
             </div>
