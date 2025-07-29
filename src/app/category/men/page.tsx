@@ -64,12 +64,12 @@ export default function MenCategoryPage() {
   // Filtros adicionales
   if (colorFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.color?.toLowerCase() === colorFilter.toLowerCase()
+      product.colors?.some((c: string) => c.toLowerCase() === colorFilter.toLowerCase())
     );
   }
   if (sizeFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.size?.toLowerCase() === sizeFilter.toLowerCase()
+      product.sizes?.map((s: string) => s.toLowerCase()).includes(sizeFilter.toLowerCase())
     );
   }
   if (priceFilter) {
@@ -203,10 +203,10 @@ export default function MenCategoryPage() {
                   {/* Ícono de favorito */}
                   <button
                     className={`absolute top-4 right-4 z-10 p-2 rounded-full bg-white shadow hover:bg-red-100 transition`}
-                    onClick={() => setFavorites(favorites.includes(product.id) ? favorites.filter(f => f !== product.id) : [...favorites, product.id])}
+                    onClick={() => setFavorites(favorites.includes(Number(product.id)) ? favorites.filter(f => f !== Number(product.id)) : [...favorites, Number(product.id)])}
                     aria-label="Favorito"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill={favorites.includes(product.id) ? "#e53e3e" : "none"} viewBox="0 0 24 24" stroke="#e53e3e" className="w-6 h-6">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill={favorites.includes(Number(product.id)) ? "#e53e3e" : "none"} viewBox="0 0 24 24" stroke="#e53e3e" className="w-6 h-6">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21.364l-7.682-7.682a4.5 4.5 0 010-6.364z" />
                     </svg>
                   </button>
