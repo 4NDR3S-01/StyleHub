@@ -1,13 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { HomeIcon, ShoppingBagIcon, GroupIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown } from 'lucide-react';
+import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
 const menuItems = [
   { name: 'Dashboard', icon: HomeIcon, href: '/admin' },
   { name: 'Ordenes', icon: ShoppingBagIcon, href: '/admin/ordenes' },
-  { name: 'Clientes', icon: GroupIcon, href: '/admin/clientes' },
   { name: 'Productos', icon: ClipboardListIcon, href: '/admin/productos' },
   { name: 'Categorias', icon: TagIcon, href: '/admin/categorias' },
   { name: 'Cupones', icon: PencilIcon, href: '/admin/cupones' },
@@ -86,7 +85,21 @@ export default function AdminSidebar() {
         </nav>
       </aside>
       {/* Fondo oscuro al abrir menú en móvil */}
-      {open && <div className="fixed inset-0 bg-black/30 z-30 md:hidden" onClick={() => setOpen(false)} />}
+      {open && (
+        <button
+          type="button"
+          className="fixed inset-0 bg-black/30 z-30 md:hidden"
+          aria-label="Cerrar menú"
+          tabIndex={0}
+          onClick={() => setOpen(false)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              setOpen(false);
+            }
+          }}
+          style={{ cursor: 'pointer' }}
+        />
+      )}
     </>
   );
 }

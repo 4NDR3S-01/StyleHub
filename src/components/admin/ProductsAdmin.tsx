@@ -115,7 +115,7 @@ export default function ProductsAdmin() {
       featured: product.featured,
       sale: product.sale
     });
-    if (product.images && product.images[0]) {
+    if (product.images?.[0]) {
       setImagePreview(product.images[0]);
     }
     setIsModalOpen(true);
@@ -147,7 +147,7 @@ export default function ProductsAdmin() {
       const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('productos')
         .upload(filePath, file);
 
@@ -175,17 +175,15 @@ export default function ProductsAdmin() {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Validaciones básicas
+  // Helper to validate form data
+  const validateFormData = () => {
     if (!formData.name.trim()) {
       toast({
         title: 'Error',
         description: 'El nombre del producto es requerido',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
     if (!formData.price || parseFloat(formData.price) <= 0) {
       toast({
@@ -193,15 +191,38 @@ export default function ProductsAdmin() {
         description: 'El precio debe ser mayor a 0',
         variant: 'destructive',
       });
-      return;
+      return false;
     }
+    return true;
+  };
+
+  // Helper to prepare product data
+  const prepareProductData = (imageUrl: string | null) => ({
+    name: formData.name,
+    description: formData.description || null,
+    price: parseFloat(formData.price),
+    original_price: formData.original_price ? parseFloat(formData.original_price) : null,
+    images: imageUrl ? [imageUrl] : (editingProduct?.images || null),
+    category_id: formData.category_id || null,
+    brand: formData.brand || null,
+    gender: formData.gender || null,
+    material: formData.material || null,
+    season: formData.season || null,
+    tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
+    featured: formData.featured,
+    sale: formData.sale
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!validateFormData()) return;
 
     setSubmitting(true);
-    
+
     try {
       let imageUrl = null;
-      
-      // Subir imagen a Supabase Storage si hay una seleccionada
+
       if (selectedImage) {
         imageUrl = await uploadImageToSupabase(selectedImage);
         if (!imageUrl) {
@@ -214,34 +235,16 @@ export default function ProductsAdmin() {
         }
       }
 
-      // Preparar datos para insertar/actualizar
-      const productData = {
-        name: formData.name,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-        images: imageUrl ? [imageUrl] : (editingProduct?.images || null),
-        category_id: formData.category_id || null,
-        brand: formData.brand || null,
-        gender: formData.gender || null,
-        material: formData.material || null,
-        season: formData.season || null,
-        // Convertir tags de string a array
-        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
-        featured: formData.featured,
-        sale: formData.sale
-      };
+      const productData = prepareProductData(imageUrl);
 
       let result;
       if (editingProduct) {
-        // Actualizar producto existente
         result = await supabase
           .from('products')
           .update(productData)
           .eq('id', editingProduct.id)
           .select();
       } else {
-        // Insertar nuevo producto
         result = await supabase
           .from('products')
           .insert([productData])
@@ -329,10 +332,113 @@ export default function ProductsAdmin() {
     fetchCategories();
   }, []);
 
+  // Extract product list rendering logic into a variable to avoid nested ternary
+  let productListContent;
+  if (loading) {
+    productListContent = (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500">Cargando productos...</p>
+      </div>
+    );
+  } else if (products.length === 0) {
+    productListContent = (
+      <div className="flex justify-center items-center h-64">
+        <p className="text-gray-500">No hay productos registrados.</p>
+      </div>
+    );
+  } else {
+    productListContent = (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        {products.map(prod => (
+          <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+            {/* Imagen del producto */}
+            <div className="aspect-square bg-gray-100 relative h-80">
+              {prod.images?.[0] ? (
+                <img 
+                  src={prod.images[0]} 
+                  alt={prod.name} 
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <span className="text-gray-400 text-lg">Sin imagen</span>
+                </div>
+              )}
+              
+              {/* Badges de destacado y oferta */}
+              <div className="absolute top-3 left-3 flex flex-col gap-2">
+                {prod.featured && (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                    Destacado
+                  </span>
+                )}
+                {prod.sale && (
+                  <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                    Oferta
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Contenido del card */}
+            <div className="p-6">
+              <h3 className="font-semibold text-gray-900 mb-3 text-lg truncate">{prod.name}</h3>
+              
+              {/* Precio */}
+              <div className="mb-4">
+                <span className="text-xl font-bold text-gray-900">${prod.price}</span>
+                {prod.original_price && prod.original_price > prod.price && (
+                  <span className="text-sm text-gray-500 line-through ml-2">
+                    ${prod.original_price}
+                  </span>
+                )}
+              </div>
+
+              {/* Etiquetas */}
+              {prod.tags && prod.tags.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-6">
+                  {prod.tags.slice(0, 2).map((tag) => (
+                    <span key={tag} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
+                      {tag}
+                    </span>
+                  ))}
+                  {prod.tags.length > 2 && (
+                    <span className="text-sm text-gray-500">+{prod.tags.length - 2}</span>
+                  )}
+                </div>
+              )}
+
+              {/* Botones de acción */}
+              <div className="flex gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => openEditProductModal(prod)}
+                  className="flex-1 flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 py-3"
+                >
+                  <Edit size={16} />
+                  Editar
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => deleteProduct(prod.id)}
+                  className="px-4 py-3 text-red-600 border-red-200 hover:bg-red-50"
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div >
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Todos los productos</h1>
         <Button 
           onClick={() => {
             resetProductModal();
@@ -341,149 +447,47 @@ export default function ProductsAdmin() {
           className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg"
         >
           <Plus size={20} />
-          Add Product
+          Agregar producto
         </Button>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500">Cargando productos...</p>
-        </div>
-      ) : products.length === 0 ? (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500">No hay productos registrados.</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map(prod => (
-            <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
-              {/* Imagen del producto */}
-              <div className="aspect-square bg-gray-100 relative h-80">
-                {prod.images && prod.images[0] ? (
-                  <img 
-                    src={prod.images[0]} 
-                    alt={prod.name} 
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <span className="text-gray-400 text-lg">Sin imagen</span>
-                  </div>
-                )}
-                
-                {/* Badges de destacado y oferta */}
-                <div className="absolute top-3 left-3 flex flex-col gap-2">
-                  {prod.featured && (
-                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
-                      Destacado
-                    </span>
-                  )}
-                  {prod.sale && (
-                    <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
-                      Oferta
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Contenido del card */}
-              <div className="p-6">
-                <h3 className="font-semibold text-gray-900 mb-3 text-lg truncate">{prod.name}</h3>
-                
-                {/* Precio */}
-                <div className="mb-4">
-                  <span className="text-xl font-bold text-gray-900">${prod.price}</span>
-                  {prod.original_price && prod.original_price > prod.price && (
-                    <span className="text-sm text-gray-500 line-through ml-2">
-                      ${prod.original_price}
-                    </span>
-                  )}
-                </div>
-
-                {/* Etiquetas */}
-                {prod.tags && prod.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {prod.tags.slice(0, 2).map((tag, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                    {prod.tags.length > 2 && (
-                      <span className="text-sm text-gray-500">+{prod.tags.length - 2}</span>
-                    )}
-                  </div>
-                )}
-
-                {/* Botones de acción */}
-                <div className="flex gap-3">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => openEditProductModal(prod)}
-                    className="flex-1 flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 py-3"
-                  >
-                    <Edit size={16} />
-                    Edit Product
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => deleteProduct(prod.id)}
-                    className="px-4 py-3 text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <Trash2 size={16} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+      {productListContent}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              {editingProduct ? 'Edit Product' : 'Add New Product'}
-              <button
-                onClick={() => {
-                  setIsModalOpen(false);
-                  resetProductModal();
-                }}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X size={20} />
-              </button>
+            <DialogTitle>
+              {editingProduct ? 'Editar producto' : 'Agregar nuevo producto'}
             </DialogTitle>
           </DialogHeader>
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">Product Name</Label>
+              <Label htmlFor="name">Nombre del producto</Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Enter product name"
+                placeholder="Ingresa el nombre del producto"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="description">Descripción</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Describe the product"
+                placeholder="Describe el producto"
                 rows={3}
               />
             </div>
 
             <div>
-              <Label htmlFor="image">Product Image</Label>
+              <Label htmlFor="image">Imagen del producto</Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="relative">
@@ -496,6 +500,7 @@ export default function ProductsAdmin() {
                       type="button"
                       onClick={removeImage}
                       className="absolute top-2 right-2 bg-red-500 text-white p-1 rounded-full hover:bg-red-600 transition-colors"
+                      aria-label="Eliminar imagen"
                     >
                       <X size={16} />
                     </button>
@@ -512,10 +517,10 @@ export default function ProductsAdmin() {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                       <Upload size={24} className="mx-auto text-gray-400 mb-2" />
                       <p className="text-sm text-gray-500">
-                        Click to upload an image
+                        Haz clic para subir una imagen
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        PNG, JPG, GIF up to 10MB
+                        PNG, JPG, GIF hasta 10MB
                       </p>
                     </div>
                   </div>
@@ -525,7 +530,7 @@ export default function ProductsAdmin() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Price *</Label>
+                <Label htmlFor="price">Precio *</Label>
                 <Input
                   id="price"
                   name="price"
@@ -539,7 +544,7 @@ export default function ProductsAdmin() {
               </div>
               
               <div>
-                <Label htmlFor="original_price">Original Price</Label>
+                <Label htmlFor="original_price">Precio original</Label>
                 <Input
                   id="original_price"
                   name="original_price"
@@ -553,10 +558,10 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="category_id">Category *</Label>
+              <Label htmlFor="category_id">Categoría *</Label>
               <Select onValueChange={handleSelectChange} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a category" />
+                  <SelectValue placeholder="Selecciona una categoría" />
                 </SelectTrigger>
                 <SelectContent>
                   {categories.map(category => (
@@ -569,26 +574,26 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="brand">Brand</Label>
+              <Label htmlFor="brand">Marca</Label>
               <Input
                 id="brand"
                 name="brand"
                 value={formData.brand}
                 onChange={handleInputChange}
-                placeholder="Product brand"
+                placeholder="Marca del producto"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="gender">Gender</Label>
+                <Label htmlFor="gender">Género</Label>
                 <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select gender" />
+                    <SelectValue placeholder="Selecciona género" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hombre">Men</SelectItem>
-                    <SelectItem value="mujer">Women</SelectItem>
+                    <SelectItem value="hombre">Hombre</SelectItem>
+                    <SelectItem value="mujer">Mujer</SelectItem>
                     <SelectItem value="unisex">Unisex</SelectItem>
                   </SelectContent>
                 </Select>
@@ -601,39 +606,39 @@ export default function ProductsAdmin() {
                   name="material"
                   value={formData.material}
                   onChange={handleInputChange}
-                  placeholder="Product material"
+                  placeholder="Material del producto"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="season">Season</Label>
+                <Label htmlFor="season">Temporada</Label>
                 <Select onValueChange={(value) => setFormData(prev => ({ ...prev, season: value }))}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select season" />
+                    <SelectValue placeholder="Selecciona temporada" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="primavera">Spring</SelectItem>
-                    <SelectItem value="verano">Summer</SelectItem>
-                    <SelectItem value="otoño">Fall</SelectItem>
-                    <SelectItem value="invierno">Winter</SelectItem>
-                    <SelectItem value="todo el año">All Year</SelectItem>
+                    <SelectItem value="primavera">Primavera</SelectItem>
+                    <SelectItem value="verano">Verano</SelectItem>
+                    <SelectItem value="otoño">Otoño</SelectItem>
+                    <SelectItem value="invierno">Invierno</SelectItem>
+                    <SelectItem value="todo el año">Todo el año</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               <div>
-                <Label htmlFor="tags">Tags</Label>
+                <Label htmlFor="tags">Etiquetas</Label>
                 <Input
                   id="tags"
                   name="tags"
                   value={formData.tags}
                   onChange={handleInputChange}
-                  placeholder="casual, elegant, sporty, comfortable..."
+                  placeholder="casual, elegante, deportivo, cómodo..."
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Separate tags with commas
+                  Separa las etiquetas con comas
                 </p>
               </div>
             </div>
@@ -645,7 +650,7 @@ export default function ProductsAdmin() {
                   checked={formData.featured}
                   onCheckedChange={(checked) => handleCheckboxChange('featured', checked as boolean)}
                 />
-                <Label htmlFor="featured">Featured Product</Label>
+                <Label htmlFor="featured">Producto destacado</Label>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -654,14 +659,24 @@ export default function ProductsAdmin() {
                   checked={formData.sale}
                   onCheckedChange={(checked) => handleCheckboxChange('sale', checked as boolean)}
                 />
-                <Label htmlFor="sale">On Sale</Label>
+                <Label htmlFor="sale">En oferta</Label>
               </div>
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={submitting}>
-                {submitting ? (editingProduct ? 'Updating...' : 'Saving...') : (editingProduct ? 'Update Product' : 'Save Product')}
-              </Button>
+              {(() => {
+                let submitButtonText;
+                if (submitting) {
+                  submitButtonText = editingProduct ? 'Actualizando...' : 'Guardando...';
+                } else {
+                  submitButtonText = editingProduct ? 'Actualizar producto' : 'Guardar producto';
+                }
+                return (
+                  <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={submitting}>
+                    {submitButtonText}
+                  </Button>
+                );
+              })()}
               <Button 
                 type="button" 
                 variant="outline" 
@@ -672,7 +687,7 @@ export default function ProductsAdmin() {
                 className="flex-1"
                 disabled={submitting}
               >
-                Cancel
+                Cancelar
               </Button>
             </div>
           </form>

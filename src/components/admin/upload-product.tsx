@@ -15,7 +15,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Subir imagen
     let imageUrl = null;
     if (base64Image && fileName) {
-      const { data: uploadData, error: uploadError } = await supabaseAdmin
+      const { error: uploadError } = await supabaseAdmin
         .storage
         .from('productos')
         .upload(`products/${fileName}`, Buffer.from(base64Image, 'base64'), {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { Edit2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -125,6 +126,19 @@ export default function UsersAdmin() {
     }
   };
 
+  const [search, setSearch] = useState('');
+  const [roleFilter, setRoleFilter] = useState('all');
+  // Filtrado de usuarios por búsqueda y rol
+  const filteredUsers = users.filter((user) => {
+    const q = search.toLowerCase();
+    const matchesSearch =
+      user.name?.toLowerCase().includes(q) ||
+      user.lastname?.toLowerCase().includes(q) ||
+      user.email?.toLowerCase().includes(q);
+    const matchesRole = roleFilter === 'all' ? true : user.role === roleFilter;
+    return matchesSearch && matchesRole;
+  });
+
   return (
     <div className="max-w-5xl mx-auto mt-8">
       <div className="flex items-center justify-between mb-6">
@@ -147,60 +161,92 @@ export default function UsersAdmin() {
         </Button>
       </div>
       <div className="bg-white rounded-2xl shadow-xl p-6">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mb-4"></div>
-            <span className="text-slate-400">Cargando usuarios...</span>
-          </div>
-        ) : users.length === 0 ? (
-          <div className="text-center py-12 text-slate-400">No hay usuarios registrados.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm border-separate border-spacing-y-2">
-              <thead>
-                <tr className="bg-slate-100 text-slate-600">
-                  <th className="p-3 rounded-l-xl">Avatar</th>
-                  <th className="p-3">Nombre</th>
-                  <th className="p-3">Apellido</th>
-                  <th className="p-3">Email</th>
-                  <th className="p-3">Rol</th>
-                  <th className="p-3">Acciones</th>
-                  <th className="p-3 rounded-r-xl">Fecha de registro</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map((user, idx) => (
-                  <tr key={user.id} className={`bg-white shadow-sm ${idx % 2 === 0 ? 'bg-slate-50' : ''} hover:bg-red-50 transition rounded-xl`}>
-                    <td className="p-3">
-                      {user.avatar ? (
-                        <img src={user.avatar} alt={user.name || user.email} className="w-10 h-10 rounded-full object-cover border-2 border-red-200" />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 font-bold border-2 border-red-100">
-                          {user.name ? user.name[0] : user.email[0]}
-                        </div>
-                      )}
-                    </td>
-                    <td className="p-3 font-semibold text-slate-700">{user.name}</td>
-                    <td className="p-3 font-semibold text-slate-700">{user.lastname}</td>
-                    <td className="p-3 text-slate-600">{user.email}</td>
-                    <td className="p-3 capitalize text-slate-500">{user.role}</td>
-                    <td className="p-3">
-                      <div className="flex gap-2">
-                        <Button size="sm" variant="outline" onClick={() => openEditModal(user)}>
-                          Editar
-                        </Button>
-                        <Button size="sm" variant="destructive" onClick={() => handleDelete(user)}>
-                          Eliminar
-                        </Button>
-                      </div>
-                    </td>
-                    <td className="p-3 text-xs text-slate-400">{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center gap-3">
+          <Input
+            type="text"
+            placeholder="Buscar usuario por nombre, apellido o email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="max-w-xs border-slate-300 focus:border-pink-400 focus:ring-pink-200"
+            autoComplete="off"
+          />
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="max-w-xs">
+              <SelectValue placeholder="Filtrar por rol" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="admin">Administrador</SelectItem>
+              <SelectItem value="cliente">Cliente</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {(() => {
+          if (loading) {
+            return (
+              <div className="flex flex-col items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-red-400 mb-4"></div>
+                <span className="text-slate-400">Cargando usuarios...</span>
+              </div>
+            );
+          } else if (filteredUsers.length === 0) {
+            return (
+              <div className="text-center py-12 text-slate-400">No hay usuarios que coincidan con la búsqueda o filtro.</div>
+            );
+          } else {
+            return (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-separate border-spacing-y-2">
+                  <thead>
+                    <tr className="bg-slate-100 text-slate-600">
+                      <th className="p-3 rounded-l-xl">Avatar</th>
+                      <th className="p-3">Nombre</th>
+                      <th className="p-3">Apellido</th>
+                      <th className="p-3">Email</th>
+                      <th className="p-3">Rol</th>
+                      <th className="p-3">Acciones</th>
+                      <th className="p-3 rounded-r-xl">Fecha de registro</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user, idx) => (
+                      <tr key={user.id} className={`shadow-sm ${idx % 2 === 0 ? 'bg-slate-50' : 'bg-white'} hover:bg-pink-50 transition rounded-xl`}>
+                        <td className="p-3">
+                          <div
+                            className={
+                              `w-12 h-12 rounded-full flex items-center justify-center font-extrabold text-lg border-2 shadow-md transition-all duration-200 ` +
+                              `bg-gradient-to-br from-pink-200 via-red-200 to-yellow-100 text-red-600 border-red-200`
+                            }
+                            title={user.name || user.email}
+                          >
+                            {(user.name ? user.name[0] : user.email[0]).toUpperCase()}
+                          </div>
+                        </td>
+                        <td className="p-3 font-semibold text-slate-800">{user.name}</td>
+                        <td className="p-3 font-semibold text-slate-800">{user.lastname}</td>
+                        <td className="p-3 text-slate-600 whitespace-nowrap">{user.email}</td>
+                        <td className="p-3 capitalize text-white">
+                          <span className={`px-2 py-1 rounded-full text-xs font-bold ${user.role === 'admin' ? 'bg-gradient-to-r from-red-500 to-pink-400' : 'bg-gradient-to-r from-slate-400 to-slate-600'}`}>{user.role}</span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button size="icon" variant="outline" onClick={() => openEditModal(user)} title="Editar usuario" className="hover:bg-pink-100">
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                            <Button size="icon" variant="destructive" onClick={() => handleDelete(user)} title="Eliminar usuario" className="hover:bg-red-200">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                            </Button>
+                          </div>
+                        </td>
+                        <td className="p-3 text-xs text-slate-400 whitespace-nowrap">{user.created_at ? new Date(user.created_at).toLocaleDateString() : '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            );
+          }
+        })()}
       </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -234,9 +280,19 @@ export default function UsersAdmin() {
               </Select>
             </div>
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? (editingUser ? 'Actualizando...' : 'Guardando...') : (editingUser ? 'Actualizar usuario' : 'Guardar usuario')}
-              </Button>
+              {(() => {
+                let buttonText;
+                if (submitting) {
+                  buttonText = editingUser ? 'Actualizando...' : 'Guardando...';
+                } else {
+                  buttonText = editingUser ? 'Actualizar usuario' : 'Guardar usuario';
+                }
+                return (
+                  <Button type="submit" className="flex-1" disabled={submitting}>
+                    {buttonText}
+                  </Button>
+                );
+              })()}
               <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)} className="flex-1" disabled={submitting}>
                 Cancelar
               </Button>
