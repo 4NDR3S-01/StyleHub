@@ -1,5 +1,3 @@
-
-
 "use client";
 
 import React, { useState } from "react";
@@ -70,12 +68,12 @@ export default function MenCategoryPage() {
   // Filtros adicionales
   if (colorFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.color?.toLowerCase() === colorFilter.toLowerCase()
+      product.colors?.map(c => c.toLowerCase()).includes(colorFilter.toLowerCase())
     );
   }
   if (sizeFilter) {
     filteredProducts = filteredProducts.filter((product) =>
-      product.size?.toLowerCase() === sizeFilter.toLowerCase()
+      product.sizes?.map(s => s.toLowerCase()).includes(sizeFilter.toLowerCase())
     );
   }
   if (priceFilter) {
@@ -209,7 +207,7 @@ export default function MenCategoryPage() {
                   {/* Ícono de favorito */}
                   <button
                     className={`absolute top-4 right-4 z-10 p-2 rounded-full bg-white shadow hover:bg-red-100 transition`}
-                    onClick={() => setFavorites(favorites.includes(product.id) ? favorites.filter(f => f !== product.id) : [...favorites, product.id])}
+                    onClick={() => setFavorites(favorites.includes(Number(product.id)) ? favorites.filter(f => f !== Number(product.id)) : [...favorites, Number(product.id)])}
                     aria-label="Favorito"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill={favorites.includes(Number(product.id)) ? "#e53e3e" : "none"} viewBox="0 0 24 24" stroke="#e53e3e" className="w-6 h-6">

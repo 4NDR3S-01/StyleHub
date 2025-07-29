@@ -55,7 +55,7 @@ export const Productos: productos[] = [
     featured: true
   },
   {
-    id: 4,
+    id: '4',
     name: 'Buzo de Cuero para Hombre',
     description: 'Buzo de cuero clásico con estilo moderno. Hecho de cuero genuino con herrajes premium.',
     price: 399.99,
@@ -66,7 +66,6 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL', 'XXL'],
     colors: ['Negro', 'Marrón', 'Azul Marino'],
-    color: 'Negro',
     stock: 8,
     rating: 4.7,
     reviews: 124,
@@ -83,7 +82,8 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Blanco', 'Azul'],
-    size: 'M',
+    // size eliminado
+    stock: 22,
     rating: 4.5,
     reviews: 80,
     featured: false
@@ -99,8 +99,7 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Azul Oscuro'],
-    color: 'Azul Oscuro',
-    size: 'L',
+    // size eliminado
     stock: 20,
     rating: 4.6,
     reviews: 65,
@@ -117,7 +116,7 @@ export const Productos: productos[] = [
     category: 'men',
     sizes: ['S', 'M', 'L', 'XL'],
     colors: ['Negro', 'Blanco', 'Gris'],
-    size: 'M',
+    // size eliminado
     stock: 30,
     rating: 4.3,
     reviews: 40,
