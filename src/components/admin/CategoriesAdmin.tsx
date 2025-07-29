@@ -180,6 +180,14 @@ export default function CategoriesAdmin() {
     fetchCategories();
   }, []);
 
+  // Extracted button text for clarity
+  let submitButtonText = '';
+  if (submitting) {
+    submitButtonText = editingCategory ? 'Actualizando...' : 'Guardando...';
+  } else {
+    submitButtonText = editingCategory ? 'Actualizar Categoría' : 'Crear Categoría';
+  }
+
   return (
     <div>
       <div className="mb-6">
@@ -195,43 +203,47 @@ export default function CategoriesAdmin() {
         </Button>
       </div>
 
-      {loading ? (
-        <p>Cargando categorías...</p>
-      ) : categories.length === 0 ? (
-        <p className="text-gray-500">No hay categorías registradas.</p>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {categories.map(category => (
-            <div key={category.id} className="border rounded-lg p-4 bg-white shadow-sm">
-              <h3 className="font-medium text-lg mb-2">{category.name}</h3>
-              <p className="text-sm text-gray-600 mb-2">Slug: {category.slug}</p>
-              {category.description && (
-                <p className="text-sm text-gray-500 mb-3">{category.description}</p>
-              )}
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => openEditCategoryModal(category)}
-                  className="flex items-center gap-1"
-                >
-                  <Edit size={14} />
-                  Editar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => deleteCategory(category.id)}
-                  className="flex items-center gap-1"
-                >
-                  <Trash2 size={14} />
-                  Eliminar
-                </Button>
+      {(() => {
+        if (loading) {
+          return <p>Cargando categorías...</p>;
+        }
+        if (categories.length === 0) {
+          return <p className="text-gray-500">No hay categorías registradas.</p>;
+        }
+        return (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {categories.map(category => (
+              <div key={category.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                <h3 className="font-medium text-lg mb-2">{category.name}</h3>
+                <p className="text-sm text-gray-600 mb-2">Slug: {category.slug}</p>
+                {category.description && (
+                  <p className="text-sm text-gray-500 mb-3">{category.description}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditCategoryModal(category)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit size={14} />
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => deleteCategory(category.id)}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar
+                  </Button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Modal para crear/editar categorías */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
@@ -291,7 +303,7 @@ export default function CategoriesAdmin() {
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? (editingCategory ? 'Actualizando...' : 'Guardando...') : (editingCategory ? 'Actualizar Categoría' : 'Crear Categoría')}
+                {submitButtonText}
               </Button>
               <Button 
                 type="button" 
