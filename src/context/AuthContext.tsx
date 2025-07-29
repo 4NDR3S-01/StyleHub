@@ -14,7 +14,7 @@ interface AuthContextType {
     lastname: string,
     role?: string
   ) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   isLoading: boolean;
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
@@ -217,8 +217,19 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      setIsLoading(true);
+      await supabase.auth.signOut();
+      setUser(null);
+      // Redirigir a la página principal después del logout
+      if (typeof window !== 'undefined') {
+        window.location.href = '/';
+      }
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const resetPassword = async (email: string) => {

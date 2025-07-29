@@ -12,6 +12,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [userButtonPosition, setUserButtonPosition] = useState({ top: 0, right: 0 });
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const userButtonRef = useRef<HTMLButtonElement>(null);
   const { itemsCount, toggleCart } = useCart();
@@ -157,80 +158,76 @@ export default function Navbar() {
 
         {/* Opciones del menú */}
         <div className="py-3">
-          <Link 
-            href="/orders" 
-            className="relative flex items-center px-5 py-4 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#ff6f61]/15 hover:via-[#ff6f61]/10 hover:to-transparent hover:text-[#d7263d] transition-all duration-300 group overflow-hidden"
-            onClick={() => setIsUserMenuOpen(false)}
-          >
-            <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mr-4 group-hover:from-[#ff6f61]/20 group-hover:to-[#d7263d]/20 group-hover:scale-110 transition-all duration-300 shadow-sm">
-              <ShoppingBag size={18} className="text-gray-600 group-hover:text-[#d7263d] transition-colors" />
-            </div>
-            <div className="relative z-10 flex-1">
-              <span className="font-semibold block">Mis Pedidos</span>
-              <span className="text-xs text-gray-400">Historial de compras</span>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#ff6f61]/5 to-[#ff6f61]/10 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-          </Link>
-
-          <Link 
-            href="/wishlist" 
-            className="relative flex items-center px-5 py-4 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-[#ff6f61]/15 hover:via-[#ff6f61]/10 hover:to-transparent hover:text-[#d7263d] transition-all duration-300 group overflow-hidden"
-            onClick={() => setIsUserMenuOpen(false)}
-          >
-            <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl flex items-center justify-center mr-4 group-hover:from-[#ff6f61]/20 group-hover:to-[#d7263d]/20 group-hover:scale-110 transition-all duration-300 shadow-sm">
-              <Heart size={18} className="text-gray-600 group-hover:text-[#d7263d] transition-colors" />
-            </div>
-            <div className="relative z-10 flex-1">
-              <span className="font-semibold block">Lista de Deseos</span>
-              <span className="text-xs text-gray-400">Productos favoritos</span>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#ff6f61]/5 to-[#ff6f61]/10 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-          </Link>
-
           {user?.role === 'admin' && (
-            <>
-              <div className="mx-5 my-3 border-t border-gradient-to-r from-transparent via-gray-200 to-transparent opacity-50"></div>
-              <Link 
-                href="/admin" 
-                className="relative flex items-center px-5 py-4 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-100/80 hover:via-purple-50 hover:to-transparent hover:text-purple-700 transition-all duration-300 group overflow-hidden"
-                onClick={() => setIsUserMenuOpen(false)}
-              >
-                <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mr-4 group-hover:from-purple-200 group-hover:to-purple-300 group-hover:scale-110 transition-all duration-300 shadow-sm">
-                  <svg className="w-5 h-5 text-purple-600 group-hover:text-purple-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                </div>
-                <div className="relative z-10 flex-1">
-                  <span className="font-semibold block">Panel Admin</span>
-                  <span className="text-xs text-purple-400">Control total del sistema</span>
-                </div>
-                <span className="relative z-10 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg">
-                  ADMIN
-                </span>
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/30 to-purple-200/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-              </Link>
-            </>
+            <Link 
+              href="/admin" 
+              className="relative flex items-center px-5 py-4 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-purple-100/80 hover:via-purple-50 hover:to-transparent hover:text-purple-700 transition-all duration-300 group overflow-hidden"
+              onClick={() => setIsUserMenuOpen(false)}
+            >
+              <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-purple-100 to-purple-200 rounded-xl flex items-center justify-center mr-4 group-hover:from-purple-200 group-hover:to-purple-300 group-hover:scale-110 transition-all duration-300 shadow-sm">
+                <svg className="w-5 h-5 text-purple-600 group-hover:text-purple-700 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </div>
+              <div className="relative z-10 flex-1">
+                <span className="font-semibold block">Panel Admin</span>
+                <span className="text-xs text-purple-400">Control total del sistema</span>
+              </div>
+              <span className="relative z-10 bg-gradient-to-r from-purple-500 to-purple-600 text-white text-xs px-3 py-1 rounded-full font-bold shadow-lg">
+                ADMIN
+              </span>
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-purple-100/30 to-purple-200/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
+            </Link>
           )}
         </div>
 
         {/* Footer del menú con botón de logout */}
         <div className="border-t border-white/20 pt-2 bg-gradient-to-t from-gray-50/30 to-transparent">
           <button
-            onClick={() => {
-              logout();
-              setIsUserMenuOpen(false);
+            onClick={async (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              
+              if (isLoggingOut) return;
+              
+              setIsLoggingOut(true);
+              try {
+                setIsUserMenuOpen(false);
+                await logout();
+              } catch (error) {
+                console.error('Error al cerrar sesión:', error);
+                alert('Error al cerrar sesión. Inténtalo de nuevo.');
+              } finally {
+                setIsLoggingOut(false);
+              }
             }}
-            className="relative flex items-center w-full px-5 py-4 text-sm text-red-600 hover:bg-gradient-to-r hover:from-red-50/80 hover:via-red-100/50 hover:to-transparent transition-all duration-300 group overflow-hidden"
+            disabled={isLoggingOut}
+            type="button"
+            className={`relative flex items-center w-full px-5 py-4 text-sm text-red-600 transition-all duration-300 group overflow-hidden ${
+              isLoggingOut 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:bg-gradient-to-r hover:from-red-50/80 hover:via-red-100/50 hover:to-transparent cursor-pointer'
+            }`}
           >
             <div className="relative z-10 w-10 h-10 bg-gradient-to-br from-red-50 to-red-100 rounded-xl flex items-center justify-center mr-4 group-hover:from-red-100 group-hover:to-red-200 group-hover:scale-110 transition-all duration-300 shadow-sm">
-              <svg className="w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
+              {isLoggingOut ? (
+                <svg className="w-5 h-5 text-red-500 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+              ) : (
+                <svg className="w-5 h-5 text-red-500 group-hover:text-red-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              )}
             </div>
             <div className="relative z-10 flex-1 text-left">
-              <span className="font-semibold block text-red-600">Cerrar Sesión</span>
-              <span className="text-xs text-red-400">Salir de forma segura</span>
+              <span className="font-semibold block text-red-600">
+                {isLoggingOut ? 'Cerrando...' : 'Cerrar Sesión'}
+              </span>
+              <span className="text-xs text-red-400">
+                {isLoggingOut ? 'Por favor espera' : 'Salir de forma segura'}
+              </span>
             </div>
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-50/30 to-red-100/20 translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
           </button>
@@ -252,17 +249,17 @@ export default function Navbar() {
     <>
       <nav className="bg-gradient-to-r from-slate-800 via-slate-700 to-slate-900 overflow-hidden shadow-lg sticky top-0 z-[99999]">
         {/* Animated background patterns */}
-        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent animate-pulse"></div>
-        <div className="absolute top-0 left-0 w-full h-full opacity-10">
+        <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent animate-pulse pointer-events-none"></div>
+        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
           <div className="w-full h-full bg-repeat animate-pulse" style={{
             backgroundImage: "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"
           }}></div>
         </div>
         
         {/* Floating geometric shapes */}
-        <div className="absolute top-1 right-1/4 w-6 h-6 bg-white/10 rounded-full animate-bounce delay-1000"></div>
-        <div className="absolute bottom-1 left-1/3 w-4 h-4 bg-gradient-to-br from-[#ff6f61]/20 to-[#d7263d]/20 rounded-full animate-bounce delay-500"></div>
-        <div className="absolute top-2 left-1/2 w-3 h-3 bg-[#d7263d]/30 rounded-full animate-pulse delay-700"></div>
+        <div className="absolute top-1 right-1/4 w-6 h-6 bg-white/10 rounded-full animate-bounce delay-1000 pointer-events-none"></div>
+        <div className="absolute bottom-1 left-1/3 w-4 h-4 bg-gradient-to-br from-[#ff6f61]/20 to-[#d7263d]/20 rounded-full animate-bounce delay-500 pointer-events-none"></div>
+        <div className="absolute top-2 left-1/2 w-3 h-3 bg-[#d7263d]/30 rounded-full animate-pulse delay-700 pointer-events-none"></div>
         
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
@@ -270,14 +267,14 @@ export default function Navbar() {
             <div className="md:hidden">
               <button
                 onClick={() => setIsMenuOpen(!isMenuOpen)}
-                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300"
+                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 relative z-10"
               >
                 {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
               </button>
             </div>
 
             {/* Logo */}
-            <Link href="/" className="flex items-center group">
+            <Link href="/" className="flex items-center group relative z-10">
               <div className="flex items-center">
                 <h1 className="text-2xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg group-hover:scale-105 transition-all duration-300 transform">
                   StyleHub
@@ -286,7 +283,7 @@ export default function Navbar() {
             </Link>
 
             {/* Desktop Navigation */}
-            <div className="hidden md:flex items-center space-x-6">
+            <div className="hidden md:flex items-center space-x-6 relative z-10">
               {navigation.map((item) => (
                 <Link
                   key={item.name}
@@ -299,19 +296,24 @@ export default function Navbar() {
             </div>
 
             {/* Right side icons */}
-            <div className="flex items-center space-x-3">
-              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+            <div className="flex items-center space-x-3 relative z-10">
+              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative z-20">
                 <Search size={20} />
               </button>
-              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105">
+              <button className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative z-20">
                 <Heart size={20} />
               </button>
               {!isLoading && user ? (
-                <div className="relative">
+                <div className="relative z-20">
                   <button 
                     ref={userButtonRef}
-                    onClick={toggleUserMenu}
-                    className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      toggleUserMenu();
+                    }}
+                    className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer"
+                    type="button"
                   >
                     <User size={20} />
                   </button>
@@ -321,12 +323,12 @@ export default function Navbar() {
                   {!isLoading ? (
                     <Link
                       href="/login"
-                      className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+                      className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative z-20"
                     >
                       <User size={20} />
                     </Link>
                   ) : (
-                    <div className="p-2 text-white/50 rounded-lg backdrop-blur-md border border-white/20">
+                    <div className="p-2 text-white/50 rounded-lg backdrop-blur-md border border-white/20 relative z-20">
                       <User size={20} />
                     </div>
                   )}
@@ -334,7 +336,7 @@ export default function Navbar() {
               )}
               <button
                 onClick={toggleCart}
-                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative"
+                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 relative z-20"
               >
                 <ShoppingBag size={20} />
                 {itemsCount > 0 && (
