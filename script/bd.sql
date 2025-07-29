@@ -366,3 +366,19 @@ create policy "Solo admin puede actualizar cupones"
 create policy "Solo admin puede eliminar cupones"
   on public.coupons for delete
   using (exists (select 1 from public.users where id = auth.uid() and role = 'admin'));
+
+
+--------------------------------
+--Índice en parent_id de categories
+---Para búsquedas rápidas de subcategorías por categoría padre:
+create index idx_categories_parent_id on public.categories(parent_id);
+--Índice en category_id de products
+---Para filtrar productos por categoría:
+create index idx_products_category_id on public.products(category_id);
+--Restricción de unicidad en (name, parent_id) en categories
+---Así evitas subcategorías duplicadas bajo la misma categoría padre:
+alter table public.categories add constraint unique_subcategory_per_parent unique (name, parent_id);
+--Campo activo/visible en productos y categorías
+---Útil para ocultar temporalmente sin borrar:
+alter table public.products add column active boolean default true;
+alter table public.categories add column active boolean default true;

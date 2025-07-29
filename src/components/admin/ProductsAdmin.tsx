@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { getSubcategories } from '@/services/category.service';
 import { Checkbox } from '@/components/ui/checkbox';
 
 const supabase = createClient(
@@ -45,7 +46,7 @@ interface Category {
 
 export default function ProductsAdmin() {
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<{ id: string; name: string; parent_name?: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,6 +67,26 @@ export default function ProductsAdmin() {
     featured: false,
     sale: false
   });
+
+  // Estado para variantes
+  const [variants, setVariants] = useState<{
+    id?: string;
+    color: string;
+    size: string;
+    stock: number;
+    image?: string;
+    imageFile?: File | null;
+    imagePreview?: string | null;
+  }[]>([]);
+  const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
+  const [variantForm, setVariantForm] = useState({
+    color: '',
+    size: '',
+    stock: '',
+    imageFile: null as File | null,
+    imagePreview: null as string | null
+  });
+  const [variantError, setVariantError] = useState<string | null>(null);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -99,7 +120,7 @@ export default function ProductsAdmin() {
     setImagePreview(null);
   };
 
-  const openEditProductModal = (product: Product) => {
+  const openEditProductModal = async (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -118,6 +139,22 @@ export default function ProductsAdmin() {
     if (product.images?.[0]) {
       setImagePreview(product.images[0]);
     }
+    // Cargar variantes del producto
+    const { data: variantData } = await supabase
+      .from('product_variants')
+      .select('id, color, size, stock, image')
+      .eq('product_id', product.id);
+    setVariants(
+      (variantData || []).map((v: any) => ({
+        id: v.id,
+        color: v.color,
+        size: v.size,
+        stock: v.stock,
+        image: v.image,
+        imageFile: null,
+        imagePreview: v.image || null
+      }))
+    );
     setIsModalOpen(true);
   };
 
@@ -139,6 +176,139 @@ export default function ProductsAdmin() {
     });
     setSelectedImage(null);
     setImagePreview(null);
+    setVariants([]);
+    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+    setEditingVariantIndex(null);
+  };
+  // Subir imagen de variante a Supabase
+  const uploadVariantImageToSupabase = async (file: File): Promise<string | null> => {
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `variant-${Date.now()}-${Math.random()}.${fileExt}`;
+      const filePath = `variants/${fileName}`;
+      const { error: uploadError } = await supabase.storage
+        .from('productos')
+        .upload(filePath, file);
+      if (uploadError) throw uploadError;
+      const { data: urlData } = supabase.storage
+        .from('productos')
+        .getPublicUrl(filePath);
+      return urlData.publicUrl;
+    } catch (error: any) {
+      toast({
+        title: 'Error al subir la imagen de la variante',
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
+      return null;
+    }
+  };
+
+  // Manejo de formulario de variante
+  const handleVariantInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setVariantForm(prev => ({ ...prev, [name]: value }));
+  };
+  const handleVariantImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setVariantForm(prev => ({ ...prev, imageFile: file }));
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setVariantForm(prev => ({ ...prev, imagePreview: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  const handleAddOrEditVariant = () => {
+    setVariantError(null);
+    if (!variantForm.color.trim() || !variantForm.size.trim() || !variantForm.stock.trim()) {
+      setVariantError('Completa color, talla y stock para la variante.');
+      toast({
+        title: 'Error en variante',
+        description: 'Completa color, talla y stock para la variante.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const stockNum = parseInt(variantForm.stock, 10);
+    if (isNaN(stockNum) || stockNum < 0) {
+      setVariantError('El stock debe ser un número mayor o igual a 0.');
+      toast({
+        title: 'Error en variante',
+        description: 'El stock debe ser un número mayor o igual a 0.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    // Prevención de duplicados (color + talla)
+    const isDuplicate = variants.some((v, i) =>
+      v.color.trim().toLowerCase() === variantForm.color.trim().toLowerCase() &&
+      v.size.trim().toLowerCase() === variantForm.size.trim().toLowerCase() &&
+      (editingVariantIndex === null || i !== editingVariantIndex)
+    );
+    if (isDuplicate) {
+      setVariantError('Ya existe una variante con ese color y talla.');
+      toast({
+        title: 'Variante duplicada',
+        description: 'Ya existe una variante con ese color y talla.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const newVariant = {
+      color: variantForm.color,
+      size: variantForm.size,
+      stock: stockNum,
+      imageFile: variantForm.imageFile,
+      imagePreview: variantForm.imagePreview
+    };
+    if (editingVariantIndex !== null) {
+      setVariants(prev => prev.map((v, i) => (i === editingVariantIndex ? { ...v, ...newVariant } : v)));
+      setEditingVariantIndex(null);
+      toast({
+        title: 'Variante actualizada',
+        description: 'La variante fue actualizada correctamente.',
+        variant: 'default',
+      });
+    } else {
+      setVariants(prev => [...prev, newVariant]);
+      toast({
+        title: 'Variante agregada',
+        description: 'La variante fue agregada correctamente.',
+        variant: 'default',
+      });
+    }
+    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+  };
+  const handleEditVariant = (idx: number) => {
+    const v = variants[idx];
+    setVariantForm({
+      color: v.color,
+      size: v.size,
+      stock: v.stock.toString(),
+      imageFile: v.imageFile || null,
+      imagePreview: v.imagePreview || v.image || null
+    });
+    setEditingVariantIndex(idx);
+    setVariantError(null);
+    toast({
+      title: 'Editando variante',
+      description: `Editando variante ${v.color} / ${v.size}`,
+      variant: 'default',
+    });
+  };
+  const handleDeleteVariant = (idx: number) => {
+    const v = variants[idx];
+    setVariants(prev => prev.filter((_, i) => i !== idx));
+    setEditingVariantIndex(null);
+    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+    setVariantError(null);
+    toast({
+      title: 'Variante eliminada',
+      description: `Variante ${v.color} / ${v.size} eliminada correctamente.`,
+      variant: 'default',
+    });
   };
 
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
@@ -213,53 +383,87 @@ export default function ProductsAdmin() {
     sale: formData.sale
   });
 
+  // Helper to upload product image and return URL or null
+  const handleProductImageUpload = async (): Promise<string | null> => {
+    if (!selectedImage) return null;
+    const imageUrl = await uploadImageToSupabase(selectedImage);
+    if (!imageUrl) {
+      toast({
+        title: 'Error al subir la imagen',
+        description: 'No se pudo obtener la URL de la imagen',
+        variant: 'destructive',
+      });
+    }
+    return imageUrl;
+  };
+
+  // Helper to save or update product and return productId or null
+  const saveOrUpdateProduct = async (productData: any): Promise<{ productId: string | null, error: any }> => {
+    let result;
+    let productId = editingProduct?.id || null;
+    if (editingProduct) {
+      result = await supabase
+        .from('products')
+        .update(productData)
+        .eq('id', editingProduct.id)
+        .select();
+    } else {
+      result = await supabase
+        .from('products')
+        .insert([productData])
+        .select();
+      if (result.data?.[0]) {
+        productId = result.data[0].id;
+      }
+    }
+    return { productId, error: result.error };
+  };
+
+  // Helper to save variants for a product
+  const saveProductVariants = async (productId: string) => {
+    // Eliminar variantes existentes si es edición
+    if (editingProduct) {
+      await supabase.from('product_variants').delete().eq('product_id', productId);
+    }
+    for (const v of variants) {
+      let variantImageUrl = v.image;
+      if (v.imageFile) {
+        variantImageUrl = (await uploadVariantImageToSupabase(v.imageFile)) ?? undefined;
+      }
+      await supabase.from('product_variants').insert({
+        product_id: productId,
+        color: v.color,
+        size: v.size,
+        stock: v.stock,
+        image: variantImageUrl ?? undefined
+      });
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!validateFormData()) return;
-
     setSubmitting(true);
-
     try {
-      let imageUrl = null;
-
-      if (selectedImage) {
-        imageUrl = await uploadImageToSupabase(selectedImage);
-        if (!imageUrl) {
-          toast({
-            title: 'Error al subir la imagen',
-            description: 'No se pudo obtener la URL de la imagen',
-            variant: 'destructive',
-          });
-          return;
-        }
-      }
-
-      const productData = prepareProductData(imageUrl);
-
-      let result;
-      if (editingProduct) {
-        result = await supabase
-          .from('products')
-          .update(productData)
-          .eq('id', editingProduct.id)
-          .select();
-      } else {
-        result = await supabase
-          .from('products')
-          .insert([productData])
-          .select();
-      }
-
-      if (result.error) {
-        toast({
-          title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
-          description: result.error.message,
-          variant: 'destructive',
-        });
+      const imageUrl = await handleProductImageUpload();
+      if (selectedImage && !imageUrl) {
+        setSubmitting(false);
         return;
       }
-
+      const productData = prepareProductData(imageUrl);
+      const { productId, error } = await saveOrUpdateProduct(productData);
+      if (error) {
+        toast({
+          title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+          description: error.message,
+          variant: 'destructive',
+        });
+        setSubmitting(false);
+        return;
+      }
+      if (productId) {
+        await saveProductVariants(productId);
+      }
       toast({
         title: `Producto ${editingProduct ? 'actualizado' : 'guardado'} exitosamente!`,
         variant: 'default',
@@ -287,12 +491,14 @@ export default function ProductsAdmin() {
     setLoading(false);
   };
 
-  const fetchCategories = async () => {
-    const { data, error } = await supabase
-      .from('categories')
-      .select('id, name, slug, image, description, parent_id')
-      .order('name');
-    if (!error && data) setCategories(data);
+  const fetchSubcategories = async () => {
+    try {
+      const data = await getSubcategories();
+      setSubcategories(data);
+    } catch (e) {
+      // No toast para evitar ruido visual
+      console.error('Error fetching subcategories:', e);
+    }
   };
 
   const deleteProduct = async (productId: string) => {
@@ -329,7 +535,7 @@ export default function ProductsAdmin() {
 
   useEffect(() => {
     fetchProducts();
-    fetchCategories();
+    fetchSubcategories();
   }, []);
 
   // Extract product list rendering logic into a variable to avoid nested ternary
@@ -558,15 +764,15 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="category_id">Categoría *</Label>
+              <Label htmlFor="category_id">Subcategoría *</Label>
               <Select onValueChange={handleSelectChange} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
+                  <SelectValue placeholder="Selecciona una subcategoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map(category => (
-                    <SelectItem key={category.id} value={category.id}>
-                      {category.name}
+                  {subcategories.map(sub => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}{sub.parent_name ? ` (${sub.parent_name})` : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -663,6 +869,90 @@ export default function ProductsAdmin() {
               </div>
             </div>
 
+            {/* Variantes y stock */}
+            <div>
+              <Label>Variantes y stock</Label>
+              <div className="space-y-2 mt-2">
+                <div className="grid grid-cols-4 gap-2">
+                  <Input
+                    name="color"
+                    value={variantForm.color}
+                    onChange={handleVariantInputChange}
+                    placeholder="Color"
+                  />
+                  <Input
+                    name="size"
+                    value={variantForm.size}
+                    onChange={handleVariantInputChange}
+                    placeholder="Talla"
+                  />
+                  <Input
+                    name="stock"
+                    type="number"
+                    min="0"
+                    value={variantForm.stock}
+                    onChange={handleVariantInputChange}
+                    placeholder="Stock"
+                  />
+                  <div>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleVariantImageChange}
+                      className="block w-full text-xs"
+                    />
+                    {variantForm.imagePreview && (
+                      <img src={variantForm.imagePreview} alt="Variante" className="w-10 h-10 object-cover mt-1 rounded" />
+                    )}
+                  </div>
+                </div>
+                <div className="flex gap-2 items-center">
+                  <Button type="button" size="sm" onClick={handleAddOrEditVariant} aria-label={editingVariantIndex !== null ? 'Actualizar variante' : 'Agregar variante'}>
+                    {editingVariantIndex !== null ? 'Actualizar variante' : 'Agregar variante'}
+                  </Button>
+                  {editingVariantIndex !== null && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => {
+                      setEditingVariantIndex(null);
+                      setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+                      setVariantError(null);
+                    }} aria-label="Cancelar edición de variante">
+                      Cancelar edición
+                    </Button>
+                  )}
+                  {variantError && (
+                    <span className="text-xs text-red-600 ml-2">{variantError}</span>
+                  )}
+                </div>
+                {/* Lista de variantes */}
+                {variants.length > 0 && (
+                  <div className="mt-2 border rounded p-2 bg-gray-50">
+                    <div className="grid grid-cols-5 gap-2 font-semibold text-xs text-gray-600 mb-1">
+                      <span>Color</span>
+                      <span>Talla</span>
+                      <span>Stock</span>
+                      <span>Imagen</span>
+                      <span>Acciones</span>
+                    </div>
+                    {variants.map((v, idx) => (
+                      <div
+                        key={v.id ?? `${v.color}-${v.size}`}
+                        className="grid grid-cols-5 gap-2 items-center border-b last:border-b-0 py-1"
+                      >
+                        <span>{v.color}</span>
+                        <span>{v.size}</span>
+                        <span>{v.stock}</span>
+                        <span>{v.imagePreview || v.image ? <img src={v.imagePreview || v.image} alt="Variante" className="w-8 h-8 object-cover rounded" /> : '-'}</span>
+                        <span className="flex gap-1">
+                          <Button type="button" size="sm" variant="outline" onClick={() => handleEditVariant(idx)} aria-label={`Editar variante ${v.color} ${v.size}`}>Editar</Button>
+                          <Button type="button" size="sm" variant="destructive" onClick={() => handleDeleteVariant(idx)} aria-label={`Eliminar variante ${v.color} ${v.size}`}>Eliminar</Button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            {/* ...botones de acción... */}
             <div className="flex gap-3 pt-4">
               {(() => {
                 let submitButtonText;
