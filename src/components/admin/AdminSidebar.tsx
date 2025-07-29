@@ -4,17 +4,19 @@ import Link from 'next/link';
 import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 
+
 const menuItems = [
   { name: 'Dashboard', icon: HomeIcon, href: '/admin' },
   { name: 'Ordenes', icon: ShoppingBagIcon, href: '/admin/ordenes' },
   { name: 'Productos', icon: ClipboardListIcon, href: '/admin/productos' },
-  { name: 'Categorias', icon: TagIcon, href: '/admin/categorias' },
+  { name: 'Categorias', icon: TagIcon }, // Agregado para el submenú
   { name: 'Cupones', icon: PencilIcon, href: '/admin/cupones' },
   { name: 'Reseñas', icon: MessageSquareIcon, href: '/admin/resenas' },
 ];
 
 export default function AdminSidebar() {
   const [configOpen, setConfigOpen] = useState(false);
+  const [categoriasOpen, setCategoriasOpen] = useState(false);
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -47,14 +49,48 @@ export default function AdminSidebar() {
         </div>
         <nav className="flex-1">
           <ul>
-            {menuItems.map((item) => (
-              <li key={item.name} className="mb-2">
-                <Link href={item.href} className="flex items-center px-3 py-2 rounded hover:bg-red-50 text-gray-700" onClick={() => setOpen(false)}>
-                  <item.icon size={20} className="mr-3 text-red-600" />
-                  {item.name}
-                </Link>
-              </li>
-            ))}
+            {menuItems.map((item) => {
+              if (item.name === 'Categorias') {
+                // Submenú para categorías
+                return (
+                  <li key={item.name} className="mb-2">
+                    <button
+                      type="button"
+                      className="flex items-center w-full px-3 py-2 rounded hover:bg-red-50 text-gray-700 focus:outline-none"
+                      onClick={() => setCategoriasOpen((v) => !v)}
+                    >
+                      <TagIcon size={20} className="mr-3 text-red-600" />
+                      Categorías
+                      <ChevronDown size={16} className={`ml-auto text-slate-500 transition-transform ${categoriasOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {categoriasOpen && (
+                      <ul className="ml-8 mt-1">
+                        <li>
+                          <Link href="/admin/categorias" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                            Gestión de categorías
+                          </Link>
+                        </li>
+                        <li>
+                          <Link href="/admin/subcategorias" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                            Gestión de subcategorías
+                          </Link>
+                        </li>
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+              return (
+                <li key={item.name} className="mb-2">
+                  {item.href ? (
+                    <Link href={item.href} className="flex items-center px-3 py-2 rounded hover:bg-red-50 text-gray-700" onClick={() => setOpen(false)}>
+                      <item.icon size={20} className="mr-3 text-red-600" />
+                      {item.name}
+                    </Link>
+                  ) : null}
+                </li>
+              );
+            })}
             {/* Configuración con submenú */}
             <li className="mb-2">
               <button

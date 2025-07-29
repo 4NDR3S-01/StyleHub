@@ -35,6 +35,11 @@ export default function CategoriesAdmin() {
     slug: '',
     description: ''
   });
+  // Mejoras: filtro de búsqueda y paginación
+  const [search, setSearch] = useState('');
+  const [pagina, setPagina] = useState(1);
+  const [porPagina, setPorPagina] = useState(10);
+  const [totalPaginas, setTotalPaginas] = useState(1);
 
   const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -159,11 +164,13 @@ export default function CategoriesAdmin() {
 
   const fetchCategories = async () => {
     setLoading(true);
-    const { data, error } = await supabase
+    let query = supabase
       .from('categories')
-      .select('id, name, slug, image, description, parent_id')
-      .order('name');
-    
+      .select('id, name, slug, image, description, parent_id', { count: 'exact' })
+      .order('name')
+      .range((pagina - 1) * porPagina, pagina * porPagina - 1);
+    if (search) query = query.ilike('name', `%${search}%`);
+    const { data, error, count } = await query;
     if (error) {
       toast({
         title: 'Error al cargar categorías',
@@ -172,13 +179,15 @@ export default function CategoriesAdmin() {
       });
     } else if (data) {
       setCategories(data);
+      setTotalPaginas(count ? Math.ceil(count / porPagina) : 1);
     }
     setLoading(false);
   };
 
   useEffect(() => {
     fetchCategories();
-  }, []);
+    // eslint-disable-next-line
+  }, [pagina, porPagina, search]);
 
   // Extracted button text for clarity
   let submitButtonText = '';
@@ -190,7 +199,17 @@ export default function CategoriesAdmin() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <div className="flex gap-2 items-center">
+          <Input
+            type="text"
+            placeholder="Buscar categoría por nombre..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPagina(1); }}
+            className="max-w-xs border-slate-300 focus:border-pink-400 focus:ring-pink-200"
+            autoComplete="off"
+          />
+        </div>
         <Button 
           onClick={() => {
             resetCategoryModal();
@@ -244,6 +263,22 @@ export default function CategoriesAdmin() {
           </div>
         );
       })()}
+      {/* Paginación */}
+      <div className="flex items-center justify-between mt-4 gap-2 flex-wrap">
+        <div className="flex items-center gap-2">
+          <button onClick={() => setPagina(1)} disabled={pagina === 1} className="p-1 rounded hover:bg-slate-100 disabled:opacity-40">{'<<'}</button>
+          <button onClick={() => setPagina(pagina - 1)} disabled={pagina === 1} className="p-1 rounded hover:bg-slate-100 disabled:opacity-40">{'<'}</button>
+          <span className="font-semibold">Página {pagina} de {totalPaginas}</span>
+          <button onClick={() => setPagina(pagina + 1)} disabled={pagina === totalPaginas} className="p-1 rounded hover:bg-slate-100 disabled:opacity-40">{'>'}</button>
+          <button onClick={() => setPagina(totalPaginas)} disabled={pagina === totalPaginas} className="p-1 rounded hover:bg-slate-100 disabled:opacity-40">{'>>'}</button>
+        </div>
+        <div className="flex items-center gap-2">
+          <span>Categorías por página:</span>
+          <select value={porPagina} onChange={e => { setPorPagina(Number(e.target.value)); setPagina(1); }} className="border border-slate-300 rounded px-2 py-1">
+            {[5, 10, 20, 50].map(n => <option key={n} value={n}>{n}</option>)}
+          </select>
+        </div>
+      </div>
 
       {/* Modal para crear/editar categorías */}
       <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
