@@ -40,13 +40,13 @@ export default function AdminDashboard() {
       label: 'Productos',
       value: stats.products,
       icon: <Box size={32} className="text-blue-500" />,
-      href: '/admin/products',
+      href: '/admin/productos',
     },
     {
       label: 'Categorías',
       value: stats.categories,
       icon: <List size={32} className="text-green-500" />,
-      href: '/admin/categories',
+      href: '/admin/categorias',
     },
     {
       label: 'Clientes',
