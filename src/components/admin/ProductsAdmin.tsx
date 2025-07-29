@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { createClient } from '@supabase/supabase-js';
-import { Plus, X, Upload } from 'lucide-react';
+import { Plus, X, Upload, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,20 +25,33 @@ interface Product {
   original_price?: number;
   images?: string[];
   category_id?: string;
-  sizes?: string[];
-  colors?: string[];
-  stock: number;
-  rating?: number;
-  reviews?: number;
+  brand?: string;
+  gender?: string;
+  material?: string;
+  season?: string;
+  tags?: string[];
   featured: boolean;
   sale: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  description?: string;
+  parent_id?: string;
+}
+
 export default function ProductsAdmin() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -46,11 +60,18 @@ export default function ProductsAdmin() {
     price: '',
     original_price: '',
     category_id: '',
-    sizes: [] as string[],
-    colors: [] as string[],
-    stock: '',
+    brand: '',
+    gender: '',
+    material: '',
+    season: '',
+    tags: '',
     featured: false,
     sale: false
+  });
+  const [categoryFormData, setCategoryFormData] = useState({
+    name: '',
+    slug: '',
+    description: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -62,13 +83,18 @@ export default function ProductsAdmin() {
     setFormData(prev => ({ ...prev, category_id: value }));
   };
 
-  const handleArrayChange = (field: 'sizes' | 'colors', value: string) => {
-    const values = value.split(',').map(v => v.trim()).filter(v => v);
-    setFormData(prev => ({ ...prev, [field]: values }));
-  };
-
   const handleCheckboxChange = (field: 'featured' | 'sale', checked: boolean) => {
     setFormData(prev => ({ ...prev, [field]: checked }));
+  };
+
+  const handleCategoryInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setCategoryFormData(prev => ({ 
+      ...prev, 
+      [name]: value,
+      // Auto-generar slug desde el nombre
+      slug: name === 'name' ? value.toLowerCase().replace(/ /g, '-').replace(/[^a-z0-9-]/g, '') : prev.slug
+    }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -90,6 +116,67 @@ export default function ProductsAdmin() {
     setImagePreview(null);
   };
 
+  const openEditProductModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      original_price: product.original_price ? product.original_price.toString() : '',
+      category_id: product.category_id || '',
+      brand: product.brand || '',
+      gender: product.gender || '',
+      material: product.material || '',
+      season: product.season || '',
+      tags: product.tags ? product.tags.join(', ') : '',
+      featured: product.featured,
+      sale: product.sale
+    });
+    if (product.images && product.images[0]) {
+      setImagePreview(product.images[0]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const openEditCategoryModal = (category: Category) => {
+    setEditingCategory(category);
+    setCategoryFormData({
+      name: category.name,
+      slug: category.slug,
+      description: category.description || ''
+    });
+    setIsCategoryModalOpen(true);
+  };
+
+  const resetProductModal = () => {
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      original_price: '',
+      category_id: '',
+      brand: '',
+      gender: '',
+      material: '',
+      season: '',
+      tags: '',
+      featured: false,
+      sale: false
+    });
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
+  const resetCategoryModal = () => {
+    setEditingCategory(null);
+    setCategoryFormData({
+      name: '',
+      slug: '',
+      description: ''
+    });
+  };
+
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
@@ -101,7 +188,11 @@ export default function ProductsAdmin() {
         .upload(filePath, file);
 
       if (uploadError) {
-        alert('Error al subir la imagen: ' + uploadError.message);
+        toast({
+          title: 'Error al subir la imagen',
+          description: uploadError.message,
+          variant: 'destructive',
+        });
         throw uploadError;
       }
 
@@ -111,7 +202,11 @@ export default function ProductsAdmin() {
 
       return urlData.publicUrl;
     } catch (error: any) {
-      alert('Error al subir la imagen: ' + (error?.message || 'Error desconocido'));
+      toast({
+        title: 'Error al subir la imagen',
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
       return null;
     }
   };
@@ -121,17 +216,19 @@ export default function ProductsAdmin() {
     
     // Validaciones básicas
     if (!formData.name.trim()) {
-      alert('El nombre del producto es requerido');
+      toast({
+        title: 'Error',
+        description: 'El nombre del producto es requerido',
+        variant: 'destructive',
+      });
       return;
     }
-    
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      alert('El precio debe ser mayor a 0');
-      return;
-    }
-    
-    if (!formData.stock || parseInt(formData.stock) < 0) {
-      alert('El stock no puede ser negativo');
+      toast({
+        title: 'Error',
+        description: 'El precio debe ser mayor a 0',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -144,61 +241,71 @@ export default function ProductsAdmin() {
       if (selectedImage) {
         imageUrl = await uploadImageToSupabase(selectedImage);
         if (!imageUrl) {
-          alert('Error al subir la imagen');
+          toast({
+            title: 'Error al subir la imagen',
+            description: 'No se pudo obtener la URL de la imagen',
+            variant: 'destructive',
+          });
           return;
         }
       }
 
-      // Preparar datos para insertar
+      // Preparar datos para insertar/actualizar
       const productData = {
         name: formData.name,
         description: formData.description || null,
         price: parseFloat(formData.price),
         original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-        images: imageUrl ? [imageUrl] : null,
+        images: imageUrl ? [imageUrl] : (editingProduct?.images || null),
         category_id: formData.category_id || null,
-        sizes: formData.sizes.length > 0 ? formData.sizes : null,
-        colors: formData.colors.length > 0 ? formData.colors : null,
-        stock: parseInt(formData.stock),
+        brand: formData.brand || null,
+        gender: formData.gender || null,
+        material: formData.material || null,
+        season: formData.season || null,
+        // Convertir tags de string a array
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
         featured: formData.featured,
         sale: formData.sale
       };
 
-      // Insertar producto en la base de datos
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productData])
-        .select();
+      let result;
+      if (editingProduct) {
+        // Actualizar producto existente
+        result = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id)
+          .select();
+      } else {
+        // Insertar nuevo producto
+        result = await supabase
+          .from('products')
+          .insert([productData])
+          .select();
+      }
 
-      if (error) {
-        alert('Error al guardar el producto: ' + error.message);
+      if (result.error) {
+        toast({
+          title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+          description: result.error.message,
+          variant: 'destructive',
+        });
         return;
       }
 
-      alert('Producto guardado exitosamente!');
-      setIsModalOpen(false);
-      
-      // Resetear formulario
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        original_price: '',
-        category_id: '',
-        sizes: [],
-        colors: [],
-        stock: '',
-        featured: false,
-        sale: false
+      toast({
+        title: `Producto ${editingProduct ? 'actualizado' : 'guardado'} exitosamente!`,
+        variant: 'default',
       });
-      setSelectedImage(null);
-      setImagePreview(null);
-      
-      // Recargar productos
+      setIsModalOpen(false);
+      resetProductModal();
       fetchProducts();
-      
     } catch (error: any) {
-      alert('Error al guardar el producto: ' + (error?.message || 'Error desconocido'));
+      toast({
+        title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -208,39 +315,228 @@ export default function ProductsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, original_price, images, stock, featured, sale');
+      .select('id, name, description, price, original_price, images, brand, gender, material, season, tags, featured, sale');
     if (!error && data) setProducts(data);
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, slug, image, description, parent_id')
+      .order('name');
+    if (!error && data) setCategories(data);
+  };
+
+  const handleCategorySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!categoryFormData.name.trim()) {
+      toast({
+        title: 'Error',
+        description: 'El nombre de la categoría es requerido',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setSubmitting(true);
+    
+    try {
+      let result;
+      if (editingCategory) {
+        // Actualizar categoría existente
+        result = await supabase
+          .from('categories')
+          .update(categoryFormData)
+          .eq('id', editingCategory.id)
+          .select();
+      } else {
+        // Insertar nueva categoría
+        result = await supabase
+          .from('categories')
+          .insert([categoryFormData])
+          .select();
+      }
+
+      if (result.error) {
+        toast({
+          title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
+          description: result.error.message,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      toast({
+        title: `Categoría ${editingCategory ? 'actualizada' : 'guardada'} exitosamente!`,
+        variant: 'default',
+      });
+      setIsCategoryModalOpen(false);
+      resetCategoryModal();
+      fetchCategories();
+    } catch (error: any) {
+      toast({
+        title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const deleteProduct = async (productId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) {
+          toast({
+            title: 'Error al eliminar el producto',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        toast({
+          title: 'Producto eliminado exitosamente!',
+          variant: 'default',
+        });
+        fetchProducts();
+      } catch (error: any) {
+        toast({
+          title: 'Error al eliminar el producto',
+          description: error?.message || 'Error desconocido',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
+  const deleteCategory = async (categoryId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar esta categoría?')) {
+      try {
+        const { error } = await supabase
+          .from('categories')
+          .delete()
+          .eq('id', categoryId);
+
+        if (error) {
+          toast({
+            title: 'Error al eliminar la categoría',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        toast({
+          title: 'Categoría eliminada exitosamente!',
+          variant: 'default',
+        });
+        fetchCategories();
+      } catch (error: any) {
+        toast({
+          title: 'Error al eliminar la categoría',
+          description: error?.message || 'Error desconocido',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 flex gap-3">
         <Button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            resetProductModal();
+            setIsModalOpen(true);
+          }}
           className="flex items-center gap-2"
         >
           <Plus size={20} />
           Añadir Producto
         </Button>
+        <Button 
+          onClick={() => {
+            resetCategoryModal();
+            setIsCategoryModalOpen(true);
+          }}
+          variant="outline"
+          className="flex items-center gap-2"
+        >
+          <Plus size={20} />
+          Añadir Categoría
+        </Button>
       </div>
 
-      {loading ? (
-        <p>Cargando productos...</p>
-      ) : (
+      {/* Sección de Categorías */}
+      <div className="mb-8">
+        <h2 className="text-xl font-semibold mb-4">Gestión de Categorías</h2>
+        {categories.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {categories.map(category => (
+              <div key={category.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                <h3 className="font-medium text-lg mb-2">{category.name}</h3>
+                <p className="text-sm text-gray-600 mb-2">Slug: {category.slug}</p>
+                {category.description && (
+                  <p className="text-sm text-gray-500 mb-3">{category.description}</p>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditCategoryModal(category)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit size={14} />
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => deleteCategory(category.id)}
+                    className="flex items-center gap-1"
+                  >
+                    <Trash2 size={14} />
+                    Eliminar
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 mb-6">No hay categorías creadas aún.</p>
+        )}
+      </div>
+
+      {/* Sección de Productos */}
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Gestión de Productos</h2>
+        {loading ? (
+          <p>Cargando productos...</p>
+        ) : (
         <table className="w-full border">
           <thead>
             <tr className="bg-gray-100">
               <th className="p-2">Imagen</th>
               <th className="p-2">Nombre</th>
               <th className="p-2">Precio</th>
-              <th className="p-2">Stock</th>
+              <th className="p-2">Etiquetas</th>
               <th className="p-2">Destacado</th>
               <th className="p-2">Oferta</th>
+              <th className="p-2">Acciones</th>
             </tr>
           </thead>
           <tbody>
@@ -257,22 +553,61 @@ export default function ProductsAdmin() {
                 </td>
                 <td className="p-2">{prod.name}</td>
                 <td className="p-2">${prod.price}</td>
-                <td className="p-2">{prod.stock}</td>
+                <td className="p-2">
+                  {prod.tags && prod.tags.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {prod.tags.slice(0, 3).map((tag, index) => (
+                        <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                          {tag}
+                        </span>
+                      ))}
+                      {prod.tags.length > 3 && (
+                        <span className="text-xs text-gray-500">+{prod.tags.length - 3} más</span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 text-sm">Sin etiquetas</span>
+                  )}
+                </td>
                 <td className="p-2">{prod.featured ? 'Sí' : 'No'}</td>
                 <td className="p-2">{prod.sale ? 'Sí' : 'No'}</td>
+                <td className="p-2">
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => openEditProductModal(prod)}
+                      className="p-2"
+                    >
+                      <Edit size={16} />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => deleteProduct(prod.id)}
+                      className="p-2"
+                    >
+                      <Trash2 size={16} />
+                    </Button>
+                  </div>
+                </td>
               </tr>
             ))}
           </tbody>
         </table>
-      )}
+        )}
+      </div>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md mx-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              Añadir Nuevo Producto
+              {editingProduct ? 'Editar Producto' : 'Añadir Nuevo Producto'}
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetProductModal();
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
@@ -376,54 +711,88 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="stock">Stock *</Label>
-              <Input
-                id="stock"
-                name="stock"
-                type="number"
-                value={formData.stock}
-                onChange={handleInputChange}
-                placeholder="0"
-                required
-              />
-            </div>
-
-            <div>
               <Label htmlFor="category_id">Categoría *</Label>
               <Select onValueChange={handleSelectChange} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una categoría" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="men">Hombres</SelectItem>
-                  <SelectItem value="women">Mujeres</SelectItem>
-                  <SelectItem value="accessories">Accesorios</SelectItem>
-                  <SelectItem value="shoes">Zapatos</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
+            <div>
+              <Label htmlFor="brand">Marca</Label>
+              <Input
+                id="brand"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                placeholder="Marca del producto"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="sizes">Tallas (separadas por comas)</Label>
-                <Input
-                  id="sizes"
-                  name="sizes"
-                  value={formData.sizes.join(', ')}
-                  onChange={(e) => handleArrayChange('sizes', e.target.value)}
-                  placeholder="XS, S, M, L, XL"
-                />
+                <Label htmlFor="gender">Género</Label>
+                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona género" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hombre">Hombre</SelectItem>
+                    <SelectItem value="mujer">Mujer</SelectItem>
+                    <SelectItem value="unisex">Unisex</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
-                <Label htmlFor="colors">Colores (separados por comas)</Label>
+                <Label htmlFor="material">Material</Label>
                 <Input
-                  id="colors"
-                  name="colors"
-                  value={formData.colors.join(', ')}
-                  onChange={(e) => handleArrayChange('colors', e.target.value)}
-                  placeholder="Rojo, Azul, Negro"
+                  id="material"
+                  name="material"
+                  value={formData.material}
+                  onChange={handleInputChange}
+                  placeholder="Material del producto"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="season">Temporada</Label>
+                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, season: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecciona temporada" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primavera">Primavera</SelectItem>
+                    <SelectItem value="verano">Verano</SelectItem>
+                    <SelectItem value="otoño">Otoño</SelectItem>
+                    <SelectItem value="invierno">Invierno</SelectItem>
+                    <SelectItem value="todo el año">Todo el año</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="tags">Etiquetas</Label>
+                <Input
+                  id="tags"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleInputChange}
+                  placeholder="casual, elegante, deportivo, cómodo..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Separa las etiquetas con comas
+                </p>
               </div>
             </div>
 
@@ -449,12 +818,92 @@ export default function ProductsAdmin() {
 
             <div className="flex gap-3 pt-4">
               <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? 'Guardando...' : 'Guardar Producto'}
+                {submitting ? (editingProduct ? 'Actualizando...' : 'Guardando...') : (editingProduct ? 'Actualizar Producto' : 'Guardar Producto')}
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetProductModal();
+                }}
+                className="flex-1"
+                disabled={submitting}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal para crear categorías */}
+      <Dialog open={isCategoryModalOpen} onOpenChange={setIsCategoryModalOpen}>
+        <DialogContent className="max-w-md mx-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              {editingCategory ? 'Editar Categoría' : 'Crear Nueva Categoría'}
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  resetCategoryModal();
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X size={20} />
+              </button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          <form onSubmit={handleCategorySubmit} className="space-y-4">
+            <div>
+              <Label htmlFor="category_name">Nombre de la Categoría</Label>
+              <Input
+                id="category_name"
+                name="name"
+                value={categoryFormData.name}
+                onChange={handleCategoryInputChange}
+                placeholder="Ej: Ropa para hombres"
+                required
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="category_description">Descripción</Label>
+              <Textarea
+                id="category_description"
+                name="description"
+                value={categoryFormData.description}
+                onChange={handleCategoryInputChange}
+                placeholder="Describe la categoría"
+                rows={3}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="category_slug">Slug (se genera automáticamente)</Label>
+              <Input
+                id="category_slug"
+                name="slug"
+                value={categoryFormData.slug}
+                onChange={handleCategoryInputChange}
+                placeholder="ropa-para-hombres"
+                disabled
+                className="bg-gray-100"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <Button type="submit" className="flex-1" disabled={submitting}>
+                {submitting ? (editingCategory ? 'Actualizando...' : 'Guardando...') : (editingCategory ? 'Actualizar Categoría' : 'Crear Categoría')}
+              </Button>
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  resetCategoryModal();
+                }}
                 className="flex-1"
                 disabled={submitting}
               >
