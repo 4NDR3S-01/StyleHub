@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import { toast } from '@/hooks/use-toast';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,7 +24,14 @@ export default function CategoriesAdmin() {
     const fetchCategories = async () => {
       setLoading(true);
       const { data, error } = await supabase.from('categories').select('*');
-      if (!error && data) setCategories(data);
+      if (error) {
+        toast({
+          title: 'Error al cargar categorías',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+      if (data) setCategories(data);
       setLoading(false);
     };
     fetchCategories();
@@ -33,6 +41,8 @@ export default function CategoriesAdmin() {
     <div>
       {loading ? (
         <p>Cargando categorías...</p>
+      ) : categories.length === 0 ? (
+        <p className="text-gray-500">No hay categorías registradas.</p>
       ) : (
         <ul className="space-y-2">
           {categories.map(cat => (

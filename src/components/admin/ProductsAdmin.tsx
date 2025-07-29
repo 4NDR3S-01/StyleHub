@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { createClient } from '@supabase/supabase-js';
 import { Plus, X, Upload, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -187,7 +188,11 @@ export default function ProductsAdmin() {
         .upload(filePath, file);
 
       if (uploadError) {
-        alert('Error al subir la imagen: ' + uploadError.message);
+        toast({
+          title: 'Error al subir la imagen',
+          description: uploadError.message,
+          variant: 'destructive',
+        });
         throw uploadError;
       }
 
@@ -197,7 +202,11 @@ export default function ProductsAdmin() {
 
       return urlData.publicUrl;
     } catch (error: any) {
-      alert('Error al subir la imagen: ' + (error?.message || 'Error desconocido'));
+      toast({
+        title: 'Error al subir la imagen',
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
       return null;
     }
   };
@@ -207,12 +216,19 @@ export default function ProductsAdmin() {
     
     // Validaciones básicas
     if (!formData.name.trim()) {
-      alert('El nombre del producto es requerido');
+      toast({
+        title: 'Error',
+        description: 'El nombre del producto es requerido',
+        variant: 'destructive',
+      });
       return;
     }
-    
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      alert('El precio debe ser mayor a 0');
+      toast({
+        title: 'Error',
+        description: 'El precio debe ser mayor a 0',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -225,7 +241,11 @@ export default function ProductsAdmin() {
       if (selectedImage) {
         imageUrl = await uploadImageToSupabase(selectedImage);
         if (!imageUrl) {
-          alert('Error al subir la imagen');
+          toast({
+            title: 'Error al subir la imagen',
+            description: 'No se pudo obtener la URL de la imagen',
+            variant: 'destructive',
+          });
           return;
         }
       }
@@ -265,21 +285,27 @@ export default function ProductsAdmin() {
       }
 
       if (result.error) {
-        alert(`Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto: ` + result.error.message);
+        toast({
+          title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+          description: result.error.message,
+          variant: 'destructive',
+        });
         return;
       }
 
-      alert(`Producto ${editingProduct ? 'actualizado' : 'guardado'} exitosamente!`);
+      toast({
+        title: `Producto ${editingProduct ? 'actualizado' : 'guardado'} exitosamente!`,
+        variant: 'default',
+      });
       setIsModalOpen(false);
-      
-      // Resetear formulario
       resetProductModal();
-      
-      // Recargar productos
       fetchProducts();
-      
     } catch (error: any) {
-      alert(`Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto: ` + (error?.message || 'Error desconocido'));
+      toast({
+        title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -306,7 +332,11 @@ export default function ProductsAdmin() {
     e.preventDefault();
     
     if (!categoryFormData.name.trim()) {
-      alert('El nombre de la categoría es requerido');
+      toast({
+        title: 'Error',
+        description: 'El nombre de la categoría es requerido',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -330,21 +360,27 @@ export default function ProductsAdmin() {
       }
 
       if (result.error) {
-        alert(`Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría: ` + result.error.message);
+        toast({
+          title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
+          description: result.error.message,
+          variant: 'destructive',
+        });
         return;
       }
 
-      alert(`Categoría ${editingCategory ? 'actualizada' : 'guardada'} exitosamente!`);
+      toast({
+        title: `Categoría ${editingCategory ? 'actualizada' : 'guardada'} exitosamente!`,
+        variant: 'default',
+      });
       setIsCategoryModalOpen(false);
-      
-      // Resetear formulario de categoría
       resetCategoryModal();
-      
-      // Recargar categorías
       fetchCategories();
-      
     } catch (error: any) {
-      alert(`Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría: ` + (error?.message || 'Error desconocido'));
+      toast({
+        title: `Error al ${editingCategory ? 'actualizar' : 'guardar'} la categoría`,
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -359,14 +395,25 @@ export default function ProductsAdmin() {
           .eq('id', productId);
 
         if (error) {
-          alert('Error al eliminar el producto: ' + error.message);
+          toast({
+            title: 'Error al eliminar el producto',
+            description: error.message,
+            variant: 'destructive',
+          });
           return;
         }
 
-        alert('Producto eliminado exitosamente!');
+        toast({
+          title: 'Producto eliminado exitosamente!',
+          variant: 'default',
+        });
         fetchProducts();
       } catch (error: any) {
-        alert('Error al eliminar el producto: ' + (error?.message || 'Error desconocido'));
+        toast({
+          title: 'Error al eliminar el producto',
+          description: error?.message || 'Error desconocido',
+          variant: 'destructive',
+        });
       }
     }
   };
@@ -380,14 +427,25 @@ export default function ProductsAdmin() {
           .eq('id', categoryId);
 
         if (error) {
-          alert('Error al eliminar la categoría: ' + error.message);
+          toast({
+            title: 'Error al eliminar la categoría',
+            description: error.message,
+            variant: 'destructive',
+          });
           return;
         }
 
-        alert('Categoría eliminada exitosamente!');
+        toast({
+          title: 'Categoría eliminada exitosamente!',
+          variant: 'default',
+        });
         fetchCategories();
       } catch (error: any) {
-        alert('Error al eliminar la categoría: ' + (error?.message || 'Error desconocido'));
+        toast({
+          title: 'Error al eliminar la categoría',
+          description: error?.message || 'Error desconocido',
+          variant: 'destructive',
+        });
       }
     }
   };
