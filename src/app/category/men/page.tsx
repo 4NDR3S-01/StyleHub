@@ -30,7 +30,7 @@ const subCategories = [
   "Accesorios"
 ];
 
-// Relación entre subcategoría y nombre de producto (puedes ajustar según tus datos reales)
+// Relación entre subcategoría y nombre de producto (puedes ajustar según tus datos reales.)
 const subCategoryKeywords: Record<string, string[]> = {
   Camisetas: ["camiseta", "t-shirt"],
   Camisas: ["camisa"],
