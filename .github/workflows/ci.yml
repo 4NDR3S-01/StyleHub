@@ -21,6 +21,11 @@ jobs:
         with:
           node-version: 20
 
+      - name: Crear archivo .env
+        run: |
+          echo "NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}" >> .env
+          echo "NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" >> .env
+
       - name: Instalar dependencias
         run: npm install
 
