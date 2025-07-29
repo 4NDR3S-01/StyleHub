@@ -72,6 +72,57 @@ export const Productos: productos[] = [
     featured: true
   },
   {
+    id: '7',
+    name: 'Camisa Casual Hombre',
+    description: 'Camisa de algodón, perfecta para el día a día.',
+    price: 59.99,
+    images: [
+      'https://images.pexels.com/photos/1707828/pexels-photo-1707828.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+    ],
+    category: 'men',
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Blanco', 'Azul'],
+    // size eliminado
+    stock: 22,
+    rating: 4.5,
+    reviews: 80,
+    featured: false
+  },
+  {
+    id: '8',
+    name: 'Jeans Slim Hombre',
+    description: 'Jeans azul oscuro, corte slim, ideal para cualquier ocasión.',
+    price: 79.99,
+    images: [
+      'https://images.pexels.com/photos/2983464/pexels-photo-2983464.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+    ],
+    category: 'men',
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Azul Oscuro'],
+    // size eliminado
+    stock: 20,
+    rating: 4.6,
+    reviews: 65,
+    featured: false
+  },
+  {
+    id: '9',
+    name: 'Polo Básico Hombre',
+    description: 'Polo básico de algodón, disponible en varios colores.',
+    price: 39.99,
+    images: [
+      'https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
+    ],
+    category: 'men',
+    sizes: ['S', 'M', 'L', 'XL'],
+    colors: ['Negro', 'Blanco', 'Gris'],
+    // size eliminado
+    stock: 30,
+    rating: 4.3,
+    reviews: 40,
+    featured: false
+  },
+  {
     id: '5',
     name: 'Designer Handbag',
     description: 'Elegant handbag crafted from premium leather. Features multiple compartments and adjustable strap.',

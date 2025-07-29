@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { toast } from '@/hooks/use-toast';
 import { createClient } from '@supabase/supabase-js';
-import { Plus, X, Upload } from 'lucide-react';
+import { Plus, X, Upload, Edit, Trash2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,20 +25,31 @@ interface Product {
   original_price?: number;
   images?: string[];
   category_id?: string;
-  sizes?: string[];
-  colors?: string[];
-  stock: number;
-  rating?: number;
-  reviews?: number;
+  brand?: string;
+  gender?: string;
+  material?: string;
+  season?: string;
+  tags?: string[];
   featured: boolean;
   sale: boolean;
 }
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  image?: string;
+  description?: string;
+  parent_id?: string;
+}
+
 export default function ProductsAdmin() {
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -46,9 +58,11 @@ export default function ProductsAdmin() {
     price: '',
     original_price: '',
     category_id: '',
-    sizes: [] as string[],
-    colors: [] as string[],
-    stock: '',
+    brand: '',
+    gender: '',
+    material: '',
+    season: '',
+    tags: '',
     featured: false,
     sale: false
   });
@@ -60,11 +74,6 @@ export default function ProductsAdmin() {
 
   const handleSelectChange = (value: string) => {
     setFormData(prev => ({ ...prev, category_id: value }));
-  };
-
-  const handleArrayChange = (field: 'sizes' | 'colors', value: string) => {
-    const values = value.split(',').map(v => v.trim()).filter(v => v);
-    setFormData(prev => ({ ...prev, [field]: values }));
   };
 
   const handleCheckboxChange = (field: 'featured' | 'sale', checked: boolean) => {
@@ -90,6 +99,48 @@ export default function ProductsAdmin() {
     setImagePreview(null);
   };
 
+  const openEditProductModal = (product: Product) => {
+    setEditingProduct(product);
+    setFormData({
+      name: product.name,
+      description: product.description || '',
+      price: product.price.toString(),
+      original_price: product.original_price ? product.original_price.toString() : '',
+      category_id: product.category_id || '',
+      brand: product.brand || '',
+      gender: product.gender || '',
+      material: product.material || '',
+      season: product.season || '',
+      tags: product.tags ? product.tags.join(', ') : '',
+      featured: product.featured,
+      sale: product.sale
+    });
+    if (product.images && product.images[0]) {
+      setImagePreview(product.images[0]);
+    }
+    setIsModalOpen(true);
+  };
+
+  const resetProductModal = () => {
+    setEditingProduct(null);
+    setFormData({
+      name: '',
+      description: '',
+      price: '',
+      original_price: '',
+      category_id: '',
+      brand: '',
+      gender: '',
+      material: '',
+      season: '',
+      tags: '',
+      featured: false,
+      sale: false
+    });
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
@@ -101,7 +152,11 @@ export default function ProductsAdmin() {
         .upload(filePath, file);
 
       if (uploadError) {
-        alert('Error al subir la imagen: ' + uploadError.message);
+        toast({
+          title: 'Error al subir la imagen',
+          description: uploadError.message,
+          variant: 'destructive',
+        });
         throw uploadError;
       }
 
@@ -111,7 +166,11 @@ export default function ProductsAdmin() {
 
       return urlData.publicUrl;
     } catch (error: any) {
-      alert('Error al subir la imagen: ' + (error?.message || 'Error desconocido'));
+      toast({
+        title: 'Error al subir la imagen',
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
       return null;
     }
   };
@@ -121,17 +180,19 @@ export default function ProductsAdmin() {
     
     // Validaciones básicas
     if (!formData.name.trim()) {
-      alert('El nombre del producto es requerido');
+      toast({
+        title: 'Error',
+        description: 'El nombre del producto es requerido',
+        variant: 'destructive',
+      });
       return;
     }
-    
     if (!formData.price || parseFloat(formData.price) <= 0) {
-      alert('El precio debe ser mayor a 0');
-      return;
-    }
-    
-    if (!formData.stock || parseInt(formData.stock) < 0) {
-      alert('El stock no puede ser negativo');
+      toast({
+        title: 'Error',
+        description: 'El precio debe ser mayor a 0',
+        variant: 'destructive',
+      });
       return;
     }
 
@@ -144,61 +205,71 @@ export default function ProductsAdmin() {
       if (selectedImage) {
         imageUrl = await uploadImageToSupabase(selectedImage);
         if (!imageUrl) {
-          alert('Error al subir la imagen');
+          toast({
+            title: 'Error al subir la imagen',
+            description: 'No se pudo obtener la URL de la imagen',
+            variant: 'destructive',
+          });
           return;
         }
       }
 
-      // Preparar datos para insertar
+      // Preparar datos para insertar/actualizar
       const productData = {
         name: formData.name,
         description: formData.description || null,
         price: parseFloat(formData.price),
         original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-        images: imageUrl ? [imageUrl] : null,
+        images: imageUrl ? [imageUrl] : (editingProduct?.images || null),
         category_id: formData.category_id || null,
-        sizes: formData.sizes.length > 0 ? formData.sizes : null,
-        colors: formData.colors.length > 0 ? formData.colors : null,
-        stock: parseInt(formData.stock),
+        brand: formData.brand || null,
+        gender: formData.gender || null,
+        material: formData.material || null,
+        season: formData.season || null,
+        // Convertir tags de string a array
+        tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
         featured: formData.featured,
         sale: formData.sale
       };
 
-      // Insertar producto en la base de datos
-      const { data, error } = await supabase
-        .from('products')
-        .insert([productData])
-        .select();
+      let result;
+      if (editingProduct) {
+        // Actualizar producto existente
+        result = await supabase
+          .from('products')
+          .update(productData)
+          .eq('id', editingProduct.id)
+          .select();
+      } else {
+        // Insertar nuevo producto
+        result = await supabase
+          .from('products')
+          .insert([productData])
+          .select();
+      }
 
-      if (error) {
-        alert('Error al guardar el producto: ' + error.message);
+      if (result.error) {
+        toast({
+          title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+          description: result.error.message,
+          variant: 'destructive',
+        });
         return;
       }
 
-      alert('Producto guardado exitosamente!');
-      setIsModalOpen(false);
-      
-      // Resetear formulario
-      setFormData({
-        name: '',
-        description: '',
-        price: '',
-        original_price: '',
-        category_id: '',
-        sizes: [],
-        colors: [],
-        stock: '',
-        featured: false,
-        sale: false
+      toast({
+        title: `Producto ${editingProduct ? 'actualizado' : 'guardado'} exitosamente!`,
+        variant: 'default',
       });
-      setSelectedImage(null);
-      setImagePreview(null);
-      
-      // Recargar productos
+      setIsModalOpen(false);
+      resetProductModal();
       fetchProducts();
-      
     } catch (error: any) {
-      alert('Error al guardar el producto: ' + (error?.message || 'Error desconocido'));
+      toast({
+        title: `Error al ${editingProduct ? 'actualizar' : 'guardar'} el producto`,
+        description: error?.message || 'Error desconocido',
+        variant: 'destructive',
+      });
     } finally {
       setSubmitting(false);
     }
@@ -208,71 +279,177 @@ export default function ProductsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, original_price, images, stock, featured, sale');
+      .select('id, name, description, price, original_price, images, brand, gender, material, season, tags, featured, sale');
     if (!error && data) setProducts(data);
     setLoading(false);
   };
 
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('id, name, slug, image, description, parent_id')
+      .order('name');
+    if (!error && data) setCategories(data);
+  };
+
+  const deleteProduct = async (productId: string) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este producto?')) {
+      try {
+        const { error } = await supabase
+          .from('products')
+          .delete()
+          .eq('id', productId);
+
+        if (error) {
+          toast({
+            title: 'Error al eliminar el producto',
+            description: error.message,
+            variant: 'destructive',
+          });
+          return;
+        }
+
+        toast({
+          title: 'Producto eliminado exitosamente!',
+          variant: 'default',
+        });
+        fetchProducts();
+      } catch (error: any) {
+        toast({
+          title: 'Error al eliminar el producto',
+          description: error?.message || 'Error desconocido',
+          variant: 'destructive',
+        });
+      }
+    }
+  };
+
   useEffect(() => {
     fetchProducts();
+    fetchCategories();
   }, []);
 
   return (
-    <div>
-      <div className="mb-6">
+    <div >
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">All Products</h1>
         <Button 
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2"
+          onClick={() => {
+            resetProductModal();
+            setIsModalOpen(true);
+          }}
+          className="bg-blue-600 hover:bg-blue-700 text-white flex items-center gap-2 px-4 py-2 rounded-lg"
         >
           <Plus size={20} />
-          Añadir Producto
+          Add Product
         </Button>
       </div>
 
       {loading ? (
-        <p>Cargando productos...</p>
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">Cargando productos...</p>
+        </div>
+      ) : products.length === 0 ? (
+        <div className="flex justify-center items-center h-64">
+          <p className="text-gray-500">No hay productos registrados.</p>
+        </div>
       ) : (
-        <table className="w-full border">
-          <thead>
-            <tr className="bg-gray-100">
-              <th className="p-2">Imagen</th>
-              <th className="p-2">Nombre</th>
-              <th className="p-2">Precio</th>
-              <th className="p-2">Stock</th>
-              <th className="p-2">Destacado</th>
-              <th className="p-2">Oferta</th>
-            </tr>
-          </thead>
-          <tbody>
-            {products.map(prod => (
-              <tr key={prod.id} className="border-t">
-                <td className="p-2">
-                  {prod.images && prod.images[0] ? (
-                    <img src={prod.images[0]} alt={prod.name} className="w-12 h-12 object-cover rounded" />
-                  ) : (
-                    <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center">
-                      <span className="text-xs text-gray-500">Sin imagen</span>
-                    </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {products.map(prod => (
+            <div key={prod.id} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-shadow">
+              {/* Imagen del producto */}
+              <div className="aspect-square bg-gray-100 relative h-80">
+                {prod.images && prod.images[0] ? (
+                  <img 
+                    src={prod.images[0]} 
+                    alt={prod.name} 
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <span className="text-gray-400 text-lg">Sin imagen</span>
+                  </div>
+                )}
+                
+                {/* Badges de destacado y oferta */}
+                <div className="absolute top-3 left-3 flex flex-col gap-2">
+                  {prod.featured && (
+                    <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-xs rounded-full font-medium">
+                      Destacado
+                    </span>
                   )}
-                </td>
-                <td className="p-2">{prod.name}</td>
-                <td className="p-2">${prod.price}</td>
-                <td className="p-2">{prod.stock}</td>
-                <td className="p-2">{prod.featured ? 'Sí' : 'No'}</td>
-                <td className="p-2">{prod.sale ? 'Sí' : 'No'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                  {prod.sale && (
+                    <span className="px-3 py-1 bg-red-100 text-red-800 text-xs rounded-full font-medium">
+                      Oferta
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Contenido del card */}
+              <div className="p-6">
+                <h3 className="font-semibold text-gray-900 mb-3 text-lg truncate">{prod.name}</h3>
+                
+                {/* Precio */}
+                <div className="mb-4">
+                  <span className="text-xl font-bold text-gray-900">${prod.price}</span>
+                  {prod.original_price && prod.original_price > prod.price && (
+                    <span className="text-sm text-gray-500 line-through ml-2">
+                      ${prod.original_price}
+                    </span>
+                  )}
+                </div>
+
+                {/* Etiquetas */}
+                {prod.tags && prod.tags.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mb-6">
+                    {prod.tags.slice(0, 2).map((tag, index) => (
+                      <span key={index} className="px-3 py-1 bg-blue-50 text-blue-700 text-sm rounded-full">
+                        {tag}
+                      </span>
+                    ))}
+                    {prod.tags.length > 2 && (
+                      <span className="text-sm text-gray-500">+{prod.tags.length - 2}</span>
+                    )}
+                  </div>
+                )}
+
+                {/* Botones de acción */}
+                <div className="flex gap-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => openEditProductModal(prod)}
+                    className="flex-1 flex items-center justify-center gap-2 text-blue-600 border-blue-200 hover:bg-blue-50 py-3"
+                  >
+                    <Edit size={16} />
+                    Edit Product
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => deleteProduct(prod.id)}
+                    className="px-4 py-3 text-red-600 border-red-200 hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md mx-auto">
+        <DialogContent className="max-w-lg mx-auto max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center justify-between">
-              Añadir Nuevo Producto
+              {editingProduct ? 'Edit Product' : 'Add New Product'}
               <button
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetProductModal();
+                }}
                 className="text-gray-400 hover:text-gray-600"
               >
                 <X size={20} />
@@ -282,31 +459,31 @@ export default function ProductsAdmin() {
           
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <Label htmlFor="name">Nombre del Producto</Label>
+              <Label htmlFor="name">Product Name</Label>
               <Input
                 id="name"
                 name="name"
                 value={formData.name}
                 onChange={handleInputChange}
-                placeholder="Ingresa el nombre del producto"
+                placeholder="Enter product name"
                 required
               />
             </div>
 
             <div>
-              <Label htmlFor="description">Descripción</Label>
+              <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 name="description"
                 value={formData.description}
                 onChange={handleInputChange}
-                placeholder="Describe el producto"
+                placeholder="Describe the product"
                 rows={3}
               />
             </div>
 
             <div>
-              <Label htmlFor="image">Imagen del Producto</Label>
+              <Label htmlFor="image">Product Image</Label>
               <div className="mt-2">
                 {imagePreview ? (
                   <div className="relative">
@@ -335,10 +512,10 @@ export default function ProductsAdmin() {
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
                       <Upload size={24} className="mx-auto text-gray-400 mb-2" />
                       <p className="text-sm text-gray-500">
-                        Haz clic para subir una imagen
+                        Click to upload an image
                       </p>
                       <p className="text-xs text-gray-400 mt-1">
-                        PNG, JPG, GIF hasta 10MB
+                        PNG, JPG, GIF up to 10MB
                       </p>
                     </div>
                   </div>
@@ -348,7 +525,7 @@ export default function ProductsAdmin() {
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="price">Precio *</Label>
+                <Label htmlFor="price">Price *</Label>
                 <Input
                   id="price"
                   name="price"
@@ -362,7 +539,7 @@ export default function ProductsAdmin() {
               </div>
               
               <div>
-                <Label htmlFor="original_price">Precio Original</Label>
+                <Label htmlFor="original_price">Original Price</Label>
                 <Input
                   id="original_price"
                   name="original_price"
@@ -376,54 +553,88 @@ export default function ProductsAdmin() {
             </div>
 
             <div>
-              <Label htmlFor="stock">Stock *</Label>
-              <Input
-                id="stock"
-                name="stock"
-                type="number"
-                value={formData.stock}
-                onChange={handleInputChange}
-                placeholder="0"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="category_id">Categoría *</Label>
+              <Label htmlFor="category_id">Category *</Label>
               <Select onValueChange={handleSelectChange} required>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona una categoría" />
+                  <SelectValue placeholder="Select a category" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="men">Hombres</SelectItem>
-                  <SelectItem value="women">Mujeres</SelectItem>
-                  <SelectItem value="accessories">Accesorios</SelectItem>
-                  <SelectItem value="shoes">Zapatos</SelectItem>
+                  {categories.map(category => (
+                    <SelectItem key={category.id} value={category.id}>
+                      {category.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
+            <div>
+              <Label htmlFor="brand">Brand</Label>
+              <Input
+                id="brand"
+                name="brand"
+                value={formData.brand}
+                onChange={handleInputChange}
+                placeholder="Product brand"
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="sizes">Tallas (separadas por comas)</Label>
-                <Input
-                  id="sizes"
-                  name="sizes"
-                  value={formData.sizes.join(', ')}
-                  onChange={(e) => handleArrayChange('sizes', e.target.value)}
-                  placeholder="XS, S, M, L, XL"
-                />
+                <Label htmlFor="gender">Gender</Label>
+                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select gender" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hombre">Men</SelectItem>
+                    <SelectItem value="mujer">Women</SelectItem>
+                    <SelectItem value="unisex">Unisex</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <div>
-                <Label htmlFor="colors">Colores (separados por comas)</Label>
+                <Label htmlFor="material">Material</Label>
                 <Input
-                  id="colors"
-                  name="colors"
-                  value={formData.colors.join(', ')}
-                  onChange={(e) => handleArrayChange('colors', e.target.value)}
-                  placeholder="Rojo, Azul, Negro"
+                  id="material"
+                  name="material"
+                  value={formData.material}
+                  onChange={handleInputChange}
+                  placeholder="Product material"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="season">Season</Label>
+                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, season: value }))}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select season" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="primavera">Spring</SelectItem>
+                    <SelectItem value="verano">Summer</SelectItem>
+                    <SelectItem value="otoño">Fall</SelectItem>
+                    <SelectItem value="invierno">Winter</SelectItem>
+                    <SelectItem value="todo el año">All Year</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label htmlFor="tags">Tags</Label>
+                <Input
+                  id="tags"
+                  name="tags"
+                  value={formData.tags}
+                  onChange={handleInputChange}
+                  placeholder="casual, elegant, sporty, comfortable..."
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Separate tags with commas
+                </p>
               </div>
             </div>
 
@@ -434,7 +645,7 @@ export default function ProductsAdmin() {
                   checked={formData.featured}
                   onCheckedChange={(checked) => handleCheckboxChange('featured', checked as boolean)}
                 />
-                <Label htmlFor="featured">Producto Destacado</Label>
+                <Label htmlFor="featured">Featured Product</Label>
               </div>
               
               <div className="flex items-center space-x-2">
@@ -443,22 +654,25 @@ export default function ProductsAdmin() {
                   checked={formData.sale}
                   onCheckedChange={(checked) => handleCheckboxChange('sale', checked as boolean)}
                 />
-                <Label htmlFor="sale">En Oferta</Label>
+                <Label htmlFor="sale">On Sale</Label>
               </div>
             </div>
 
             <div className="flex gap-3 pt-4">
-              <Button type="submit" className="flex-1" disabled={submitting}>
-                {submitting ? 'Guardando...' : 'Guardar Producto'}
+              <Button type="submit" className="flex-1 bg-blue-600 hover:bg-blue-700" disabled={submitting}>
+                {submitting ? (editingProduct ? 'Updating...' : 'Saving...') : (editingProduct ? 'Update Product' : 'Save Product')}
               </Button>
               <Button 
                 type="button" 
                 variant="outline" 
-                onClick={() => setIsModalOpen(false)}
+                onClick={() => {
+                  setIsModalOpen(false);
+                  resetProductModal();
+                }}
                 className="flex-1"
                 disabled={submitting}
               >
-                Cancelar
+                Cancel
               </Button>
             </div>
           </form>

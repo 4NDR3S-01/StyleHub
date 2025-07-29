@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Box, List, Users, ShoppingCart } from 'lucide-react';
 
@@ -49,7 +49,7 @@ export default function AdminDashboard() {
       href: '/admin/categorias',
     },
     {
-      label: 'Usuarios',
+      label: 'Clientes',
       value: stats.users,
       icon: <Users size={32} className="text-purple-500" />,
       href: '/admin/clientes',
@@ -57,30 +57,24 @@ export default function AdminDashboard() {
     {
       label: 'Pedidos',
       value: stats.orders,
-      icon: <ShoppingCart size={32} className="text-[#ff6f61] drop-shadow-lg" />,
-      href: '/admin/ordenes',
+      icon: <ShoppingCart size={32} className="text-red-400" />,
+      href: '/admin/orders',
     },
   ];
 
   return (
-    <div className="w-full">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {cards.map(card => (
-          <a
-            key={card.label}
-            href={card.href}
-            className="bg-white rounded-xl px-7 py-6 flex flex-col items-center justify-center hover:shadow-md transition-shadow border border-slate-100 group min-h-[140px] shadow-sm"
-            style={{ boxShadow: '0 2px 8px 0 rgba(60,72,100,0.04)' }}
-          >
-            <div className="flex flex-col items-center justify-center w-full">
-              <div className="mb-2">{card.icon}</div>
-              <span className="text-3xl font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors mb-1 break-words">{card.value}</span>
-              <span className="text-base text-gray-600 font-medium text-center break-words">{card.label}</span>
-            </div>
-          </a>
-        ))}
-      </div>
-      {/* Aquí puedes agregar más widgets, gráficas o tablas como en la imagen de referencia */}
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {cards.map(card => (
+        <a
+          key={card.label}
+          href={card.href}
+          className="bg-white rounded-xl shadow-lg p-6 flex flex-col items-center justify-center hover:shadow-xl transition-shadow border border-gray-100 group"
+        >
+          {card.icon}
+          <span className="mt-4 text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{card.value}</span>
+          <span className="mt-2 text-lg text-gray-600">{card.label}</span>
+        </a>
+      ))}
     </div>
   );
 }
