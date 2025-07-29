@@ -49,10 +49,10 @@ export default function AdminDashboard() {
       href: '/admin/categories',
     },
     {
-      label: 'Usuarios',
+      label: 'Clientes',
       value: stats.users,
       icon: <Users size={32} className="text-purple-500" />,
-      href: '/admin/users',
+      href: '/admin/clientes',
     },
     {
       label: 'Pedidos',

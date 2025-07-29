@@ -15,7 +15,8 @@ const TITLES: Record<string, string> = {
   '/admin/clientes': 'Clientes',
   '/admin/cupones': 'Cupones',
   '/admin/reseñas': 'Reseñas',
-  '/admin/configuracion': 'Configuración',
+  '/admin/configuracion-de-cuenta': 'Usuarios',
+  '/admin/usuarios': 'Gestión de Usuarios',
 };
 
 type Props = {

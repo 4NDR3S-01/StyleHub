@@ -74,6 +74,11 @@ export default function AdminSidebar() {
                       Configuraciones de la cuenta
                     </Link>
                   </li>
+                  <li>
+                    <Link href="/admin/usuarios" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Gestión de usuarios
+                    </Link>
+                  </li>
                 </ul>
               )}
             </li>
