@@ -24,7 +24,7 @@ export const Productos: productos[] = [
     id: '2',
     name: 'Chaqueta de Mezclilla Premium',
     description: 'Chaqueta de mezclilla de inspiración vintage con ajuste moderno. Hecha de mezclilla sostenible con detalles únicos de lavado.',
-    price: 149.99,
+    price: 0.00,
     images: [
       'https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1',
       'https://images.pexels.com/photos/1656684/pexels-photo-1656684.jpeg?auto=compress&cs=tinysrgb&w=500&h=600&dpr=1'
