@@ -16,7 +16,8 @@ import { CartItem, User as UserType } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { OrderService, PaymentService } from '@/services/order.service';
+import { OrderService } from '@/services/order.service';
+import { stripePromise } from '@/lib/stripe';
 
 // Esquema de validación para el formulario
 const checkoutSchema = z.object({
@@ -33,18 +34,7 @@ const checkoutSchema = z.object({
   zipCode: z.string().min(5, 'El código postal debe tener al menos 5 caracteres'),
   country: z.string().min(2, 'El país es requerido'),
   
-  // Información de pago
-  cardNumber: z.string()
-    .min(16, 'El número de tarjeta debe tener 16 dígitos')
-    .max(19, 'Número de tarjeta inválido')
-    .regex(/^[0-9\s]+$/, 'Solo se permiten números'),
-  cardHolder: z.string().min(2, 'El nombre del titular es requerido'),
-  expiryDate: z.string()
-    .regex(/^(0[1-9]|1[0-2])\/([0-9]{2})$/, 'Formato inválido (MM/YY)'),
-  cvv: z.string()
-    .min(3, 'CVV debe tener al menos 3 dígitos')
-    .max(4, 'CVV debe tener máximo 4 dígitos')
-    .regex(/^[0-9]+$/, 'Solo se permiten números'),
+  // Información de pago (ya no se recolecta en frontend, Stripe lo gestiona)
   
   // Opciones adicionales
   saveInfo: z.boolean().default(false),
@@ -77,97 +67,33 @@ export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }:
       state: '',
       zipCode: '',
       country: 'Colombia',
-      cardNumber: '',
-      cardHolder: '',
-      expiryDate: '',
-      cvv: '',
+      // Campos de tarjeta eliminados
       saveInfo: false,
       sameAsShipping: true,
     },
   });
 
-  // Formatear número de tarjeta
-  const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
-    const parts = [];
-    for (let i = 0, len = match.length; i < len; i += 4) {
-      parts.push(match.substring(i, i + 4));
-    }
-    if (parts.length) {
-      return parts.join(' ');
-    } else {
-      return v;
-    }
-  };
-
-  // Formatear fecha de expiración
-  const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
-    if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
-    }
-    return v;
-  };
+  // Stripe gestiona la recolección de datos de tarjeta
 
   const onSubmit = async (data: CheckoutFormData) => {
     setIsProcessing(true);
-    
     try {
-      if (!user) {
-        throw new Error('Usuario no autenticado');
-      }
-
-      // Calcular totales
-      const totals = OrderService.calculateTotals(cartItems);
-
-      // Procesar pago
-      const paymentResult = await PaymentService.processPayment(totals.total, {
-        cardNumber: data.cardNumber,
-        cardHolder: data.cardHolder,
-        expiryDate: data.expiryDate,
-        cvv: data.cvv
-      });
-
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.error || 'Error procesando el pago');
-      }
-
-      // Crear orden en la base de datos
-      const orderData = {
-        user_id: user.id,
-        items: cartItems,
-        shipping_info: {
-          firstName: data.firstName,
-          lastName: data.lastName,
+      if (!user) throw new Error('Usuario no autenticado');
+      const stripe = await stripePromise;
+      // Llama a la API para crear la sesión de Stripe Checkout
+      const response = await fetch('/api/stripe/checkout-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cartItems,
           email: data.email,
-          phone: data.phone,
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
-          country: data.country,
-        },
-        payment_info: {
-          method: 'credit_card',
-          lastFour: data.cardNumber.slice(-4),
-        },
-        subtotal: totals.subtotal,
-        shipping_cost: totals.shipping,
-        tax: totals.tax,
-        total: totals.total,
-      };
-
-      const order = await OrderService.createOrder(orderData);
-      
-      // Limpiar carrito y redirigir
-      clearCart();
-      toast.success('¡Pago procesado exitosamente!');
-      router.push(`/orden-confirmada?orderId=${order.id}`);
-      
+        }),
+      });
+      const session = await response.json();
+      if (!response.ok) throw new Error(session.error || 'No se pudo iniciar el pago con Stripe');
+      // Redirige a Stripe Checkout
+      await stripe?.redirectToCheckout({ sessionId: session.id });
     } catch (error) {
-      console.error('Error procesando pago:', error);
       toast.error(error instanceof Error ? error.message : 'Error al procesar el pago. Intenta nuevamente.');
     } finally {
       setIsProcessing(false);
@@ -361,106 +287,13 @@ export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }:
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <FormField
-                control={form.control}
-                name="cardNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Número de Tarjeta</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="1234 5678 9012 3456"
-                        {...field}
-                        onChange={(e) => {
-                          const formatted = formatCardNumber(e.target.value);
-                          field.onChange(formatted);
-                        }}
-                        maxLength={19}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="cardHolder"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nombre del Titular</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Como aparece en la tarjeta" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="expiryDate"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Fecha de Expiración</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="MM/YY"
-                          {...field}
-                          onChange={(e) => {
-                            const formatted = formatExpiryDate(e.target.value);
-                            field.onChange(formatted);
-                          }}
-                          maxLength={5}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="cvv"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>CVV</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="123"
-                          type="password"
-                          maxLength={4}
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+              <div className="text-center py-8">
+                <p className="text-gray-700 mb-4">
+                  Serás redirigido a Stripe para completar el pago de forma segura.<br />
+                  <span className="text-xs text-gray-500">Tus datos de tarjeta no se almacenan en este sitio.</span>
+                </p>
+                <img src="https://stripe.com/img/v3/home/social.png" alt="Stripe" className="mx-auto h-8" />
               </div>
-
-              <Separator />
-
-              <FormField
-                control={form.control}
-                name="saveInfo"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                    <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        Guardar información para futuras compras
-                      </FormLabel>
-                    </div>
-                  </FormItem>
-                )}
-              />
             </CardContent>
           </Card>
         )}
@@ -489,7 +322,7 @@ export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }:
                 <div className="text-left bg-gray-50 p-4 rounded-lg space-y-2">
                   <p><strong>Email:</strong> {form.getValues('email')}</p>
                   <p><strong>Envío a:</strong> {form.getValues('address')}, {form.getValues('city')}</p>
-                  <p><strong>Tarjeta:</strong> **** **** **** {form.getValues('cardNumber').slice(-4)}</p>
+                  {/* Stripe mostrará los datos de tarjeta en su página segura */}
                 </div>
               </div>
             </CardContent>
