@@ -16,7 +16,6 @@ import { CartItem, User as UserType } from '@/types';
 import { useCart } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { OrderService } from '@/services/order.service';
 import { stripePromise } from '@/lib/stripe';
 
 // Esquema de validación para el formulario
