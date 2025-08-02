@@ -1,30 +1,79 @@
-import { Star } from 'lucide-react';
+'use client';
 
-const Testimonios = [
-  {
-    id: 1,
-    name: 'Sarah Johnson',
-    avatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1',
-    rating: 5,
-    text: '¡Calidad y estilo increíbles! He pedido varios artículos y siempre superan mis expectativas. El servicio al cliente también es excepcional.',
-  },
-  {
-    id: 2,
-    name: 'Michael Chen',
-    avatar: 'https://images.pexels.com/photos/1043471/pexels-photo-1043471.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1',
-    rating: 5,
-    text: 'StyleHub se ha convertido en mi primera opción para moda premium. Los materiales son de primera y el ajuste siempre es perfecto. ¡Muy recomendado!',
-  },
-  {
-    id: 3,
-    name: 'Emily Davis',
-    avatar: 'https://images.pexels.com/photos/762020/pexels-photo-762020.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&dpr=1',
-    rating: 5,
-    text: 'Me encanta la variedad y calidad de los productos. Envío rápido y devoluciones fáciles hacen que comprar aquí sea una delicia. ¡Mi guardarropa nunca se ha visto mejor!',
-  },
-];
+import { useEffect, useState } from 'react';
+import { Star } from 'lucide-react';
+import { getApprovedTestimonials } from '@/services/testimonial.service';
+
+interface Testimonial {
+  id: string;
+  name: string;
+  avatar?: string;
+  rating: number;
+  text: string;
+  created_at: string;
+}
 
 export default function Testimonials() {
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadTestimonials() {
+      try {
+        const data = await getApprovedTestimonials();
+        setTestimonials(data);
+      } catch (error) {
+        console.error('Error loading testimonials:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadTestimonials();
+  }, []);
+
+  if (loading) {
+    return (
+      <section className="py-16 bg-slate-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] bg-clip-text text-transparent drop-shadow-lg mb-4">
+              Lo Que Dicen Nuestros Clientes
+            </h2>
+            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+              No solo confíes en nuestra palabra - escucha a nuestros clientes satisfechos
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-2xl p-8 shadow-lg animate-pulse">
+                <div className="flex items-center mb-4">
+                  <div className="w-12 h-12 bg-gray-200 rounded-full mr-4"></div>
+                  <div>
+                    <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
+                    <div className="flex">
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="w-4 h-4 bg-gray-200 rounded mr-1"></div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="h-4 bg-gray-200 rounded"></div>
+                  <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
+
+  if (testimonials.length === 0) {
+    return null; // Don't show testimonials section if no testimonials
+  }
+
   return (
     <section className="py-16 bg-slate-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -38,16 +87,19 @@ export default function Testimonials() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {Testimonios.map((testimonial) => (
+          {testimonials.map((testimonial) => (
             <div
               key={testimonial.id}
               className="bg-white rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow duration-300"
             >
               <div className="flex items-center mb-4">
                 <img
-                  src={testimonial.avatar}
+                  src={testimonial.avatar || '/default-avatar.png'}
                   alt={testimonial.name}
                   className="w-12 h-12 rounded-full object-cover mr-4"
+                  onError={(e) => {
+                    e.currentTarget.src = '/default-avatar.png';
+                  }}
                 />
                 <div>
                   <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
