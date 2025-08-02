@@ -160,31 +160,244 @@ export default function CategoryPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-white to-purple-50">
+      {/* Hero Section */}
+      <div className="relative overflow-hidden bg-gradient-to-r from-pink-500 to-purple-600 text-white">
+        <div className="absolute inset-0 bg-black opacity-20"></div>
+        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+          <div className="text-center">
+            <h1 className="text-5xl md:text-6xl font-bold mb-4 capitalize">
+              {category.name}
+            </h1>
+            {category.description && (
+              <p className="text-xl md:text-2xl text-pink-100 max-w-3xl mx-auto">
+                {category.description}
+              </p>
+            )}
+            <div className="mt-8 flex justify-center space-x-4">
+              <div className="bg-white bg-opacity-20 rounded-lg px-6 py-3">
+                <span className="text-2xl font-bold">{products.length}</span>
+                <p className="text-sm">Productos</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-lg px-6 py-3">
+                <span className="text-2xl font-bold">{featuredProducts.length}</span>
+                <p className="text-sm">Destacados</p>
+              </div>
+              <div className="bg-white bg-opacity-20 rounded-lg px-6 py-3">
+                <span className="text-2xl font-bold">{products.filter(p => p.sale).length}</span>
+                <p className="text-sm">En Oferta</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4 capitalize">
-            {category.name}
-          </h1>
-          {category.description && (
-            <p className="text-gray-600 text-lg">
-              {category.description}
-            </p>
-          )}
+        {/* Quick Categories / Collections */}
+        <div className="mb-12">
+          <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">Explora por Colección</h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <img 
+                src="https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1" 
+                alt="Vestidos" 
+                className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-2 left-2 text-white">
+                <h3 className="font-semibold">Vestidos</h3>
+                <p className="text-xs opacity-90">Elegancia y estilo</p>
+              </div>
+            </div>
+            
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <img 
+                src="https://images.pexels.com/photos/1040945/pexels-photo-1040945.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1" 
+                alt="Chaquetas" 
+                className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-2 left-2 text-white">
+                <h3 className="font-semibold">Chaquetas</h3>
+                <p className="text-xs opacity-90">Para cada ocasión</p>
+              </div>
+            </div>
+            
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <img 
+                src="https://images.pexels.com/photos/1174732/pexels-photo-1174732.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1" 
+                alt="Suéteres" 
+                className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-2 left-2 text-white">
+                <h3 className="font-semibold">Suéteres</h3>
+                <p className="text-xs opacity-90">Comodidad premium</p>
+              </div>
+            </div>
+            
+            <div className="relative group cursor-pointer rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-300">
+              <img 
+                src="https://images.pexels.com/photos/1927259/pexels-photo-1927259.jpeg?auto=compress&cs=tinysrgb&w=300&h=200&dpr=1" 
+                alt="Accesorios" 
+                className="w-full h-32 object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+              <div className="absolute bottom-2 left-2 text-white">
+                <h3 className="font-semibold">Accesorios</h3>
+                <p className="text-xs opacity-90">Completa tu look</p>
+              </div>
+            </div>
+          </div>
         </div>
 
+        {/* Productos destacados mejorados */}
+        {featuredProducts.length > 0 && (
+          <div className="mb-12">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 mb-4">✨ Productos Destacados</h2>
+              <p className="text-gray-600">Descubre nuestras piezas más populares y elegantes</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {featuredProducts.slice(0, 6).map((product) => (
+                <div key={product.id} className="group">
+                  <ProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
+          {/* Sidebar mejorado */}
           <aside className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-              {/* Productos destacados */}
+            <div className="space-y-6">
+              {/* Filtros avanzados */}
+              <div className="bg-white rounded-2xl shadow-lg p-6 border border-pink-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                  <span className="bg-pink-100 p-2 rounded-lg mr-3">🔍</span>
+                  Filtros
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Filtro de precio con rangos */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Precio</label>
+                    <select
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                      value={priceFilter}
+                      onChange={(e) => setPriceFilter(e.target.value)}
+                    >
+                      <option value="">Todos los precios</option>
+                      <option value="low">$0 - $50</option>
+                      <option value="medium">$50 - $100</option>
+                      <option value="high">$100+</option>
+                    </select>
+                  </div>
+
+                  {/* Filtro de color con círculos de colores */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Color</label>
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setColorFilter("")}
+                        className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                          colorFilter === "" 
+                            ? "bg-pink-500 text-white" 
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        Todos
+                      </button>
+                      {availableColors.map((color) => (
+                        <button
+                          key={color}
+                          onClick={() => setColorFilter(color)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                            colorFilter === color 
+                              ? "bg-pink-500 text-white" 
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {color}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Filtro de talla */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Talla</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setSizeFilter("")}
+                        className={`py-2 rounded-lg text-sm font-medium transition-all ${
+                          sizeFilter === "" 
+                            ? "bg-pink-500 text-white" 
+                            : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                        }`}
+                      >
+                        Todas
+                      </button>
+                      {availableSizes.map((size) => (
+                        <button
+                          key={size}
+                          onClick={() => setSizeFilter(size)}
+                          className={`py-2 rounded-lg text-sm font-medium transition-all ${
+                            sizeFilter === size 
+                              ? "bg-pink-500 text-white" 
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          {size}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Botón limpiar filtros */}
+                  <button
+                    onClick={() => {
+                      setColorFilter("");
+                      setSizeFilter("");
+                      setPriceFilter("");
+                      setSortBy("name");
+                    }}
+                    className="w-full py-2 px-4 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Limpiar filtros
+                  </button>
+                </div>
+              </div>
+
+              {/* Ofertas especiales */}
+              {products.filter(p => p.sale).length > 0 && (
+                <div className="bg-gradient-to-br from-pink-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
+                  <h3 className="text-xl font-bold mb-3">🏷️ Ofertas Especiales</h3>
+                  <p className="text-pink-100 mb-4">
+                    ¡{products.filter(p => p.sale).length} productos en oferta!
+                  </p>
+                  <button 
+                    onClick={() => {
+                      // Filtrar solo productos en oferta
+                      setColorFilter("");
+                      setSizeFilter("");
+                      setPriceFilter("");
+                    }}
+                    className="bg-white text-pink-600 px-4 py-2 rounded-lg font-medium hover:bg-pink-50 transition-colors"
+                  >
+                    Ver ofertas
+                  </button>
+                </div>
+              )}
+
+              {/* Productos destacados del sidebar */}
               {featuredProducts.length > 0 && (
-                <div>
-                  <h2 className="text-xl font-bold mb-4 text-blue-700">Productos Destacados</h2>
+                <div className="bg-white rounded-2xl shadow-lg p-6 border border-pink-100">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">⭐ Más Populares</h3>
                   <div className="space-y-4">
                     {featuredProducts.slice(0, 3).map((product) => (
-                      <div key={product.id} className="flex space-x-3">
+                      <div key={product.id} className="flex space-x-3 p-3 bg-pink-50 rounded-lg hover:bg-pink-100 transition-colors cursor-pointer">
                         <img
                           src={product.images[0]}
                           alt={product.name}
@@ -194,140 +407,107 @@ export default function CategoryPage() {
                           <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
                             {product.name}
                           </h4>
-                          <p className="text-blue-600 font-semibold text-sm">
-                            ${product.price.toFixed(2)}
-                          </p>
+                          <div className="flex items-center space-x-2">
+                            <p className="text-pink-600 font-semibold text-sm">
+                              ${product.price.toFixed(2)}
+                            </p>
+                            {product.original_price && (
+                              <p className="text-gray-400 text-xs line-through">
+                                ${product.original_price.toFixed(2)}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
-
-              {/* Estadísticas */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Estadísticas</h3>
-                <div className="space-y-2 text-sm text-gray-600">
-                  <p>Total de productos: {products.length}</p>
-                  <p>Productos destacados: {featuredProducts.length}</p>
-                  <p>En oferta: {products.filter(p => p.sale).length}</p>
-                </div>
-              </div>
             </div>
           </aside>
 
           {/* Contenido principal */}
           <main className="lg:col-span-3">
-            {/* Productos destacados */}
-            {featuredProducts.length > 0 && (
-              <div className="mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6">Productos Destacados</h2>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {featuredProducts.slice(0, 6).map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
+            {/* Barra de ordenamiento mejorada */}
+            <div className="bg-white rounded-2xl shadow-lg p-6 mb-8 border border-pink-100">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div className="flex items-center space-x-4">
+                  <h3 className="font-semibold text-gray-900">Ordenar por:</h3>
+                  <select
+                    className="border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-pink-500 focus:border-transparent"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                  >
+                    <option value="name">Nombre A-Z</option>
+                    <option value="price-low">Precio: Menor a Mayor</option>
+                    <option value="price-high">Precio: Mayor a Menor</option>
+                    <option value="newest">Más Recientes</option>
+                  </select>
                 </div>
-              </div>
-            )}
-
-            {/* Filtros y ordenamiento */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Filtros y Ordenamiento</h3>
-              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={colorFilter}
-                  onChange={(e) => setColorFilter(e.target.value)}
-                >
-                  <option value="">Todos los colores</option>
-                  {availableColors.map((color) => (
-                    <option key={color} value={color}>{color}</option>
-                  ))}
-                </select>
                 
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={sizeFilter}
-                  onChange={(e) => setSizeFilter(e.target.value)}
-                >
-                  <option value="">Todas las tallas</option>
-                  {availableSizes.map((size) => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
-                
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={priceFilter}
-                  onChange={(e) => setPriceFilter(e.target.value)}
-                >
-                  <option value="">Todos los precios</option>
-                  <option value="low">Menos de $50</option>
-                  <option value="medium">$50 - $99</option>
-                  <option value="high">$100 o más</option>
-                </select>
-
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                >
-                  <option value="name">Nombre A-Z</option>
-                  <option value="price-low">Precio: Menor a Mayor</option>
-                  <option value="price-high">Precio: Mayor a Menor</option>
-                  <option value="newest">Más Recientes</option>
-                </select>
-                
-                <button
-                  className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition"
-                  onClick={() => {
-                    setColorFilter("");
-                    setSizeFilter("");
-                    setPriceFilter("");
-                    setSortBy("name");
-                  }}
-                >
-                  Limpiar filtros
-                </button>
+                <div className="flex items-center space-x-2 text-sm text-gray-600">
+                  <span className="bg-pink-100 text-pink-800 px-3 py-1 rounded-full font-medium">
+                    {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Productos */}
+            {/* Grid de productos */}
             <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  Todos los Productos
-                </h2>
-                <span className="text-gray-600">
-                  {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              
               {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
                   {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
+                    <div key={product.id} className="group">
+                      <ProductCard product={product} />
+                    </div>
                   ))}
                 </div>
               ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">
-                    No hay productos que coincidan con los filtros seleccionados.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setColorFilter("");
-                      setSizeFilter("");
-                      setPriceFilter("");
-                    }}
-                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Ver todos los productos
-                  </button>
+                <div className="text-center py-16">
+                  <div className="max-w-md mx-auto">
+                    <div className="bg-pink-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                      <span className="text-3xl">🔍</span>
+                    </div>
+                    <h3 className="text-xl font-medium text-gray-900 mb-2">
+                      No encontramos productos
+                    </h3>
+                    <p className="text-gray-600 mb-6">
+                      Intenta ajustar los filtros o explora otras categorías.
+                    </p>
+                    <button
+                      onClick={() => {
+                        setColorFilter("");
+                        setSizeFilter("");
+                        setPriceFilter("");
+                      }}
+                      className="bg-pink-600 text-white px-6 py-3 rounded-lg hover:bg-pink-700 transition-colors"
+                    >
+                      Ver todos los productos
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
           </main>
+        </div>
+
+        {/* Newsletter Section */}
+        <div className="mt-16 bg-gradient-to-r from-pink-500 to-purple-600 rounded-3xl shadow-2xl p-8 text-white text-center">
+          <h3 className="text-3xl font-bold mb-4">¡No te pierdas nada!</h3>
+          <p className="text-pink-100 mb-6 max-w-2xl mx-auto">
+            Suscríbete a nuestro newsletter y recibe las últimas tendencias, ofertas exclusivas y nuevos lanzamientos directamente en tu email.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="Tu email"
+              className="flex-1 px-4 py-3 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-white"
+            />
+            <button className="bg-white text-pink-600 px-6 py-3 rounded-lg font-medium hover:bg-pink-50 transition-colors">
+              Suscribirse
+            </button>
+          </div>
         </div>
       </div>
     </div>
