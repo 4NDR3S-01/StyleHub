@@ -13,7 +13,8 @@ export class OrderService {
           *,
           order_items (
             *,
-            product:products (*)
+            product:products (*),
+            variant:product_variants (*)
           )
         `)
         .eq('id', orderId)
@@ -23,6 +24,59 @@ export class OrderService {
       return data;
     } catch (error: any) {
       throw new Error(error.message || 'Error al obtener orden');
+    }
+  }
+
+  /**
+   * Obtener todas las órdenes del usuario autenticado
+   */
+  static async getUserOrders() {
+    try {
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) throw authError;
+      if (!user) throw new Error('Usuario no autenticado');
+
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          order_items (
+            *,
+            product:products (*),
+            variant:product_variants (*)
+          )
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error: any) {
+      console.error('Error al obtener órdenes del usuario:', error);
+      throw new Error(error.message || 'Error al obtener órdenes');
+    }
+  }
+
+  /**
+   * Actualizar estado de una orden
+   */
+  static async updateOrderStatus(orderId: string, status: string) {
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .update({ 
+          status,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', orderId)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    } catch (error: any) {
+      throw new Error(error.message || 'Error al actualizar orden');
     }
   }
 
