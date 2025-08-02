@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ShoppingBag, Package, Truck, CheckCircle, Clock, Eye, Star, AlertCircle } from "lucide-react";
-import { OrderService } from "@/services/order.service";
+import { getUserOrders } from "@/services/order.service";
 import { Order, OrderItem } from "@/types";
 
 interface ExtendedOrder extends Omit<Order, 'address' | 'items'> {
@@ -22,7 +22,7 @@ export default function OrdersPage() {
       try {
         setLoading(true);
         setError(null);
-        const ordersData = await OrderService.getUserOrders();
+        const ordersData = await getUserOrders();
         setOrders(ordersData || []);
       } catch (error: any) {
         console.error('Error loading orders:', error);

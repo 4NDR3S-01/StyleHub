@@ -3,6 +3,9 @@
 import { useState } from 'react'
 import { productos, ProductVariant } from '@/types'
 import { useCart } from '@/context/CartContext'
+import { useWishlist } from '@/context/WishlistContext'
+import ProductReviews from '@/components/product/ProductReviews'
+import ReviewForm from '@/components/product/ReviewForm'
 
 interface ProductDetailProps {
   /** Producto devuelto desde Supabase, contiene la propiedad
@@ -20,6 +23,7 @@ interface ProductDetailProps {
  */
 export default function ProductDetail({ product }: ProductDetailProps) {
   const { addToCart } = useCart()
+  const { isInWishlist, toggleWishlist } = useWishlist()
   // Combinar variantes si existen, en caso contrario generar combinaciones
   const variants: ProductVariant[] =
     product.product_variants && product.product_variants.length > 0
@@ -77,7 +81,17 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
       {/* Información del producto */}
       <div className="space-y-6">
-        <h1 className="text-3xl font-bold text-slate-900">{product.name}</h1>
+        <div className="flex items-start justify-between">
+          <h1 className="text-3xl font-bold text-slate-900 mr-2 flex-1">{product.name}</h1>
+          {/* Botón de favorito */}
+          <button
+            onClick={() => toggleWishlist(product.id)}
+            className="text-red-500 text-2xl focus:outline-none"
+            aria-label="Agregar a favoritos"
+          >
+            {isInWishlist(product.id) ? '♥' : '♡'}
+          </button>
+        </div>
         {product.originalPrice && product.originalPrice > product.price ? (
           <div className="flex items-baseline gap-3">
             <span className="text-4xl font-extrabold text-slate-900">
@@ -146,6 +160,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         >
           Añadir al carrito
         </button>
+        {/* Sección de reseñas */}
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-2">Reseñas</h2>
+          <ProductReviews productId={product.id} />
+          <ReviewForm productId={product.id} onSubmitted={() => {}} />
+        </div>
       </div>
     </div>
   )

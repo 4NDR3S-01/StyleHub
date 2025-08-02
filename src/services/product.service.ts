@@ -56,44 +56,30 @@ export async function getProductsByCategorySlug(slug: string) {
 }
 
 /**
- * Obtiene todos los productos con opción de filtrado
- * @param options Opciones de filtrado
+ * Busca productos por nombre, descripción o tags
+ * @param query Término de búsqueda
  */
-export async function getAllProducts(options: {
-  featured?: boolean;
-  sale?: boolean;
-  category?: string;
-  limit?: number;
-  gender?: string;
-} = {}) {
-  let query = supabase
+export async function searchProducts(query: string) {
+  const { data, error } = await supabase
     .from('products')
     .select('*, product_variants(id,color,size,stock,image)')
+    .or(`name.ilike.%${query}%,description.ilike.%${query}%,tags.cs.{${query}}`)
+    .order('created_at', { ascending: false })
+  
+  if (error) throw error
+  return data || []
+}
 
-  if (options.featured !== undefined) {
-    query = query.eq('featured', options.featured)
-  }
+/**
+ * Obtiene todas las categorías principales
+ */
+export async function getAllCategories() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .is('parent_id', null)
+    .order('name')
   
-  if (options.sale !== undefined) {
-    query = query.eq('sale', options.sale)
-  }
-  
-  if (options.category) {
-    const category = await getCategoryBySlug(options.category)
-    if (category) {
-      query = query.eq('category_id', category.id)
-    }
-  }
-  
-  if (options.gender) {
-    query = query.eq('gender', options.gender)
-  }
-  
-  if (options.limit) {
-    query = query.limit(options.limit)
-  }
-
-  const { data, error } = await query
   if (error) throw error
   return data || []
 }
@@ -102,30 +88,12 @@ export async function getAllProducts(options: {
  * Obtiene productos destacados
  */
 export async function getFeaturedProducts() {
-  return getAllProducts({ featured: true, limit: 6 })
-}
-
-/**
- * Obtiene todas las categorías
- */
-export async function getAllCategories() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .order('name')
-  
-  if (error) throw error
-  return data || []
-}
-
-/**
- * Busca productos por nombre o descripción
- */
-export async function searchProducts(query: string) {
   const { data, error } = await supabase
     .from('products')
     .select('*, product_variants(id,color,size,stock,image)')
-    .or(`name.ilike.%${query}%,description.ilike.%${query}%`)
+    .eq('featured', true)
+    .order('created_at', { ascending: false })
+    .limit(8)
   
   if (error) throw error
   return data || []
