@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { ShoppingBag, Package, Truck, CheckCircle, Clock, Eye, Star, AlertCircle } from "lucide-react";
 import { getUserOrders } from "@/services/order.service";
+import { useAuth } from "@/context/AuthContext";
 import { Order, OrderItem } from "@/types";
 
 interface ExtendedOrder extends Omit<Order, 'address' | 'items'> {
@@ -11,6 +12,7 @@ interface ExtendedOrder extends Omit<Order, 'address' | 'items'> {
 }
 
 export default function OrdersPage() {
+  const { user, loading: authLoading } = useAuth();
   const [orders, setOrders] = useState<ExtendedOrder[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -19,10 +21,23 @@ export default function OrdersPage() {
   // Cargar órdenes del usuario
   useEffect(() => {
     async function loadOrders() {
+      // Si aún está cargando la autenticación, esperar
+      if (authLoading) return;
+      
+      // Si no hay usuario, mostrar error
+      if (!user) {
+        setError('Debes iniciar sesión para ver tus pedidos');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         setError(null);
+        console.log('Usuario autenticado:', user.id);
+        console.log('Iniciando carga de órdenes...');
         const ordersData = await getUserOrders();
+        console.log('Órdenes recibidas:', ordersData);
         setOrders(ordersData || []);
       } catch (error: any) {
         console.error('Error loading orders:', error);
@@ -33,7 +48,7 @@ export default function OrdersPage() {
     }
 
     loadOrders();
-  }, []);
+  }, [user, authLoading]);
 
   const getStatusInfo = (status: string) => {
     switch (status) {

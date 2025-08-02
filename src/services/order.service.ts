@@ -31,11 +31,36 @@ export async function getOrderById(orderId: string) {
  */
 export async function getUserOrders() {
   try {
+    // Verificar autenticación
     const { data: { user }, error: authError } = await supabase.auth.getUser();
     
-    if (authError) throw authError;
-    if (!user) throw new Error('Usuario no autenticado');
+    if (authError) {
+      console.error('Error de autenticación:', authError);
+      throw new Error('Error de autenticación: ' + authError.message);
+    }
+    
+    if (!user) {
+      console.error('Usuario no autenticado');
+      throw new Error('Usuario no autenticado. Por favor, inicia sesión.');
+    }
 
+    console.log('Usuario autenticado:', user.id);
+
+    // Primero intentar una consulta simple
+    const { data: simpleData, error: simpleError } = await supabase
+      .from('orders')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (simpleError) {
+      console.error('Error en consulta simple de órdenes:', simpleError);
+      throw new Error('Error al acceder a las órdenes: ' + simpleError.message);
+    }
+
+    console.log('Órdenes encontradas (consulta simple):', simpleData?.length || 0);
+
+    // Si la consulta simple funciona, intentar la consulta completa
     const { data, error } = await supabase
       .from('orders')
       .select(`
@@ -49,7 +74,13 @@ export async function getUserOrders() {
       .eq('user_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) throw error;
+    if (error) {
+      console.error('Error en consulta completa de órdenes:', error);
+      // Si falla la consulta completa, devolver la simple
+      return simpleData || [];
+    }
+
+    console.log('Órdenes encontradas (consulta completa):', data?.length || 0);
     return data || [];
   } catch (error: any) {
     console.error('Error al obtener órdenes del usuario:', error);
