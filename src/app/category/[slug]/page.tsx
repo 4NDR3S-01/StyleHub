@@ -1,41 +1,9 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import ProductCard from "../../../components/product/ProductCard";
-import { getProductsByCategorySlug } from "../../../services/product.service";
-
-// Puedes crear un array de marcas populares
-const marcasPopulares = ["Nike", "Adidas", "Puma", "Levi's", "Zara", "H&M"];
-
-const subCategories = [
-  "Camisetas",
-  "Camisas",
-  "Trajes de baño",
-  "Shorts",
-  "Pantalones",
-  "Jeans",
-  "Básicos",
-  "Buzos y hoodies",
-  "Chompas y abrigos",
-  "Suéteres y cárdigans",
-  "Ropa deportiva",
-  "Joggers",
-  "Ropa formal",
-  "Calzado",
-  "Calcetines",
-  "Ropa interior",
-  "Accesorios"
-];
-
-// Relación entre subcategoría y nombre de producto (puedes ajustar según tus datos reales.)
-const subCategoryKeywords: Record<string, string[]> = {
-  Camisetas: ["camiseta", "t-shirt"],
-  Camisas: ["camisa"],
-  Buzos: ["buzo", "suéter", "hoodie"],
-  Polos: ["polo"],
-  Jeans: ["jean", "mezclilla"],
-  Pantalones: ["pantalón", "pantalones"],
-};
+import { getProductsByCategorySlug, getCategoryBySlug } from "../../../services/product.service";
 
 interface Product {
   id: string;
@@ -61,32 +29,48 @@ interface Product {
   }>;
 }
 
-export default function MenCategoryPage() {
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export default function CategoryPage() {
+  const params = useParams();
+  const slug = params.slug as string;
+  
   // Estados
   const [products, setProducts] = useState<Product[]>([]);
+  const [category, setCategory] = useState<Category | null>(null);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
   const [colorFilter, setColorFilter] = useState<string>("");
   const [sizeFilter, setSizeFilter] = useState<string>("");
   const [priceFilter, setPriceFilter] = useState<string>("");
-  const [selectedSub, setSelectedSub] = useState<string>("");
+  const [sortBy, setSortBy] = useState<string>("name");
 
-  // Cargar productos de la categoría "men"
+  // Cargar productos de la categoría
   useEffect(() => {
-    async function loadMenProducts() {
+    async function loadCategoryData() {
       try {
         setLoading(true);
-        const menProducts = await getProductsByCategorySlug('men');
-        setProducts(menProducts);
+        const [categoryData, productsData] = await Promise.all([
+          getCategoryBySlug(slug),
+          getProductsByCategorySlug(slug)
+        ]);
+        setCategory(categoryData);
+        setProducts(productsData);
       } catch (error) {
-        console.error('Error loading men products:', error);
+        console.error('Error loading category data:', error);
       } finally {
         setLoading(false);
       }
     }
 
-    loadMenProducts();
-  }, []);
+    if (slug) {
+      loadCategoryData();
+    }
+  }, [slug]);
 
   // Obtener todos los colores y tallas disponibles
   const availableColors = Array.from(new Set(
@@ -101,26 +85,12 @@ export default function MenCategoryPage() {
     )
   )).filter(Boolean);
 
-  // Productos tendencia (productos destacados)
-  const productosTendencia = products.filter(product => product.featured);
+  // Productos destacados
+  const featuredProducts = products.filter(product => product.featured);
 
-  // Filtrado por subcategoría
-  let filteredProducts = selectedSub
-    ? products.filter((product) => {
-        const keywords = subCategoryKeywords[selectedSub] || [];
-        if (keywords.length > 0) {
-          return keywords.some((kw) =>
-            product.name?.toLowerCase().includes(kw.toLowerCase())
-          );
-        }
-        // Si no hay keywords, filtrar por tags o nombre exacto
-        return product.tags?.some(tag => 
-          tag.toLowerCase().includes(selectedSub.toLowerCase())
-        ) || product.name?.toLowerCase().includes(selectedSub.toLowerCase());
-      })
-    : products;
+  // Aplicar filtros
+  let filteredProducts = [...products];
 
-  // Filtros adicionales
   if (colorFilter) {
     filteredProducts = filteredProducts.filter((product) =>
       product.product_variants?.some(v => 
@@ -147,13 +117,21 @@ export default function MenCategoryPage() {
     }
   }
 
-  const toggleFavorite = (productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
+  // Aplicar ordenamiento
+  filteredProducts.sort((a, b) => {
+    switch (sortBy) {
+      case "price-low":
+        return a.price - b.price;
+      case "price-high":
+        return b.price - a.price;
+      case "name":
+        return a.name.localeCompare(b.name);
+      case "newest":
+        return 0; // Por ahora no tenemos fecha de creación
+      default:
+        return 0;
+    }
+  });
 
   if (loading) {
     return (
@@ -161,7 +139,20 @@ export default function MenCategoryPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="text-center py-12">
             <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-            <p className="mt-4 text-gray-600">Cargando productos para hombres...</p>
+            <p className="mt-4 text-gray-600">Cargando productos...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!category) {
+    return (
+      <div className="min-h-screen bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-12">
+            <h1 className="text-2xl font-bold text-gray-900 mb-4">Categoría no encontrada</h1>
+            <p className="text-gray-600">La categoría que buscas no existe.</p>
           </div>
         </div>
       </div>
@@ -173,81 +164,53 @@ export default function MenCategoryPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Ropa para Hombres</h1>
-          <p className="text-gray-600 text-lg">
-            Descubre nuestra colección de ropa masculina de alta calidad
-          </p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 capitalize">
+            {category.name}
+          </h1>
+          {category.description && (
+            <p className="text-gray-600 text-lg">
+              {category.description}
+            </p>
+          )}
         </div>
 
-        {/* Sidebar y contenido principal */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           {/* Sidebar */}
           <aside className="lg:col-span-1">
             <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-              {/* Subcategorías */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Categorías</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setSelectedSub("")}
-                    className={`block w-full text-left px-3 py-2 rounded-md transition ${
-                      selectedSub === ""
-                        ? "bg-blue-100 text-blue-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Todos los productos
-                  </button>
-                  {subCategories.map((sub) => (
-                    <button
-                      key={sub}
-                      onClick={() => setSelectedSub(sub)}
-                      className={`block w-full text-left px-3 py-2 rounded-md transition ${
-                        selectedSub === sub
-                          ? "bg-blue-100 text-blue-700 font-medium"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {sub}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Nuevos productos */}
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-blue-700">Nuevos productos</h2>
-                <div className="space-y-4">
-                  {products.slice(0, 3).map((product) => (
-                    <div key={product.id} className="flex space-x-3">
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
-                          {product.name}
-                        </h4>
-                        <p className="text-blue-600 font-semibold text-sm">
-                          ${product.price.toFixed(2)}
-                        </p>
+              {/* Productos destacados */}
+              {featuredProducts.length > 0 && (
+                <div>
+                  <h2 className="text-xl font-bold mb-4 text-blue-700">Productos Destacados</h2>
+                  <div className="space-y-4">
+                    {featuredProducts.slice(0, 3).map((product) => (
+                      <div key={product.id} className="flex space-x-3">
+                        <img
+                          src={product.images[0]}
+                          alt={product.name}
+                          className="w-16 h-16 object-cover rounded-lg"
+                        />
+                        <div className="flex-1">
+                          <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
+                            {product.name}
+                          </h4>
+                          <p className="text-blue-600 font-semibold text-sm">
+                            ${product.price.toFixed(2)}
+                          </p>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* Marcas populares */}
+              {/* Estadísticas */}
               <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Marcas populares</h3>
-                <div className="space-y-2">
-                  {marcasPopulares.map((marca) => (
-                    <label key={marca} className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <span className="text-gray-600">{marca}</span>
-                    </label>
-                  ))}
+                <h3 className="font-semibold text-gray-900 mb-3">Estadísticas</h3>
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>Total de productos: {products.length}</p>
+                  <p>Productos destacados: {featuredProducts.length}</p>
+                  <p>En oferta: {products.filter(p => p.sale).length}</p>
                 </div>
               </div>
             </div>
@@ -255,24 +218,22 @@ export default function MenCategoryPage() {
 
           {/* Contenido principal */}
           <main className="lg:col-span-3">
-            {/* Productos tendencia */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Productos en Tendencia</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {productosTendencia.length > 0 ? (
-                  productosTendencia.map((product) => (
+            {/* Productos destacados */}
+            {featuredProducts.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6">Productos Destacados</h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {featuredProducts.slice(0, 6).map((product) => (
                     <ProductCard key={product.id} product={product} />
-                  ))
-                ) : (
-                  <p className="col-span-full text-center text-gray-500">No hay productos en tendencia.</p>
-                )}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            {/* Filtros */}
+            {/* Filtros y ordenamiento */}
             <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Filtros</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <h3 className="font-semibold text-gray-900 mb-4">Filtros y Ordenamiento</h3>
+              <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                 <select
                   className="border border-gray-300 rounded-md px-3 py-2"
                   value={colorFilter}
@@ -305,6 +266,17 @@ export default function MenCategoryPage() {
                   <option value="medium">$50 - $99</option>
                   <option value="high">$100 o más</option>
                 </select>
+
+                <select
+                  className="border border-gray-300 rounded-md px-3 py-2"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                >
+                  <option value="name">Nombre A-Z</option>
+                  <option value="price-low">Precio: Menor a Mayor</option>
+                  <option value="price-high">Precio: Mayor a Menor</option>
+                  <option value="newest">Más Recientes</option>
+                </select>
                 
                 <button
                   className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition"
@@ -312,6 +284,7 @@ export default function MenCategoryPage() {
                     setColorFilter("");
                     setSizeFilter("");
                     setPriceFilter("");
+                    setSortBy("name");
                   }}
                 >
                   Limpiar filtros
@@ -319,11 +292,11 @@ export default function MenCategoryPage() {
               </div>
             </div>
 
-            {/* Productos filtrados */}
+            {/* Productos */}
             <div>
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedSub || 'Todos los productos'}
+                  Todos los Productos
                 </h2>
                 <span className="text-gray-600">
                   {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
@@ -346,7 +319,6 @@ export default function MenCategoryPage() {
                       setColorFilter("");
                       setSizeFilter("");
                       setPriceFilter("");
-                      setSelectedSub("");
                     }}
                     className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
                   >

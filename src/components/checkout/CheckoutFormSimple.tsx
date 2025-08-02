@@ -393,9 +393,12 @@ export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps)
                     <p>{form.getValues('city')}, {form.getValues('state')}</p>
                   </div>
                   <div>
-                    <p className="text-gray-600">Pago con:</p>
+                    <p className="text-gray-600">Pago con Stripe</p>
                     <p className="font-medium">
-                      **** **** **** {form.getValues('cardNumber').slice(-4)}
+                      {form.getValues('cardNumber') ? 
+                        `**** **** **** ${form.getValues('cardNumber')?.slice(-4)}` : 
+                        'Tarjeta de crédito/débito'
+                      }
                     </p>
                     <p className="text-gray-600">Email de confirmación:</p>
                     <p className="font-medium">{form.getValues('email')}</p>

@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -6,59 +6,44 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { CartItem, User } from '@/types';
 import { useCart } from '@/context/CartContext';
-import { OrderService, PaymentService } from '@/services/order.service';
+import { PaymentService, CheckoutSessionData } from '@/services/payment.service';
 
 // Esquema de validación
 const checkoutSchema = z.object({
-  // Información de envío
   firstName: z.string().min(2, 'El nombre debe tener al menos 2 caracteres'),
   lastName: z.string().min(2, 'El apellido debe tener al menos 2 caracteres'),
   email: z.string().email('Email inválido'),
   phone: z.string().min(10, 'El teléfono debe tener al menos 10 dígitos'),
-  
-  // Dirección
   address: z.string().min(5, 'La dirección debe tener al menos 5 caracteres'),
-  city: z.string().min(2, 'La ciudad es requerida'),
-  state: z.string().min(2, 'El estado/provincia es requerido'),
-  zipCode: z.string().min(5, 'El código postal debe tener al menos 5 caracteres'),
-  country: z.string().min(2, 'El país es requerido'),
-  
-  // Información de pago
-  cardNumber: z.string()
-    .min(16, 'El número de tarjeta debe tener 16 dígitos')
-    .max(19, 'Número de tarjeta inválido')
-    .regex(/^[0-9\s]+$/, 'Solo se permiten números'),
-  cardHolder: z.string().min(2, 'El nombre del titular es requerido'),
-  expiryDate: z.string()
-    .regex(/^(0[1-9]|1[0-2])\/([0-9]{2})$/, 'Formato inválido (MM/YY)'),
-  cvv: z.string()
-    .min(3, 'CVV debe tener al menos 3 dígitos')
-    .max(4, 'CVV debe tener máximo 4 dígitos')
-    .regex(/^[0-9]+$/, 'Solo se permiten números'),
-  
-  // Opciones adicionales
-  saveInfo: z.boolean().default(false),
-  sameAsShipping: z.boolean().default(true),
+  city: z.string().min(2, 'La ciudad debe tener al menos 2 caracteres'),
+  state: z.string().min(2, 'El estado debe tener al menos 2 caracteres'),
+  zipCode: z.string().min(4, 'El código postal debe tener al menos 4 caracteres'),
+  country: z.string().min(2, 'El país debe tener al menos 2 caracteres'),
+  cardNumber: z.string().optional(),
+  cardHolder: z.string().optional(),
+  expiryDate: z.string().optional(),
+  cvv: z.string().optional(),
+  saveInfo: z.boolean().optional(),
 });
 
 export type CheckoutFormData = z.infer<typeof checkoutSchema>;
 
 interface UseCheckoutProps {
-  user: User | null;
   cartItems: CartItem[];
+  user: User | null;
 }
 
-export function useCheckout({ user, cartItems }: UseCheckoutProps) {
-  const { clearCart } = useCart();
-  const router = useRouter();
-  const [isProcessing, setIsProcessing] = useState(false);
+export function useCheckout({ cartItems, user }: UseCheckoutProps) {
   const [step, setStep] = useState(1);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const router = useRouter();
+  const { clearCart } = useCart();
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
     defaultValues: {
-      firstName: user?.name || '',
-      lastName: user?.lastname || '',
+      firstName: '',
+      lastName: '',
       email: user?.email || '',
       phone: '',
       address: '',
@@ -71,19 +56,19 @@ export function useCheckout({ user, cartItems }: UseCheckoutProps) {
       expiryDate: '',
       cvv: '',
       saveInfo: false,
-      sameAsShipping: true,
     },
   });
 
-  // Formatear número de tarjeta
   const formatCardNumber = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const v = value.replace(/\s+/g, '').replace(/\D/gi, '');
     const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
+    const match = matches?.[0] || '';
     const parts = [];
+
     for (let i = 0, len = match.length; i < len; i += 4) {
       parts.push(match.substring(i, i + 4));
     }
+
     if (parts.length) {
       return parts.join(' ');
     } else {
@@ -91,39 +76,34 @@ export function useCheckout({ user, cartItems }: UseCheckoutProps) {
     }
   };
 
-  // Formatear fecha de expiración
   const formatExpiryDate = (value: string) => {
-    const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+    const v = value.replace(/\s+/g, '').replace(/\D/gi, '');
     if (v.length >= 2) {
-      return v.substring(0, 2) + '/' + v.substring(2, 4);
+      return v.substring(0, 2) + (v.length > 2 ? '/' + v.substring(2, 4) : '');
     }
     return v;
   };
 
-  // Validar número de tarjeta usando algoritmo de Luhn
   const validateCardNumber = (cardNumber: string) => {
     const num = cardNumber.replace(/\s/g, '');
     let sum = 0;
-    let alternate = false;
+    let shouldDouble = false;
     
     for (let i = num.length - 1; i >= 0; i--) {
-      let n = parseInt(num.charAt(i), 10);
+      let digit = parseInt(num.charAt(i), 10);
       
-      if (alternate) {
-        n *= 2;
-        if (n > 9) {
-          n = (n % 10) + 1;
-        }
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
       }
       
-      sum += n;
-      alternate = !alternate;
+      sum += digit;
+      shouldDouble = !shouldDouble;
     }
     
-    return (sum % 10) === 0;
+    return sum % 10 === 0;
   };
 
-  // Detectar tipo de tarjeta
   const detectCardType = (cardNumber: string) => {
     const num = cardNumber.replace(/\s/g, '');
     
@@ -143,57 +123,28 @@ export function useCheckout({ user, cartItems }: UseCheckoutProps) {
         throw new Error('Usuario no autenticado');
       }
 
-      // Validar número de tarjeta
-      if (!validateCardNumber(data.cardNumber)) {
-        throw new Error('Número de tarjeta inválido');
-      }
-
-      // Calcular totales
-      const totals = OrderService.calculateTotals(cartItems);
-
-      // Procesar pago
-      const paymentResult = await PaymentService.processPayment(totals.total, {
-        cardNumber: data.cardNumber,
-        cardHolder: data.cardHolder,
-        expiryDate: data.expiryDate,
-        cvv: data.cvv
-      });
-
-      if (!paymentResult.success) {
-        throw new Error(paymentResult.error || 'Error procesando el pago');
-      }
-
-      // Crear orden en la base de datos
-      const orderData = {
-        user_id: user.id,
-        items: cartItems,
-        shipping_info: {
+      const checkoutData: CheckoutSessionData = {
+        cartItems: cartItems,
+        email: data.email,
+        userId: user.id,
+        customerData: {
+          name: `${data.firstName} ${data.lastName}`,
+          phone: data.phone,
+          address: {
+            line1: data.address,
+            city: data.city,
+            state: data.state,
+            postal_code: data.zipCode,
+            country: data.country || 'CO',
+          },
+        },
+        metadata: {
           firstName: data.firstName,
           lastName: data.lastName,
-          email: data.email,
-          phone: data.phone,
-          address: data.address,
-          city: data.city,
-          state: data.state,
-          zipCode: data.zipCode,
-          country: data.country,
         },
-        payment_info: {
-          method: 'credit_card',
-          lastFour: data.cardNumber.slice(-4),
-        },
-        subtotal: totals.subtotal,
-        shipping_cost: totals.shipping,
-        tax: totals.tax,
-        total: totals.total,
       };
 
-      const order = await OrderService.createOrder(orderData);
-      
-      // Limpiar carrito y redirigir
-      clearCart();
-      toast.success('¡Pago procesado exitosamente!');
-      router.push(`/orden-confirmada?orderId=${order.id}`);
+      await PaymentService.processPayment(checkoutData);
       
     } catch (error) {
       console.error('Error procesando pago:', error);
@@ -205,17 +156,12 @@ export function useCheckout({ user, cartItems }: UseCheckoutProps) {
 
   const nextStep = () => {
     if (step === 1) {
-      // Validar información de envío
       const shippingFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'country'];
-      form.trigger(shippingFields as any).then(isValid => {
+      form.trigger(shippingFields as any).then((isValid: boolean) => {
         if (isValid) setStep(2);
       });
     } else if (step === 2) {
-      // Validar información de pago
-      const paymentFields = ['cardNumber', 'cardHolder', 'expiryDate', 'cvv'];
-      form.trigger(paymentFields as any).then(isValid => {
-        if (isValid) setStep(3);
-      });
+      setStep(3);
     }
   };
 
