@@ -10,16 +10,6 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- =====================================================
--- CLEANUP (for re-runs)
--- =====================================================
-
--- Drop existing policies first (to avoid conflicts)
-DROP POLICY IF EXISTS "Users can read own data" ON public.users;
-DROP POLICY IF EXISTS "Categories are publicly readable" ON public.categories;
-DROP POLICY IF EXISTS "Products are publicly readable" ON public.products;
-DROP POLICY IF EXISTS "Reviews are publicly readable" ON public.reviews;
-
--- =====================================================
 -- STORAGE BUCKETS CREATION
 -- =====================================================
 
