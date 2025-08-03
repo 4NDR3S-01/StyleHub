@@ -27,6 +27,50 @@ export async function getOrderById(orderId: string) {
 }
 
 /**
+ * Función de prueba para verificar la conexión con Supabase
+ */
+export async function testSupabaseConnection() {
+  try {
+    console.log('Probando conexión con Supabase...');
+    
+    // Verificar autenticación
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    console.log('Test auth:', user ? 'Usuario autenticado' : 'No autenticado', authError);
+    
+    // Verificar acceso a tabla orders
+    const { data: ordersTest, error: ordersError } = await supabase
+      .from('orders')
+      .select('count')
+      .limit(1);
+    console.log('Test orders table:', ordersTest, ordersError);
+    
+    // Verificar acceso a tabla order_items
+    const { data: itemsTest, error: itemsError } = await supabase
+      .from('order_items')
+      .select('count')
+      .limit(1);
+    console.log('Test order_items table:', itemsTest, itemsError);
+    
+    // Verificar acceso a tabla products
+    const { data: productsTest, error: productsError } = await supabase
+      .from('products')
+      .select('count')
+      .limit(1);
+    console.log('Test products table:', productsTest, productsError);
+    
+    return {
+      auth: !authError,
+      orders: !ordersError,
+      orderItems: !itemsError,
+      products: !productsError
+    };
+  } catch (error) {
+    console.error('Error en test de conexión:', error);
+    return null;
+  }
+}
+
+/**
  * Obtener todas las órdenes del usuario autenticado
  */
 export async function getUserOrders() {
@@ -45,6 +89,22 @@ export async function getUserOrders() {
     }
 
     console.log('Usuario autenticado:', user.id);
+
+    // Primero verificar si la tabla orders existe
+    const { data: tableCheck, error: tableError } = await supabase
+      .from('orders')
+      .select('count')
+      .limit(1);
+
+    if (tableError) {
+      console.error('Error verificando tabla orders:', tableError);
+      if (tableError.code === '42P01') {
+        throw new Error('La tabla de pedidos no existe. Contacta al administrador.');
+      }
+      throw new Error('Error de base de datos: ' + tableError.message);
+    }
+
+    console.log('Tabla orders verificada correctamente');
 
     // Primero intentar una consulta simple
     const { data: simpleData, error: simpleError } = await supabase

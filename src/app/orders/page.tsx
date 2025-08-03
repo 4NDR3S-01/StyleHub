@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { ShoppingBag, Package, Truck, CheckCircle, Clock, Eye, Star, AlertCircle } from "lucide-react";
-import { getUserOrders } from "@/services/order.service";
+import { getUserOrders, testSupabaseConnection } from "@/services/order.service";
 import { useAuth } from "@/context/AuthContext";
 import { Order, OrderItem } from "@/types";
 
@@ -17,6 +17,35 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<string>("all");
+  const [debugMode, setDebugMode] = useState(false);
+
+  // Función para ejecutar diagnóstico
+  const runDiagnostic = async () => {
+    console.log('Ejecutando diagnóstico...');
+    setDebugMode(true);
+    
+    try {
+      const testResult = await testSupabaseConnection();
+      console.log('Resultado del diagnóstico:', testResult);
+      
+      if (testResult) {
+        const issues = [];
+        if (!testResult.auth) issues.push('Autenticación');
+        if (!testResult.orders) issues.push('Tabla de órdenes');
+        if (!testResult.orderItems) issues.push('Tabla de items de órdenes');
+        if (!testResult.products) issues.push('Tabla de productos');
+        
+        if (issues.length > 0) {
+          setError(`Problemas detectados en: ${issues.join(', ')}. Revisa la consola para más detalles.`);
+        } else {
+          setError('Todas las conexiones están funcionando. El error puede ser temporal.');
+        }
+      }
+    } catch (error) {
+      console.error('Error en diagnóstico:', error);
+      setError('Error al ejecutar diagnóstico: ' + (error as Error).message);
+    }
+  };
 
   // Cargar órdenes del usuario
   useEffect(() => {
@@ -24,9 +53,8 @@ export default function OrdersPage() {
       // Si aún está cargando la autenticación, esperar
       if (authLoading) return;
       
-      // Si no hay usuario, mostrar error
+      // Si no hay usuario, no hacer nada (se maneja en el render)
       if (!user) {
-        setError('Debes iniciar sesión para ver tus pedidos');
         setLoading(false);
         return;
       }
@@ -36,12 +64,33 @@ export default function OrdersPage() {
         setError(null);
         console.log('Usuario autenticado:', user.id);
         console.log('Iniciando carga de órdenes...');
+        
         const ordersData = await getUserOrders();
         console.log('Órdenes recibidas:', ordersData);
-        setOrders(ordersData || []);
+        
+        // Verificar si ordersData es un array
+        if (Array.isArray(ordersData)) {
+          setOrders(ordersData);
+        } else {
+          console.warn('Los datos de órdenes no son un array:', ordersData);
+          setOrders([]);
+        }
       } catch (error: any) {
         console.error('Error loading orders:', error);
-        setError(error.message || 'Error al cargar los pedidos');
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          code: error.code
+        });
+        
+        // Manejo de errores más específico
+        if (error.message?.includes('Usuario no autenticado')) {
+          setError('Tu sesión ha expirado. Por favor, inicia sesión nuevamente.');
+        } else if (error.message?.includes('connection')) {
+          setError('Problema de conexión. Verifica tu internet e intenta nuevamente.');
+        } else {
+          setError(error.message || 'Error al cargar los pedidos. Intenta nuevamente.');
+        }
       } finally {
         setLoading(false);
       }
@@ -136,6 +185,52 @@ export default function OrdersPage() {
     return `STH-${year}${month}-${shortId}`;
   };
 
+  // Si aún está cargando la autenticación, mostrar loading
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-20">
+            <div className="inline-block h-12 w-12 animate-spin rounded-full border-4 border-solid border-blue-600 border-r-transparent"></div>
+            <p className="mt-4 text-gray-600 text-lg">Verificando autenticación...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Si no hay usuario autenticado, mostrar mensaje de login
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="text-center py-20">
+            <ShoppingBag className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Inicia sesión para ver tus pedidos</h2>
+            <p className="text-gray-600 mb-6">
+              Necesitas estar autenticado para acceder a tu historial de pedidos.
+            </p>
+            <button 
+              onClick={() => window.location.href = '/'}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors mr-4"
+            >
+              Ir al inicio
+            </button>
+            <button 
+              onClick={() => {
+                // Aquí puedes agregar la lógica para abrir el modal de login
+                console.log('Abrir modal de login');
+              }}
+              className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+            >
+              Iniciar sesión
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
@@ -157,12 +252,40 @@ export default function OrdersPage() {
             <AlertCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Error al cargar pedidos</h2>
             <p className="text-gray-600 mb-6">{error}</p>
-            <button 
-              onClick={() => window.location.reload()}
-              className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Intentar de nuevo
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button 
+                onClick={() => window.location.reload()}
+                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Intentar de nuevo
+              </button>
+              <button 
+                onClick={runDiagnostic}
+                disabled={debugMode}
+                className="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+              >
+                {debugMode ? 'Ejecutando diagnóstico...' : 'Ejecutar diagnóstico'}
+              </button>
+              <button 
+                onClick={() => window.location.href = '/'}
+                className="bg-gray-600 text-white px-6 py-3 rounded-lg hover:bg-gray-700 transition-colors"
+              >
+                Ir al inicio
+              </button>
+            </div>
+            {debugMode && (
+              <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-left max-w-lg mx-auto">
+                <p className="text-sm text-yellow-800 mb-2">
+                  <strong>Modo diagnóstico activado.</strong> Revisa la consola del navegador (F12 → Console) para ver información detallada.
+                </p>
+                <button 
+                  onClick={() => setDebugMode(false)}
+                  className="text-sm text-yellow-700 underline"
+                >
+                  Ocultar
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
