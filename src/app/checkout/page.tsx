@@ -156,7 +156,7 @@ export default function CheckoutPage() {
                 {state.items.map((item, idx) => (
                   <li key={idx} className="flex justify-between border-b pb-2">
                     <span>
-                      {item.producto.name} ({item.size}/{item.color}) × {item.quantity}
+                      {item.producto.name} {item.variant && `(${item.variant.color}/${item.variant.size})`} × {item.quantity}
                     </span>
                     <span>${(item.producto.price * item.quantity).toFixed(2)}</span>
                   </li>

@@ -28,10 +28,8 @@ import {
   DialogHeader, 
   DialogTitle 
 } from '@/components/ui/dialog';
-import { 
-  Badge, 
-  Separator 
-} from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
 import { 
   MapPin, 
   Plus, 

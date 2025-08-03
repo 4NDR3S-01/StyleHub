@@ -173,7 +173,7 @@ export async function setDefaultAddress(addressId: string, userId: string): Prom
 /**
  * Valida los datos de una dirección
  */
-export async function validateAddress(address: CreateAddressData) {
+export function validateAddress(address: CreateAddressData) {
   const errors: string[] = [];
 
   // Validaciones básicas

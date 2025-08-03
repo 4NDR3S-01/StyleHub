@@ -1,170 +1,132 @@
 "use client"
 
-import { useState } from 'react'
-import { productos, ProductVariant } from '@/types'
-import { useCart } from '@/context/CartContext'
-import { useWishlist } from '@/context/WishlistContext'
-import ProductReviews from '@/components/product/ProductReviews'
-import ReviewForm from '@/components/product/ReviewForm'
+import { useState } from "react"
+import { Product } from "@/services/product.service"
+import { useCart } from "@/context/CartContext"
+import { useWishlist } from "@/context/WishlistContext"
 
 interface ProductDetailProps {
-  /** Producto devuelto desde Supabase, contiene la propiedad
-   *  `product_variants` con el stock por color/talla si existe */
-  product: productos & {
-    product_variants?: ProductVariant[]
-  }
+  readonly product: Product
 }
 
-/**
- * Muestra el detalle de un producto permitiendo seleccionar color y talla
- * y añadirlo al carrito.  Soporta variantes almacenadas en la tabla
- * `product_variants`; si no hay variantes usa los arrays `sizes` y `colors`
- * definidos en la interfaz de producto.
- */
 export default function ProductDetail({ product }: ProductDetailProps) {
-  const { addToCart } = useCart()
+  const { addItem } = useCart()
   const { isInWishlist, toggleWishlist } = useWishlist()
-  // Combinar variantes si existen, en caso contrario generar combinaciones
-  const variants: ProductVariant[] =
-    product.product_variants && product.product_variants.length > 0
-      ? product.product_variants
-      : []
-  // Determinar la lista de colores y tallas a mostrar
-  const uniqueColors = variants.length
-    ? Array.from(new Set(variants.map((v) => v.color)))
-    : product.colors
-  const uniqueSizes = variants.length
-    ? Array.from(new Set(variants.map((v) => v.size)))
-    : product.sizes
-  // Estado para color y talla seleccionados
-  const [selectedColor, setSelectedColor] = useState(uniqueColors[0])
-  const [selectedSize, setSelectedSize] = useState(uniqueSizes[0])
-  const selectedVariant = variants.find(
-    (v) => v.color === selectedColor && v.size === selectedSize,
-  )
+  
+  const [selectedQuantity, setSelectedQuantity] = useState(1)
+  const [mainImage, setMainImage] = useState(product.images?.[0] || "")
 
   const handleAddToCart = () => {
-    // Utiliza `addToCart` del contexto de carrito.  Si se encuentra una
-    // variante específica, se pasa su id para referenciarla posteriormente.
-    addToCart(product, selectedSize, selectedColor)
+    const cartItem = {
+      id: `${product.id}-${Date.now()}`,
+      producto: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        images: product.images,
+        category_id: product.category_id
+      },
+      quantity: selectedQuantity
+    }
+    addItem(cartItem)
   }
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-2 gap-10">
-      {/* Galería de imágenes */}
       <div className="space-y-4">
-        <div className="w-full h-[500px] overflow-hidden rounded-xl shadow-lg">
+        <div className="aspect-square bg-gray-100 rounded-xl overflow-hidden">
           <img
-            src={product.images?.[0]}
+            src={mainImage}
             alt={product.name}
             className="w-full h-full object-cover"
           />
         </div>
-        {/* Miniaturas */}
-        <div className="flex gap-2">
-          {product.images?.slice(1).map((img, idx) => (
-            <div key={idx} className="w-20 h-20 overflow-hidden rounded-lg cursor-pointer">
+        
+        <div className="flex space-x-2 overflow-x-auto">
+          {product.images?.map((img, idx) => (
+            <button
+              key={`img-${idx}`}
+              className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border-2 border-transparent hover:border-blue-500"
+              onClick={() => setMainImage(img)}
+            >
               <img
                 src={img}
-                alt={product.name}
+                alt={`${product.name} ${idx + 1}`}
                 className="w-full h-full object-cover"
-                onClick={() => {
-                  // Al hacer click en miniatura, se mueve al primer lugar para mostrarse
-                  const newImages = [img, ...product.images!.filter((i) => i !== img)]
-                  product.images = newImages
-                }}
               />
-            </div>
+            </button>
           ))}
         </div>
       </div>
 
-      {/* Información del producto */}
       <div className="space-y-6">
-        <div className="flex items-start justify-between">
+        <div className="flex justify-between items-start">
           <h1 className="text-3xl font-bold text-slate-900 mr-2 flex-1">{product.name}</h1>
-          {/* Botón de favorito */}
           <button
+            className="text-2xl text-red-500 hover:scale-110 transition-transform"
             onClick={() => toggleWishlist(product.id)}
-            className="text-red-500 text-2xl focus:outline-none"
             aria-label="Agregar a favoritos"
           >
-            {isInWishlist(product.id) ? '♥' : '♡'}
+            {isInWishlist(product.id) ? "♥" : "♡"}
           </button>
         </div>
-        {product.originalPrice && product.originalPrice > product.price ? (
-          <div className="flex items-baseline gap-3">
-            <span className="text-4xl font-extrabold text-slate-900">
-              ${product.price.toFixed(2)}
-            </span>
-            <span className="line-through text-gray-400 text-xl">
-              ${product.originalPrice.toFixed(2)}
-            </span>
-          </div>
-        ) : (
-          <span className="text-4xl font-extrabold text-slate-900">
-            ${product.price.toFixed(2)}
-          </span>
-        )}
-        <p className="text-gray-700 leading-relaxed">{product.description}</p>
-        {/* Selección de color */}
-        <div className="space-y-2">
-          <span className="font-medium">Color:</span>
-          <div className="flex gap-2">
-            {uniqueColors.map((color) => (
-              <button
-                key={color}
-                onClick={() => setSelectedColor(color)}
-                className={
-                  'px-3 py-1 rounded-full border text-sm transition-colors ' +
-                  (selectedColor === color
-                    ? 'bg-slate-800 text-white'
-                    : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100')
-                }
-              >
-                {color}
-              </button>
-            ))}
-          </div>
+
+        <div className="text-2xl font-semibold text-green-600">
+          ${product.price.toFixed(2)}
         </div>
-        {/* Selección de talla */}
-        <div className="space-y-2">
-          <span className="font-medium">Talla:</span>
-          <div className="flex gap-2">
-            {uniqueSizes.map((size) => (
-              <button
-                key={size}
-                onClick={() => setSelectedSize(size)}
-                className={
-                  'px-3 py-1 rounded-full border text-sm transition-colors ' +
-                  (selectedSize === size
-                    ? 'bg-slate-800 text-white'
-                    : 'bg-white text-slate-800 border-slate-300 hover:bg-slate-100')
-                }
-              >
-                {size}
-              </button>
-            ))}
+
+        {product.description && (
+          <div className="text-gray-700">
+            <h3 className="font-semibold mb-2">Descripción</h3>
+            <p>{product.description}</p>
           </div>
-        </div>
-        {/* Stock disponible */}
-        {selectedVariant && (
-          <p className="text-sm text-gray-500">
-            Stock disponible: {selectedVariant.stock}
-          </p>
         )}
-        {/* Botón de añadir al carrito */}
-        <button
-          onClick={handleAddToCart}
-          className="w-full mt-4 bg-[#ff6f61] hover:bg-[#d7263d] text-white font-semibold py-3 px-5 rounded-xl shadow-lg transition-transform transform hover:scale-105"
-        >
-          Añadir al carrito
-        </button>
-        {/* Sección de reseñas */}
-        <div className="mt-8">
-          <h2 className="text-xl font-semibold mb-2">Reseñas</h2>
-          <ProductReviews productId={product.id} />
-          <ReviewForm productId={product.id} onSubmitted={() => {}} />
+
+        {product.category && (
+          <div className="text-sm text-gray-600">
+            Categoría: <span className="font-medium">{product.category.name}</span>
+          </div>
+        )}
+
+        <div className="text-sm text-gray-600">
+          Stock: <span className="font-medium">{product.stock > 0 ? `${product.stock} disponibles` : "Sin stock"}</span>
+        </div>
+
+        <div className="flex items-center space-x-4">
+          <label htmlFor="quantity" className="font-semibold">Cantidad:</label>
+          <select
+            id="quantity"
+            value={selectedQuantity}
+            onChange={(e) => setSelectedQuantity(Number(e.target.value))}
+            className="border border-gray-300 rounded px-3 py-2"
+          >
+            {Array.from({ length: Math.min(10, product.stock) }, (_, i) => i + 1).map((num) => (
+              <option key={num} value={num}>{num}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="space-y-3">
+          <button
+            onClick={handleAddToCart}
+            disabled={product.stock <= 0}
+            className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            {product.stock > 0 ? "Agregar al carrito" : "Sin stock"}
+          </button>
+          
+          <button
+            onClick={() => toggleWishlist(product.id)}
+            className="w-full border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors"
+          >
+            {isInWishlist(product.id) ? "Quitar de favoritos" : "Agregar a favoritos"}
+          </button>
+        </div>
+
+        <div className="border-t pt-6 space-y-2 text-sm text-gray-600">
+          <p>• Envío gratis en compras superiores a $50</p>
+          <p>• Devoluciones gratuitas dentro de 30 días</p>
+          <p>• Garantía de satisfacción</p>
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { CreditCard, MapPin, Lock, CheckCircle } from 'lucide-react';
 import { CartItem, User as UserType } from '@/types';
 import { useCheckout } from '@/hooks/useCheckout';
 import { checkCartStock } from '@/services/inventory.service';
+import { validateCardNumber } from '@/utils/validation';
 import { toast } from 'sonner';
 
 interface CheckoutFormSimpleProps {
@@ -73,21 +74,6 @@ export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps)
       
       nextStep();
     }
-  };
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        form.setError('email', { message: 'Email inválido' });
-        return;
-      }
-      
-      // Validar teléfono
-      const phone = values.phone;
-      if (!/^\+?[\d\s-()]{10,}$/.test(phone)) {
-        form.setError('phone', { message: 'Teléfono inválido' });
-        return;
-      }
-    }
-    
-    nextStep();
   };
 
   // Indicador de progreso

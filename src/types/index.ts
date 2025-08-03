@@ -35,11 +35,24 @@ export interface ProductVariant {
 }
 
 export interface CartItem {
-  producto: productos;
+  id: string;
+  producto: {
+    id: string;
+    name: string;
+    price: number;
+    original_price?: number;
+    images: string[];
+    category_id: string;
+    brand?: string;
+    gender?: string;
+  };
+  variant?: {
+    id: string;
+    color: string;
+    size: string;
+    stock: number;
+  };
   quantity: number;
-  size: string;
-  color: string;
-  variantId?: string;
 }
 
 export interface User {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { getAllCategories } from '@/services/product.service'
+import { getCategories } from '@/services/product.service'
 
 interface Category {
   id: string
@@ -22,7 +22,7 @@ export default function Categories() {
   useEffect(() => {
     async function loadCategories() {
       try {
-        const categoriesData = await getAllCategories()
+        const categoriesData = await getCategories()
         // Filtrar solo las categorías principales (sin parent_id)
         const mainCategories = categoriesData.filter(cat => !cat.parent_id)
         setCategories(mainCategories)

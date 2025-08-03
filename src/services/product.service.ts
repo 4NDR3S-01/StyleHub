@@ -3,429 +3,379 @@ import supabase from '@/lib/supabaseClient';
 export interface Product {
   id: string;
   name: string;
-  description?: string;
+  description: string;
   price: number;
-  original_price?: number;
   images: string[];
   category_id: string;
-  brand?: string;
-  gender?: string;
-  material?: string;
-  season?: string;
-  tags?: string[];
-  featured: boolean;
-  sale: boolean;
-  active: boolean;
+  subcategory_id?: string;
+  sku: string;
+  stock: number;
+  is_featured: boolean;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
   category?: {
     id: string;
     name: string;
     slug: string;
   };
-  product_variants?: Array<{
+  subcategory?: {
     id: string;
-    color: string;
-    size: string;
-    stock: number;
-    image?: string;
-  }>;
+    name: string;
+    slug: string;
+  };
+}
+
+export interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  image?: string;
+  parent_id?: string;
+  is_active: boolean;
+  created_at: string;
 }
 
 export interface ProductFilters {
   category?: string;
-  gender?: string;
-  brand?: string;
+  subcategory?: string;
   minPrice?: number;
   maxPrice?: number;
   featured?: boolean;
   sale?: boolean;
+  gender?: string;
+  active?: boolean;
   search?: string;
-  tags?: string[];
 }
 
 export interface ProductSort {
-  field: 'name' | 'price' | 'created_at';
+  field: 'created_at' | 'name' | 'price';
   direction: 'asc' | 'desc';
 }
 
 /**
- * Obtiene todos los productos con filtros y ordenamiento
+ * Obtiene todos los productos con filtros opcionales
  */
 export async function getProducts(
-  filters: ProductFilters = {},
-  sort: ProductSort = { field: 'created_at', direction: 'desc' },
-  page: number = 1,
-  limit: number = 12
-): Promise<{ products: Product[]; total: number }> {
-  let query = supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .eq('active', true);
+  filters: ProductFilters = {}, 
+  sort?: ProductSort, 
+  limit?: number
+) {
+  try {
+    let query = supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `);
 
-  // Aplicar filtros
-  if (filters.category) {
-    query = query.eq('category_id', filters.category);
+    // Aplicar filtros
+    if (filters.category) {
+      query = query.eq('category_id', filters.category);
+    }
+
+    if (filters.subcategory) {
+      query = query.eq('subcategory_id', filters.subcategory);
+    }
+
+    if (filters.minPrice !== undefined) {
+      query = query.gte('price', filters.minPrice);
+    }
+
+    if (filters.maxPrice !== undefined) {
+      query = query.lte('price', filters.maxPrice);
+    }
+
+    if (filters.featured !== undefined) {
+      query = query.eq('is_featured', filters.featured);
+    }
+
+    if (filters.gender) {
+      query = query.eq('gender', filters.gender);
+    }
+
+    if (filters.active !== undefined) {
+      query = query.eq('is_active', filters.active);
+    }
+
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
+    }
+
+    // Aplicar ordenamiento
+    if (sort) {
+      query = query.order(sort.field, { ascending: sort.direction === 'asc' });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    // Aplicar límite
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getProducts:', error);
+    throw error;
   }
-
-  if (filters.gender) {
-    query = query.eq('gender', filters.gender);
-  }
-
-  if (filters.brand) {
-    query = query.eq('brand', filters.brand);
-  }
-
-  if (filters.minPrice !== undefined) {
-    query = query.gte('price', filters.minPrice);
-  }
-
-  if (filters.maxPrice !== undefined) {
-    query = query.lte('price', filters.maxPrice);
-  }
-
-  if (filters.featured !== undefined) {
-    query = query.eq('featured', filters.featured);
-  }
-
-  if (filters.sale !== undefined) {
-    query = query.eq('sale', filters.sale);
-  }
-
-  if (filters.search) {
-    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-  }
-
-  if (filters.tags && filters.tags.length > 0) {
-    query = query.overlaps('tags', filters.tags);
-  }
-
-  // Contar total antes de aplicar paginación
-  const { count } = await query.count();
-
-  // Aplicar ordenamiento y paginación
-  query = query
-    .order(sort.field, { ascending: sort.direction === 'asc' })
-    .range((page - 1) * limit, page * limit - 1);
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching products:', error);
-    throw new Error('Error al cargar productos');
-  }
-
-  return {
-    products: data || [],
-    total: count || 0,
-  };
 }
 
 /**
  * Obtiene un producto por ID
  */
 export async function getProductById(id: string): Promise<Product | null> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .eq('id', id)
-    .eq('active', true)
-    .single();
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('id', id)
+      .single();
 
-  if (error) {
-    if (error.code === 'PGRST116') {
-      return null; // Producto no encontrado
+    if (error) {
+      console.error('Error fetching product by ID:', error);
+      return null;
     }
-    console.error('Error fetching product:', error);
-    throw new Error('Error al cargar producto');
+
+    return data;
+  } catch (error) {
+    console.error('Error in getProductById:', error);
+    return null;
   }
-
-  return data;
-}
-
-/**
- * Obtiene productos por slug de categoría
- */
-export async function getProductsByCategorySlug(
-  slug: string,
-  filters: ProductFilters = {},
-  sort: ProductSort = { field: 'created_at', direction: 'desc' },
-  page: number = 1,
-  limit: number = 12
-): Promise<{ products: Product[]; total: number; category: any }> {
-  // Primero obtener la categoría
-  const { data: category, error: categoryError } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('slug', slug)
-    .single();
-
-  if (categoryError) {
-    console.error('Error fetching category:', categoryError);
-    throw new Error('Categoría no encontrada');
-  }
-
-  // Obtener productos de la categoría y subcategorías
-  const { data: subcategories } = await supabase
-    .from('categories')
-    .select('id')
-    .eq('parent_id', category.id);
-
-  const categoryIds = [category.id, ...(subcategories?.map(c => c.id) || [])];
-
-  let query = supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .in('category_id', categoryIds)
-    .eq('active', true);
-
-  // Aplicar filtros adicionales
-  if (filters.gender) {
-    query = query.eq('gender', filters.gender);
-  }
-
-  if (filters.brand) {
-    query = query.eq('brand', filters.brand);
-  }
-
-  if (filters.minPrice !== undefined) {
-    query = query.gte('price', filters.minPrice);
-  }
-
-  if (filters.maxPrice !== undefined) {
-    query = query.lte('price', filters.maxPrice);
-  }
-
-  if (filters.search) {
-    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%`);
-  }
-
-  // Contar total
-  const { count } = await query.count();
-
-  // Aplicar ordenamiento y paginación
-  query = query
-    .order(sort.field, { ascending: sort.direction === 'asc' })
-    .range((page - 1) * limit, page * limit - 1);
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching products by category:', error);
-    throw new Error('Error al cargar productos de la categoría');
-  }
-
-  return {
-    products: data || [],
-    total: count || 0,
-    category,
-  };
-}
-
-/**
- * Busca productos
- */
-export async function searchProducts(query: string, limit: number = 10): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug)
-    `)
-    .or(`name.ilike.%${query}%,description.ilike.%${query}%,brand.ilike.%${query}%`)
-    .eq('active', true)
-    .limit(limit);
-
-  if (error) {
-    console.error('Error searching products:', error);
-    throw new Error('Error al buscar productos');
-  }
-
-  return data || [];
-}
-
-/**
- * Obtiene todas las categorías principales
- */
-export async function getAllCategories() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .is('parent_id', null)
-    .order('name');
-  
-  if (error) throw error;
-  return data || [];
-}
-
-/**
- * Obtiene subcategorías de una categoría
- */
-export async function getSubcategories(parentId: string) {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('*')
-    .eq('parent_id', parentId)
-    .order('name');
-  
-  if (error) throw error;
-  return data || [];
 }
 
 /**
  * Obtiene productos destacados
  */
-export async function getFeaturedProducts(limit: number = 6): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .eq('featured', true)
-    .eq('active', true)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+export async function getFeaturedProducts(limit: number = 8): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('is_featured', true)
+      .eq('is_active', true)
+      .limit(limit)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching featured products:', error);
-    throw new Error('Error al cargar productos destacados');
+    if (error) {
+      console.error('Error fetching featured products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getFeaturedProducts:', error);
+    return [];
   }
+}
 
-  return data || [];
+/**
+ * Busca productos por texto
+ */
+export async function searchProducts(searchTerm: string): Promise<Product[]> {
+  try {
+    if (!searchTerm || searchTerm.trim().length === 0) {
+      return [];
+    }
+
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Error searching products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in searchProducts:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene productos por categoría (slug)
+ */
+export async function getProductsByCategorySlug(categorySlug: string): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories!inner(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('category.slug', categorySlug)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching products by category slug:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getProductsByCategorySlug:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene una categoría por slug
+ */
+export async function getCategoryBySlug(slug: string): Promise<Category | null> {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('slug', slug)
+      .eq('is_active', true)
+      .single();
+
+    if (error) {
+      console.error('Error fetching category by slug:', error);
+      return null;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('Error in getCategoryBySlug:', error);
+    return null;
+  }
+}
+
+/**
+ * Obtiene todas las categorías
+ */
+export async function getCategories(): Promise<Category[]> {
+  try {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+
+    if (error) {
+      console.error('Error fetching categories:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getCategories:', error);
+    return [];
+  }
+}
+
+/**
+ * Obtiene productos nuevos/recientes
+ */
+export async function getNewProducts(limit: number = 8): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      console.error('Error fetching new products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getNewProducts:', error);
+    return [];
+  }
 }
 
 /**
  * Obtiene productos en oferta
  */
 export async function getSaleProducts(limit: number = 8): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .eq('sale', true)
-    .eq('active', true)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('is_active', true)
+      .lt('price', 50) // Productos con precio menor a 50 como "oferta"
+      .order('price', { ascending: true })
+      .limit(limit);
 
-  if (error) {
-    console.error('Error fetching sale products:', error);
-    throw new Error('Error al cargar productos en oferta');
+    if (error) {
+      console.error('Error fetching sale products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getSaleProducts:', error);
+    return [];
   }
-
-  return data || [];
-}
-
-/**
- * Obtiene marcas únicas
- */
-export async function getBrands(): Promise<string[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select('brand')
-    .eq('active', true)
-    .not('brand', 'is', null);
-
-  if (error) {
-    console.error('Error fetching brands:', error);
-    throw new Error('Error al cargar marcas');
-  }
-
-  const brands = [...new Set(data?.map(p => p.brand).filter(Boolean))];
-  return brands.sort();
 }
 
 /**
  * Obtiene productos relacionados
  */
-export async function getRelatedProducts(
-  productId: string,
-  categoryId: string,
-  limit: number = 4
-): Promise<Product[]> {
-  const { data, error } = await supabase
-    .from('products')
-    .select(`
-      *,
-      category:categories(id, name, slug),
-      product_variants(*)
-    `)
-    .eq('category_id', categoryId)
-    .eq('active', true)
-    .neq('id', productId)
-    .order('created_at', { ascending: false })
-    .limit(limit);
+export async function getRelatedProducts(productId: string, categoryId: string, limit: number = 4): Promise<Product[]> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        subcategory:subcategories(id, name, slug)
+      `)
+      .eq('category_id', categoryId)
+      .eq('is_active', true)
+      .neq('id', productId) // Excluir el producto actual
+      .limit(limit)
+      .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Error fetching related products:', error);
-    throw new Error('Error al cargar productos relacionados');
+    if (error) {
+      console.error('Error fetching related products:', error);
+      throw error;
+    }
+
+    return data || [];
+  } catch (error) {
+    console.error('Error in getRelatedProducts:', error);
+    return [];
   }
-
-  return data || [];
-}
-
-/**
- * Actualiza stock de variantes
- */
-export async function updateProductStock(variantId: string, quantity: number): Promise<void> {
-  const { error } = await supabase
-    .from('product_variants')
-    .update({ stock: quantity })
-    .eq('id', variantId);
-
-  if (error) {
-    console.error('Error updating product stock:', error);
-    throw new Error('Error al actualizar stock');
-  }
-}
-
-/**
- * Obtiene estadísticas de productos (solo para admin)
- */
-export async function getProductStats() {
-  const { data: total, error: totalError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact' });
-
-  const { data: active, error: activeError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact' })
-    .eq('active', true);
-
-  const { data: featured, error: featuredError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact' })
-    .eq('featured', true);
-
-  const { data: sale, error: saleError } = await supabase
-    .from('products')
-    .select('id', { count: 'exact' })
-    .eq('sale', true);
-
-  if (totalError || activeError || featuredError || saleError) {
-    console.error('Error fetching product stats:', { totalError, activeError, featuredError, saleError });
-    throw new Error('Error al cargar estadísticas de productos');
-  }
-
-  return {
-    total: total?.length || 0,
-    active: active?.length || 0,
-    featured: featured?.length || 0,
-    sale: sale?.length || 0,
-  };
 }

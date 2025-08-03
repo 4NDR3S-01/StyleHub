@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { Box, List, Users, ShoppingCart, TrendingUp, UserPlus } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import SampleDataLoader from './SampleDataLoader';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,

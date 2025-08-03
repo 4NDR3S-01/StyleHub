@@ -1,40 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getSaleProducts } from '@/services/product.service';
+import { getSaleProducts, Product } from '@/services/product.service';
 import ProductCard from '@/components/product/ProductCard';
 import { Filter, SortAsc, SortDesc, Grid, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
-interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  original_price: number;
-  images: string[];
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  product_variants: Array<{
-    id: string;
-    color: string;
-    size: string;
-    stock: number;
-    price_adjustment: number;
-  }>;
-  brand: string;
-  gender: string;
-  tags: string[];
-  featured: boolean;
-  sale: boolean;
-  active: boolean;
-  created_at: string;
-}
 
 export default function SalePage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -63,58 +35,34 @@ export default function SalePage() {
     }
   };
 
-  // Get unique brands and genders for filters
-  const brands = Array.from(new Set(products.map(p => p.brand).filter(Boolean)));
-  const genders = Array.from(new Set(products.map(p => p.gender).filter(Boolean)));
+  // Get available categories for filtering
+  const categories = Array.from(new Set(products.map(p => p.category?.name).filter(Boolean)));
 
-  // Filter and sort products
-  const filteredProducts = products
-    .filter(product => {
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          product.brand?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
-      const matchesBrand = !selectedBrand || product.brand === selectedBrand;
-      const matchesGender = !selectedGender || product.gender === selectedGender;
+  // Filter products based on search and filters
+  const filteredProducts = products.filter(product => {
+    const matchesSearch = !searchTerm || 
+                          product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          product.description?.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesCategory = !selectedBrand || product.category?.name === selectedBrand;
+    const matchesPrice = product.price >= priceRange.min && product.price <= priceRange.max;
 
-      return matchesSearch && matchesPrice && matchesBrand && matchesGender;
-    })
-    .sort((a, b) => {
-      let aValue: any, bValue: any;
-      
-      switch (sortBy) {
-        case 'price':
-          aValue = a.price;
-          bValue = b.price;
-          break;
-        case 'name':
-          aValue = a.name;
-          bValue = b.name;
-          break;
-        case 'created_at':
-          aValue = new Date(a.created_at);
-          bValue = new Date(b.created_at);
-          break;
-        case 'discount':
-          aValue = ((a.original_price - a.price) / a.original_price) * 100;
-          bValue = ((b.original_price - b.price) / b.original_price) * 100;
-          break;
-        default:
-          aValue = a.price;
-          bValue = b.price;
-      }
+    return matchesSearch && matchesCategory && matchesPrice;
+  });
 
-      if (sortOrder === 'asc') {
-        return aValue > bValue ? 1 : -1;
-      } else {
-        return aValue < bValue ? 1 : -1;
-      }
-    });
-
-  const calculateDiscount = (originalPrice: number, currentPrice: number) => {
-    return Math.round(((originalPrice - currentPrice) / originalPrice) * 100);
-  };
+  // Sort products
+  const sortedProducts = [...filteredProducts].sort((a, b) => {
+    switch (sortBy) {
+      case 'price-low':
+        return a.price - b.price;
+      case 'price-high':
+        return b.price - a.price;
+      case 'name':
+        return a.name.localeCompare(b.name);
+      default:
+        return 0;
+    }
+  });
 
   const clearFilters = () => {
     setSearchTerm('');
@@ -130,8 +78,8 @@ export default function SalePage() {
           <div className="animate-pulse">
             <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[...Array(8)].map((_, i) => (
-                <div key={i} className="bg-white rounded-lg shadow-md p-4">
+              {Array.from({ length: 8 }, (_, i) => (
+                <div key={`sale-skeleton-${i}`} className="bg-white rounded-lg shadow-md p-4">
                   <div className="h-48 bg-gray-200 rounded mb-4"></div>
                   <div className="h-4 bg-gray-200 rounded mb-2"></div>
                   <div className="h-4 bg-gray-200 rounded w-3/4"></div>
@@ -226,8 +174,8 @@ export default function SalePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todas</SelectItem>
-                    {brands.map(brand => (
-                      <SelectItem key={brand} value={brand}>{brand}</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category || ''}>{category}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -241,8 +189,8 @@ export default function SalePage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Todos</SelectItem>
-                    {genders.map(gender => (
-                      <SelectItem key={gender} value={gender}>{gender}</SelectItem>
+                    {categories.map(category => (
+                      <SelectItem key={category} value={category || ''}>{category}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -294,19 +242,10 @@ export default function SalePage() {
               ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' 
               : 'grid-cols-1'
           }`}>
-            {filteredProducts.map((product) => (
+            {sortedProducts.map((product) => (
               <div key={product.id} className="relative">
-                {/* Discount Badge */}
-                <div className="absolute top-2 left-2 z-10">
-                  <div className="bg-red-500 text-white px-2 py-1 rounded-full text-xs font-bold">
-                    -{calculateDiscount(product.original_price || product.price, product.price)}%
-                  </div>
-                </div>
-                
                 <ProductCard 
                   product={product}
-                  showDiscount={true}
-                  layout={viewMode}
                 />
               </div>
             ))}

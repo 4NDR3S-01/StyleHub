@@ -64,24 +64,13 @@ const nextConfig = {
   //   return config;
   // },
 
+  // External packages for server components
+  serverExternalPackages: ['@prisma/client'],
+  
   // Experimental features
   experimental: {
     // Optimize package imports
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    
-    // Enable server components
-    serverComponentsExternalPackages: ['@prisma/client'],
-    
-    // Font optimization
-    fontLoaders: [
-      {
-        loader: '@next/font/google',
-        options: {
-          timeout: 10000,
-          retries: 3,
-        },
-      },
-    ],
   },
 
   // Redirects

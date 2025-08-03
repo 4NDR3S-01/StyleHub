@@ -41,3 +41,21 @@ export async function deleteSubcategory(id: string) {
   const { error } = await supabase.from('categories').delete().eq('id', id);
   if (error) throw error;
 }
+
+/**
+ * Obtiene categorías por tipo
+ */
+export async function getCategoriesByType(type?: string) {
+  let query = supabase
+    .from('categories')
+    .select('*')
+    .eq('active', true);
+  
+  if (type) {
+    query = query.eq('type', type);
+  }
+  
+  const { data, error } = await query.order('name');
+  if (error) throw error;
+  return data || [];
+}
