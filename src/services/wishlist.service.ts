@@ -15,8 +15,13 @@ export interface WishlistItem {
  */
 export async function getWishlist(userId: string): Promise<WishlistItem[]> {
   const { data, error } = await supabase
-    .from('wishlists')
-    .select('id, user_id, product_id, products(*)')
+    .from('wishlist')
+    .select(`
+      id, 
+      user_id, 
+      product_id, 
+      products:products(*, category:categories(id, name, slug))
+    `)
     .eq('user_id', userId)
   if (error) throw error
   return data || []
@@ -30,7 +35,7 @@ export async function getWishlist(userId: string): Promise<WishlistItem[]> {
  */
 export async function addToWishlist(userId: string, productId: string) {
   const { error } = await supabase
-    .from('wishlists')
+    .from('wishlist')
     .upsert({ user_id: userId, product_id: productId }, { onConflict: 'user_id,product_id' })
   if (error) throw error
 }
@@ -43,7 +48,7 @@ export async function addToWishlist(userId: string, productId: string) {
  */
 export async function removeFromWishlist(userId: string, productId: string) {
   const { error } = await supabase
-    .from('wishlists')
+    .from('wishlist')
     .delete()
     .eq('user_id', userId)
     .eq('product_id', productId)

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 
+
 export default function HeroPrincipal() {
   return (
     <div className="relative h-screen flex items-center justify-center">
@@ -7,7 +8,7 @@ export default function HeroPrincipal() {
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{
-          backgroundImage: 'url(https://images.pexels.com/photos/1926769/pexels-photo-1926769.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&dpr=1)',
+          // Usa la imagen que puede cambiar desde el panel administrador
         }}
       >
         <div className="absolute inset-0 bg-black bg-opacity-40"></div>

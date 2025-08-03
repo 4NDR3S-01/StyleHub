@@ -2,10 +2,12 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { Search, ShoppingBag, User, Menu, X, Heart } from 'lucide-react';
+import { Search, ShoppingBag, User, Menu, X, Heart, MapPin, CreditCard, Settings, LogOut } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { useWishlist } from '@/context/WishlistContext';
 import { useAuth } from '../../context/AuthContext';
 import CartSidebar from '../cart/CartSidebar';
+import WishlistSidebar from '../wishlist/WishlistSidebar';
 import AuthModal from '../auth/AuthModal';
 import UserAvatar from '../ui/UserAvatar';
 
@@ -13,7 +15,9 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isWishlistOpen, setIsWishlistOpen] = useState(false);
   const { itemsCount, toggleCart } = useCart();
+  const { items: wishlistItems } = useWishlist();
   const { user, logout } = useAuth();
   
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -36,6 +40,7 @@ export default function Navbar() {
       if (event.key === 'Escape') {
         setIsMenuOpen(false);
         setIsUserMenuOpen(false);
+        setIsWishlistOpen(false);
       }
     };
 
@@ -68,8 +73,12 @@ export default function Navbar() {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = async () => {
-    await logout();
+  const handleWishlistToggle = () => {
+    setIsWishlistOpen(!isWishlistOpen);
+  };
+
+  const handleLogout = () => {
+    logout();
     setIsUserMenuOpen(false);
   };
 
@@ -147,10 +156,19 @@ export default function Navbar() {
               
               <button 
                 ref={wishlistButtonRef}
-                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-white/50"
+                onClick={handleWishlistToggle}
+                className="p-2 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg backdrop-blur-md border border-white/20 transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 group focus:outline-none focus:ring-2 focus:ring-white/50 relative"
                 aria-label="Ver lista de deseos"
               >
                 <Heart size={20} className="group-hover:scale-110 transition-transform duration-200" />
+                {wishlistItems.length > 0 && (
+                  <span 
+                    className="absolute -top-1 -right-1 bg-gradient-to-r from-pink-500 to-pink-600 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center font-bold animate-pulse shadow-lg ring-2 ring-white/30"
+                    aria-label={`${wishlistItems.length} items en lista de deseos`}
+                  >
+                    {wishlistItems.length}
+                  </span>
+                )}
               </button>
               
               {/* Botón de usuario mejorado */}
@@ -190,9 +208,49 @@ export default function Navbar() {
                     
                     {/* Opciones del menú */}
                     <div className="py-2">
+                      {/* Opción de panel de administración solo para admin */}
+                      {user.role === 'admin' && (
+                        <Link 
+                          href="/admin" 
+                          className="flex items-center px-4 py-3 text-sm text-purple-700 hover:bg-gradient-to-r hover:from-purple-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-purple-100/80"
+                          role="menuitem"
+                          onClick={() => setIsUserMenuOpen(false)}
+                        >
+                          <div className="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-purple-200 transition-colors">
+                            <Settings size={16} className="text-purple-600" />
+                          </div>
+                          <span className="font-medium">Panel Administrador</span>
+                        </Link>
+                      )}
+                      {/* Editar direcciones del usuario */}
+                      <Link 
+                        href="/perfil/addresses" 
+                        className="flex items-center px-4 py-3 text-sm text-blue-700 hover:bg-gradient-to-r hover:from-blue-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-blue-100/80"
+                        role="menuitem"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-blue-200 transition-colors">
+                          <MapPin size={16} className="text-blue-600" />
+                        </div>
+                        <span className="font-medium">Mis Direcciones</span>
+                      </Link>
+                      
+                      {/* Métodos de pago del usuario */}
+                      <Link 
+                        href="/perfil/payment-methods" 
+                        className="flex items-center px-4 py-3 text-sm text-emerald-700 hover:bg-gradient-to-r hover:from-emerald-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-emerald-100/80"
+                        role="menuitem"
+                        onClick={() => setIsUserMenuOpen(false)}
+                      >
+                        <div className="w-8 h-8 bg-emerald-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-emerald-200 transition-colors">
+                          <CreditCard size={16} className="text-emerald-600" />
+                        </div>
+                        <span className="font-medium">Métodos de Pago</span>
+                      </Link>
+                      {/* Mi perfil */}
                       <Link 
                         href="/perfil" 
-                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-gray-100/80"
+                        className="flex items-center px-4 py-3 text-sm text-blue-700 hover:bg-gradient-to-r hover:from-blue-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-blue-100/80"
                         role="menuitem"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
@@ -201,9 +259,10 @@ export default function Navbar() {
                         </div>
                         <span className="font-medium">Mi Perfil</span>
                       </Link>
+                      
                       <Link 
-                        href="/orders" 
-                        className="flex items-center px-4 py-3 text-sm text-gray-700 hover:bg-gradient-to-r hover:from-gray-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-gray-100/80"
+                        href="/perfil/orders" 
+                        className="flex items-center px-4 py-3 text-sm text-green-700 hover:bg-gradient-to-r hover:from-green-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-green-100/80"
                         role="menuitem"
                         onClick={() => setIsUserMenuOpen(false)}
                       >
@@ -212,6 +271,53 @@ export default function Navbar() {
                         </div>
                         <span className="font-medium">Mis Pedidos</span>
                       </Link>
+
+                      {/* Línea divisoria */}
+                      <div className="border-t border-gray-200/50 my-2"></div>
+                      
+                      {/* Carrito */}
+                      <button 
+                        onClick={() => {
+                          toggleCart();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-sm text-orange-700 hover:bg-gradient-to-r hover:from-orange-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-orange-100/80"
+                        role="menuitem"
+                      >
+                        <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-orange-200 transition-colors">
+                          <ShoppingBag size={16} className="text-orange-600" />
+                        </div>
+                        <div className="flex items-center justify-between flex-1">
+                          <span className="font-medium">Mi Carrito</span>
+                          {itemsCount > 0 && (
+                            <span className="bg-orange-500 text-white text-xs rounded-full px-2 py-1 font-bold">
+                              {itemsCount}
+                            </span>
+                          )}
+                        </div>
+                      </button>
+                      
+                      {/* Wishlist */}
+                      <button 
+                        onClick={() => {
+                          handleWishlistToggle();
+                          setIsUserMenuOpen(false);
+                        }}
+                        className="flex items-center w-full px-4 py-3 text-sm text-pink-700 hover:bg-gradient-to-r hover:from-pink-100/80 hover:to-transparent transition-all duration-200 group focus:outline-none focus:bg-pink-100/80"
+                        role="menuitem"
+                      >
+                        <div className="w-8 h-8 bg-pink-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-pink-200 transition-colors">
+                          <Heart size={16} className="text-pink-600" />
+                        </div>
+                        <div className="flex items-center justify-between flex-1">
+                          <span className="font-medium">Lista de Deseos</span>
+                          {wishlistItems.length > 0 && (
+                            <span className="bg-pink-500 text-white text-xs rounded-full px-2 py-1 font-bold">
+                              {wishlistItems.length}
+                            </span>
+                          )}
+                        </div>
+                      </button>
                       
                       {/* Botón de logout */}
                       <div className="border-t border-gray-200/50 mt-2 pt-2">
@@ -221,9 +327,7 @@ export default function Navbar() {
                           role="menuitem"
                         >
                           <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center mr-3 group-hover:bg-red-200 transition-colors">
-                            <svg className="w-4 h-4 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                            </svg>
+                            <LogOut size={16} className="text-red-600" />
                           </div>
                           <span className="font-medium">Cerrar Sesión</span>
                         </button>
@@ -292,6 +396,7 @@ export default function Navbar() {
       </nav>
 
       <CartSidebar />
+      <WishlistSidebar isOpen={isWishlistOpen} onClose={() => setIsWishlistOpen(false)} />
       <AuthModal isOpen={isAuthModalOpen} onClose={() => setIsAuthModalOpen(false)} />
     </>
   );

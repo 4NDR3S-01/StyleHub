@@ -9,7 +9,6 @@ import {
   deleteAddress, 
   setDefaultAddress,
   validateAddress,
-  formatAddress,
   type Address,
   type CreateAddressData
 } from '@/services/address.service';
@@ -37,9 +36,6 @@ import {
   Trash2, 
   Star, 
   StarOff,
-  Home,
-  Building,
-  User
 } from 'lucide-react';
 import { toast } from 'sonner';
 

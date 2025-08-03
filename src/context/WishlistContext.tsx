@@ -61,12 +61,12 @@ export const WishlistProvider = ({ children }: { children: React.ReactNode }) =>
     }
   }
 
-  const value: WishlistContextValue = {
+  const value = React.useMemo<WishlistContextValue>(() => ({
     items,
     isInWishlist,
     toggleWishlist,
     refresh: loadWishlist,
-  }
+  }), [items, isInWishlist, toggleWishlist, loadWishlist])
 
   return <WishlistContext.Provider value={value}>{children}</WishlistContext.Provider>
 }

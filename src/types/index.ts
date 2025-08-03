@@ -1,135 +1,174 @@
-export interface productos {
+// Product (match con tabla 'products')
+export interface Product {
   id: string;
   name: string;
-  description: string;
+  description?: string;
   price: number;
-  original_price?: number; // ✅ SOLO snake_case para match con DB
-  images: string[];
-  category_id: string; // ✅ SOLO usar ID para referencia a la DB
-  stock: number;
-  rating: number;
-  reviews: number;
-  featured?: boolean;
-  sale?: boolean;
+  original_price?: number;
+  images?: string[];
+  category_id: string;
   brand?: string;
-  gender?: 'masculino' | 'femenino' | 'unisex'; // ✅ Match con DB
+  gender?: 'masculino' | 'femenino' | 'unisex';
   material?: string;
-  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año'; // ✅ Match con DB
+  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año';
   tags?: string[];
-  product_variants?: ProductVariant[]; // ✅ SOLO una forma, match con DB
-  created_at?: string;
-  updated_at?: string;
-  // Campos adicionales disponibles en DB
+  featured?: boolean;          // deprecated, usar is_featured
+  sale?: boolean;
+  active?: boolean;
+  is_active?: boolean;         // preferible usar este
+  is_featured?: boolean;
   sku?: string;
   weight?: number;
-  dimensions?: any;
+  dimensions?: any;            // mejor si tienes una interfaz Dimensions
+  stock_alert_threshold?: number;
   meta_title?: string;
   meta_description?: string;
-  active?: boolean;
-  is_active?: boolean;
-  is_featured?: boolean;
-  stock_alert_threshold?: number;
+  created_at?: string;
+  updated_at?: string;
+
+  // Relación
+  product_variants?: ProductVariant[];
 }
 
+// ProductVariant (match tabla 'product_variants')
 export interface ProductVariant {
   id: string;
-  product_id?: string;
+  product_id: string;
   color: string;
   size: string;
   stock: number;
+  price_adjustment?: number;
   image?: string;
-  price_adjustment?: number; // ✅ Campo adicional de DB
-  sku?: string; // ✅ Campo adicional de DB
-  weight_adjustment?: number; // ✅ Campo adicional de DB
+  sku?: string;
+  weight_adjustment?: number;
   created_at?: string;
   updated_at?: string;
 }
 
+// CartItem
 export interface CartItem {
   id: string;
-  producto: {
-    id: string;
-    name: string;
-    price: number;
-    original_price?: number;
-    images: string[];
-    category_id: string;
-    brand?: string;
-    gender?: string;
-  };
-  variant?: {
-    id: string;
-    color: string;
-    size: string;
-    stock: number;
-  };
+  product_id: string;
+  variant_id: string;
   quantity: number;
+  color?: string;
+  size?: string;
+  created_at?: string;
+  updated_at?: string;
+
+  // Relación para mostrar detalles (opcional en frontend)
+  product?: Product;
+  variant?: ProductVariant;
 }
 
+// User (match tabla 'users')
 export interface User {
   id: string;
   email: string;
   name: string;
   lastname: string;
   avatar?: string;
-  role: string;
-  address?: Address;
+  role: 'admin' | 'cliente';
   phone?: string;
-  createdAt?: string;
+  email_verified?: boolean;
+  last_login?: string;
+  login_count?: number;
+  account_status?: 'active' | 'suspended' | 'deactivated';
+  preferences?: Record<string, any>;
   created_at?: string;
-  // Para compatibilidad con AuthModal/AuthContext
+  updated_at?: string;
+
+  // Para compatibilidad con Auth
   user_metadata?: {
     name?: string;
+    lastname?: string;
     avatar_url?: string;
+    role?: string;
   };
 }
 
+// Address (match tabla 'addresses' y uso en orders)
 export interface Address {
-  street: string;
+  id?: string;
+  user_id?: string;
+  name?: string; // Nombre de la dirección (en la tabla addresses existe)
+  phone?: string;
+  address: string; // Campo "address" en la tabla
   city: string;
-  state: string;
-  zip: string;
+  state?: string;
+  zip_code?: string;
   country: string;
+  is_default?: boolean;
+  address_type?: 'shipping' | 'billing' | 'both';
+  created_at?: string;
+  updated_at?: string;
 }
 
-export interface categorias {
+// Category (match tabla 'categories')
+export interface Category {
   id: string;
   name: string;
-  image: string;
+  image?: string;
   slug: string;
   description?: string;
-  parentId?: string;
   parent_id?: string;
+  active?: boolean;
+  sort_order?: number;
+  meta_title?: string;
+  meta_description?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
+// Order (match tabla 'orders')
 export interface Order {
   id: string;
-  userId: string;
-  user_id?: string;
-  items: CartItem[];
-  order_items?: OrderItem[];
+  user_id: string;
+  order_number: string;
   total: number;
-  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  createdAt: string;
-  created_at?: string;
-  updatedAt?: string;
-  updated_at?: string;
-  address: Address | string;
-  paymentMethod: 'card' | 'paypal';
-  payment_method?: string;
-  trackingNumber?: string;
+  subtotal?: number;
+  tax?: number;
+  shipping?: number;
+  discount?: number;
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled' | 'refunded';
+  payment_status: 'pending' | 'paid' | 'failed' | 'refunded' | 'partially_refunded';
+  payment_method: 'stripe' | 'paypal';
+  address: any;           // JSONB, puede ser Address o un objeto plano
+  shipping_address?: any; // JSONB, igual que address
+  billing_address?: any;
   tracking_number?: string;
+  tracking_url?: string;
+  payment_intent_id?: string;
+  stripe_session_id?: string;
+  paypal_order_id?: string;
+  notes?: string;
+  estimated_delivery_date?: string;
+  delivered_at?: string;
+  cancelled_at?: string;
+  cancellation_reason?: string;
+  created_at?: string;
+  updated_at?: string;
+
+  // Relación
+  order_items?: OrderItem[];
 }
 
+// OrderItem (match tabla 'order_items')
 export interface OrderItem {
   id: string;
   order_id: string;
   product_id: string;
   variant_id?: string;
+  product_name: string;
+  variant_name?: string;
+  color?: string;
+  size?: string;
   quantity: number;
   price: number;
-  size?: string;
-  color?: string;
-  product?: productos;
+  total: number;
+  created_at?: string;
+
+  // Relación (opcional, para consulta JOIN)
+  product?: Product;
   variant?: ProductVariant;
 }
