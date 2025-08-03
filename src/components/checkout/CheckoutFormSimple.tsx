@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { CreditCard, MapPin, Lock, CheckCircle } from 'lucide-react';
 import { CartItem, User as UserType } from '@/types';
 import { useCheckout } from '@/hooks/useCheckout';
+import { checkCartStock } from '@/services/inventory.service';
+import { validateCardNumber } from '@/utils/validation';
+import { toast } from 'sonner';
 
 interface CheckoutFormSimpleProps {
   user: UserType | null;
@@ -30,6 +33,48 @@ export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps)
     formatExpiryDate,
     detectCardType
   } = useCheckout({ user, cartItems });
+
+  // Validación mejorada para nextStep
+  const handleNextStep = async () => {
+    if (step === 1) {
+      // Validar información de envío
+      const shippingFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'country'];
+      const values = form.getValues();
+      const errors = shippingFields.filter(field => !values[field as keyof typeof values]);
+      
+      if (errors.length > 0) {
+        toast.error(`Por favor completa todos los campos requeridos: ${errors.join(', ')}`);
+        return;
+      }
+      
+      // Validar formato de email
+      const email = values.email;
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        toast.error('Por favor ingresa un email válido');
+        return;
+      }
+      
+      // Verificar stock antes de continuar
+      const stockChecks = await checkCartStock(cartItems);
+      const stockIssues = stockChecks.filter(check => !check.isAvailable);
+      
+      if (stockIssues.length > 0) {
+        toast.error('Algunos productos no tienen stock suficiente. Por favor revisa tu carrito.');
+        return;
+      }
+      
+      nextStep();
+    } else if (step === 2) {
+      // Validar datos de pago si es necesario
+      const cardNumber = form.getValues('cardNumber');
+      if (cardNumber && !validateCardNumber(cardNumber)) {
+        toast.error('Número de tarjeta inválido');
+        return;
+      }
+      
+      nextStep();
+    }
+  };
 
   // Indicador de progreso
   const ProgressIndicator = () => (

@@ -1,363 +1,82 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import ProductCard from "../../../components/product/ProductCard";
-import { getProductsByCategorySlug } from "../../../services/product.service";
-
-// Puedes crear un array de marcas populares
-const marcasPopulares = ["Nike", "Adidas", "Puma", "Levi's", "Zara", "H&M"];
-
-const subCategories = [
-  "Camisetas",
-  "Camisas",
-  "Trajes de baño",
-  "Shorts",
-  "Pantalones",
-  "Jeans",
-  "Básicos",
-  "Buzos y hoodies",
-  "Chompas y abrigos",
-  "Suéteres y cárdigans",
-  "Ropa deportiva",
-  "Joggers",
-  "Ropa formal",
-  "Calzado",
-  "Calcetines",
-  "Ropa interior",
-  "Accesorios"
-];
-
-// Relación entre subcategoría y nombre de producto (puedes ajustar según tus datos reales.)
-const subCategoryKeywords: Record<string, string[]> = {
-  Camisetas: ["camiseta", "t-shirt"],
-  Camisas: ["camisa"],
-  Buzos: ["buzo", "suéter", "hoodie"],
-  Polos: ["polo"],
-  Jeans: ["jean", "mezclilla"],
-  Pantalones: ["pantalón", "pantalones"],
-};
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  original_price?: number;
-  images: string[];
-  category_id: string;
-  brand?: string;
-  gender?: string;
-  material?: string;
-  season?: string;
-  tags?: string[];
-  featured: boolean;
-  sale: boolean;
-  product_variants?: Array<{
-    id: string;
-    color: string;
-    size: string;
-    stock: number;
-    image?: string;
-  }>;
-}
+import { getProductsByCategorySlug, Product } from "../../../services/product.service";
 
 export default function MenCategoryPage() {
-  // Estados
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [colorFilter, setColorFilter] = useState<string>("");
-  const [sizeFilter, setSizeFilter] = useState<string>("");
-  const [priceFilter, setPriceFilter] = useState<string>("");
-  const [selectedSub, setSelectedSub] = useState<string>("");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
-  // Cargar productos de la categoría "men"
   useEffect(() => {
-    async function loadMenProducts() {
-      try {
-        setLoading(true);
-        const menProducts = await getProductsByCategorySlug('men');
-        setProducts(menProducts);
-      } catch (error) {
-        console.error('Error loading men products:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
     loadMenProducts();
   }, []);
 
-  // Obtener todos los colores y tallas disponibles
-  const availableColors = Array.from(new Set(
-    products.flatMap(product => 
-      product.product_variants?.map(v => v.color) || []
-    )
-  )).filter(Boolean);
-
-  const availableSizes = Array.from(new Set(
-    products.flatMap(product => 
-      product.product_variants?.map(v => v.size) || []
-    )
-  )).filter(Boolean);
-
-  // Productos tendencia (productos destacados)
-  const productosTendencia = products.filter(product => product.featured);
-
-  // Filtrado por subcategoría
-  let filteredProducts = selectedSub
-    ? products.filter((product) => {
-        const keywords = subCategoryKeywords[selectedSub] || [];
-        if (keywords.length > 0) {
-          return keywords.some((kw) =>
-            product.name?.toLowerCase().includes(kw.toLowerCase())
-          );
-        }
-        // Si no hay keywords, filtrar por tags o nombre exacto
-        return product.tags?.some(tag => 
-          tag.toLowerCase().includes(selectedSub.toLowerCase())
-        ) || product.name?.toLowerCase().includes(selectedSub.toLowerCase());
-      })
-    : products;
-
-  // Filtros adicionales
-  if (colorFilter) {
-    filteredProducts = filteredProducts.filter((product) =>
-      product.product_variants?.some(v => 
-        v.color.toLowerCase().includes(colorFilter.toLowerCase())
-      )
-    );
-  }
-  
-  if (sizeFilter) {
-    filteredProducts = filteredProducts.filter((product) =>
-      product.product_variants?.some(v => 
-        v.size.toLowerCase().includes(sizeFilter.toLowerCase())
-      )
-    );
-  }
-  
-  if (priceFilter) {
-    if (priceFilter === "low") {
-      filteredProducts = filteredProducts.filter((product) => product.price < 50);
-    } else if (priceFilter === "medium") {
-      filteredProducts = filteredProducts.filter((product) => product.price >= 50 && product.price < 100);
-    } else if (priceFilter === "high") {
-      filteredProducts = filteredProducts.filter((product) => product.price >= 100);
+  async function loadMenProducts() {
+    try {
+      setLoading(true);
+      const menProducts = await getProductsByCategorySlug('men');
+      setProducts(menProducts);
+    } catch (error) {
+      console.error('Error loading men products:', error);
+    } finally {
+      setLoading(false);
     }
   }
 
-  const toggleFavorite = (productId: string) => {
-    setFavorites(prev => 
-      prev.includes(productId)
-        ? prev.filter(id => id !== productId)
-        : [...prev, productId]
-    );
-  };
+  const filteredProducts = searchTerm
+    ? products.filter((product) =>
+        product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        product.description?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : products;
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent motion-reduce:animate-[spin_1.5s_linear_infinite]"></div>
-            <p className="mt-4 text-gray-600">Cargando productos para hombres...</p>
-          </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Cargando productos para hombres...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Ropa para Hombres</h1>
-          <p className="text-gray-600 text-lg">
-            Descubre nuestra colección de ropa masculina de alta calidad
-          </p>
-        </div>
-
-        {/* Sidebar y contenido principal */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <aside className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-sm p-6 space-y-6">
-              {/* Subcategorías */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Categorías</h3>
-                <div className="space-y-2">
-                  <button
-                    onClick={() => setSelectedSub("")}
-                    className={`block w-full text-left px-3 py-2 rounded-md transition ${
-                      selectedSub === ""
-                        ? "bg-blue-100 text-blue-700 font-medium"
-                        : "text-gray-600 hover:bg-gray-100"
-                    }`}
-                  >
-                    Todos los productos
-                  </button>
-                  {subCategories.map((sub) => (
-                    <button
-                      key={sub}
-                      onClick={() => setSelectedSub(sub)}
-                      className={`block w-full text-left px-3 py-2 rounded-md transition ${
-                        selectedSub === sub
-                          ? "bg-blue-100 text-blue-700 font-medium"
-                          : "text-gray-600 hover:bg-gray-100"
-                      }`}
-                    >
-                      {sub}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Nuevos productos */}
-              <div>
-                <h2 className="text-xl font-bold mb-4 text-blue-700">Nuevos productos</h2>
-                <div className="space-y-4">
-                  {products.slice(0, 3).map((product) => (
-                    <div key={product.id} className="flex space-x-3">
-                      <img
-                        src={product.images[0]}
-                        alt={product.name}
-                        className="w-16 h-16 object-cover rounded-lg"
-                      />
-                      <div className="flex-1">
-                        <h4 className="font-medium text-sm text-gray-900 line-clamp-2">
-                          {product.name}
-                        </h4>
-                        <p className="text-blue-600 font-semibold text-sm">
-                          ${product.price.toFixed(2)}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Marcas populares */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-3">Marcas populares</h3>
-                <div className="space-y-2">
-                  {marcasPopulares.map((marca) => (
-                    <label key={marca} className="flex items-center">
-                      <input type="checkbox" className="mr-2" />
-                      <span className="text-gray-600">{marca}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </aside>
-
-          {/* Contenido principal */}
-          <main className="lg:col-span-3">
-            {/* Productos tendencia */}
-            <div className="mb-8">
-              <h2 className="text-2xl font-bold text-gray-900 mb-6">Productos en Tendencia</h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {productosTendencia.length > 0 ? (
-                  productosTendencia.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))
-                ) : (
-                  <p className="col-span-full text-center text-gray-500">No hay productos en tendencia.</p>
-                )}
-              </div>
-            </div>
-
-            {/* Filtros */}
-            <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-              <h3 className="font-semibold text-gray-900 mb-4">Filtros</h3>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={colorFilter}
-                  onChange={(e) => setColorFilter(e.target.value)}
-                >
-                  <option value="">Todos los colores</option>
-                  {availableColors.map((color) => (
-                    <option key={color} value={color}>{color}</option>
-                  ))}
-                </select>
-                
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={sizeFilter}
-                  onChange={(e) => setSizeFilter(e.target.value)}
-                >
-                  <option value="">Todas las tallas</option>
-                  {availableSizes.map((size) => (
-                    <option key={size} value={size}>{size}</option>
-                  ))}
-                </select>
-                
-                <select
-                  className="border border-gray-300 rounded-md px-3 py-2"
-                  value={priceFilter}
-                  onChange={(e) => setPriceFilter(e.target.value)}
-                >
-                  <option value="">Todos los precios</option>
-                  <option value="low">Menos de $50</option>
-                  <option value="medium">$50 - $99</option>
-                  <option value="high">$100 o más</option>
-                </select>
-                
-                <button
-                  className="px-4 py-2 rounded-md bg-gray-200 hover:bg-gray-300 transition"
-                  onClick={() => {
-                    setColorFilter("");
-                    setSizeFilter("");
-                    setPriceFilter("");
-                  }}
-                >
-                  Limpiar filtros
-                </button>
-              </div>
-            </div>
-
-            {/* Productos filtrados */}
-            <div>
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900">
-                  {selectedSub || 'Todos los productos'}
-                </h2>
-                <span className="text-gray-600">
-                  {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-              
-              {filteredProducts.length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {filteredProducts.map((product) => (
-                    <ProductCard key={product.id} product={product} />
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-12">
-                  <p className="text-gray-500 text-lg">
-                    No hay productos que coincidan con los filtros seleccionados.
-                  </p>
-                  <button
-                    onClick={() => {
-                      setColorFilter("");
-                      setSizeFilter("");
-                      setPriceFilter("");
-                      setSelectedSub("");
-                    }}
-                    className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
-                  >
-                    Ver todos los productos
-                  </button>
-                </div>
-              )}
-            </div>
-          </main>
-        </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold text-gray-900 mb-4">Ropa para Hombres</h1>
+        <p className="text-gray-600">Descubre la mejor moda masculina</p>
       </div>
+
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Buscar productos..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+      </div>
+
+      <div className="mb-6">
+        <p className="text-gray-600">
+          Mostrando {filteredProducts.length} producto{filteredProducts.length !== 1 ? 's' : ''} de {products.length}
+        </p>
+      </div>
+
+      {filteredProducts.length === 0 ? (
+        <div className="text-center py-12">
+          <p className="text-gray-500 text-lg">No se encontraron productos.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {filteredProducts.map((product) => (
+            <ProductCard key={product.id} product={product} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

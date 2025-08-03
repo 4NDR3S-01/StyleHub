@@ -211,9 +211,9 @@ export async function createOrder(
     order_id: order.id,
     product_id: item.producto.id,
     quantity: item.quantity,
-    size: item.size,
-    color: item.color,
-    variant_id: item.variantId ?? null,
+    size: item.variant?.size || null,
+    color: item.variant?.color || null,
+    variant_id: item.variant?.id || null,
     price: item.producto.price,
   }))
   const { error: errItems } = await supabase

@@ -29,7 +29,7 @@ export function OrderSummary({ items, isProcessing = false }: OrderSummaryProps)
         {/* Lista de productos */}
         <div className="space-y-3 max-h-60 overflow-y-auto">
           {items.map((item, index) => (
-            <div key={`${item.producto.id}-${item.size}-${item.color}-${index}`} className="flex gap-3">
+            <div key={`${item.id}-${index}`} className="flex gap-3">
               <div className="relative w-16 h-16 rounded-md overflow-hidden bg-gray-100">
                 <Image
                   src={item.producto.images[0]}
@@ -50,8 +50,8 @@ export function OrderSummary({ items, isProcessing = false }: OrderSummaryProps)
                   {item.producto.name}
                 </h4>
                 <div className="text-xs text-gray-600 space-y-1">
-                  <p>Talla: {item.size}</p>
-                  <p>Color: {item.color}</p>
+                  {item.variant?.size && <p>Talla: {item.variant.size}</p>}
+                  {item.variant?.color && <p>Color: {item.variant.color}</p>}
                 </div>
                 <p className="font-semibold text-sm mt-1">
                   ${(item.producto.price * item.quantity).toLocaleString('es-CO')}

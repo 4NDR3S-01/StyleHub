@@ -24,117 +24,114 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    let sessionTimeout: NodeJS.Timeout | null = null;
-    let inactivityTimeout: NodeJS.Timeout | null = null;
-
     const restoreSession = async () => {
-      setIsLoading(true);
-      sessionTimeout = setTimeout(() => {
-        setUser(null);
-        setIsLoading(false);
-      }, 2500);
       try {
-        const { data } = await supabase.auth.getUser();
-        if (data?.user) {
-          const { data: userDataDb } = await supabase
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error getting session:', error);
+          return;
+        }
+        
+        if (session?.user) {
+          const { data: userDataDb, error: userError } = await supabase
             .from('users')
             .select('role, lastname')
-            .eq('id', data.user.id)
+            .eq('id', session.user.id)
             .single();
+            
+          if (userError) {
+            console.error('Error fetching user data:', userError);
+            return;
+          }
+          
           setUser({
-            id: data.user.id,
-            email: data.user.email ?? '',
-            name: data.user.user_metadata?.name ?? '',
+            id: session.user.id,
+            email: session.user.email ?? '',
+            name: session.user.user_metadata?.name ?? '',
             lastname: userDataDb?.lastname ?? '',
-            avatar: data.user.user_metadata?.avatar_url ?? '',
+            avatar: session.user.user_metadata?.avatar_url ?? '',
             role: userDataDb?.role ?? 'cliente',
             user_metadata: {
-              name: data.user.user_metadata?.name,
-              avatar_url: data.user.user_metadata?.avatar_url,
+              name: session.user.user_metadata?.name,
+              avatar_url: session.user.user_metadata?.avatar_url,
             },
           });
         } else {
           setUser(null);
         }
+      } catch (error) {
+        console.error('Session restoration error:', error);
+        setUser(null);
       } finally {
-        if (sessionTimeout) clearTimeout(sessionTimeout);
         setIsLoading(false);
       }
     };
+
     restoreSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setIsLoading(true);
-      if (session?.user) {
-        const { data: userDataDb } = await supabase
-          .from('users')
-          .select('role, lastname')
-          .eq('id', session.user.id)
-          .single();
-        setUser({
-          id: session.user.id,
-          email: session.user.email ?? '',
-          name: session.user.user_metadata?.name ?? '',
-          lastname: userDataDb?.lastname ?? '',
-          avatar: session.user.user_metadata?.avatar_url ?? '',
-          role: userDataDb?.role ?? 'cliente',
-          user_metadata: {
-            name: session.user.user_metadata?.name,
-            avatar_url: session.user.user_metadata?.avatar_url,
-          },
-        });
-      } else {
+      try {
+        if (session?.user) {
+          const { data: userDataDb, error: userError } = await supabase
+            .from('users')
+            .select('role, lastname')
+            .eq('id', session.user.id)
+            .single();
+            
+          if (userError) {
+            console.error('Error fetching user data on auth change:', userError);
+            return;
+          }
+          
+          setUser({
+            id: session.user.id,
+            email: session.user.email ?? '',
+            name: session.user.user_metadata?.name ?? '',
+            lastname: userDataDb?.lastname ?? '',
+            avatar: session.user.user_metadata?.avatar_url ?? '',
+            role: userDataDb?.role ?? 'cliente',
+            user_metadata: {
+              name: session.user.user_metadata?.name,
+              avatar_url: session.user.user_metadata?.avatar_url,
+            },
+          });
+        } else {
+          setUser(null);
+        }
+      } catch (error) {
+        console.error('Auth state change error:', error);
         setUser(null);
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     });
 
-    const resetTimer = () => {
-      if (inactivityTimeout) clearTimeout(inactivityTimeout);
-      inactivityTimeout = setTimeout(async () => {
-        await logout();
-        alert('Sesión cerrada por inactividad.');
-      }, 1000 * 60 * 60);
-    };
-
-    window.addEventListener('mousemove', resetTimer);
-    window.addEventListener('keydown', resetTimer);
-    resetTimer();
-
     return () => {
-      if (sessionTimeout) clearTimeout(sessionTimeout);
-      if (inactivityTimeout) clearTimeout(inactivityTimeout);
-      window.removeEventListener('mousemove', resetTimer);
-      window.removeEventListener('keydown', resetTimer);
-      listener?.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) throw new Error(error?.message || 'Inicio de sesión fallido');
-      const { data: userDataDb } = await supabase
-        .from('users')
-        .select('role, lastname')
-        .eq('id', data.user.id)
-        .single();
-      setUser({
-        id: data.user.id,
-        email: data.user.email ?? '',
-        name: data.user.user_metadata?.name ?? '',
-        lastname: userDataDb?.lastname ?? '',
-        avatar: data.user.user_metadata?.avatar_url ?? '',
-        role: userDataDb?.role ?? 'cliente',
-        user_metadata: {
-          name: data.user.user_metadata?.name,
-          avatar_url: data.user.user_metadata?.avatar_url,
-        },
+      const { data, error } = await supabase.auth.signInWithPassword({ 
+        email: email.trim().toLowerCase(), 
+        password 
       });
+      
+      if (error) {
+        throw new Error(error.message || 'Inicio de sesión fallido');
+      }
+      
+      if (!data.user) {
+        throw new Error('No se pudo autenticar al usuario');
+      }
+      
+      // User data will be set by the auth state change listener
     } catch (error: any) {
       throw new Error(error?.message || 'Inicio de sesión fallido');
     } finally {
@@ -154,22 +151,40 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       if (!email || !password || !name || !lastname) {
         throw new Error('Todos los campos son obligatorios.');
       }
-      // Registro con metadatos correctos
+      
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        throw new Error('Formato de email inválido.');
+      }
+      
+      // Validate password strength
+      if (password.length < 8) {
+        throw new Error('La contraseña debe tener al menos 8 caracteres.');
+      }
+      
       const { data, error } = await supabase.auth.signUp({
-        email,
+        email: email.trim().toLowerCase(),
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/confirm-email`,
           data: {
-            name,
-            lastname,
+            name: name.trim(),
+            lastname: lastname.trim(),
             role: "cliente",
-            display_name: name,
+            display_name: name.trim(),
           },
         },
       });
-      if (error || !data.user) throw new Error(error?.message || 'Registro fallido');
-      // No actualizar display_name manualmente ni iniciar sesión automáticamente
+      
+      if (error) {
+        throw new Error(error.message || 'Registro fallido');
+      }
+      
+      if (!data.user) {
+        throw new Error('No se pudo crear el usuario');
+      }
+      
     } catch (error: any) {
       throw new Error(error?.message || 'Registro fallido');
     } finally {
@@ -178,15 +193,35 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('Logout error:', error);
+      }
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      setUser(null);
+    }
   };
 
   const resetPassword = async (email: string) => {
     setIsLoading(true);
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
-      if (error) throw new Error(error.message);
+      if (!email.trim()) {
+        throw new Error('El email es requerido.');
+      }
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(
+        email.trim().toLowerCase(),
+        {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }
+      );
+      
+      if (error) {
+        throw new Error(error.message);
+      }
     } catch (error: any) {
       throw new Error(error?.message || 'No se pudo enviar el correo de recuperación');
     } finally {
@@ -197,9 +232,18 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const resendVerification = async () => {
     setIsLoading(true);
     try {
-      if (!user?.email) throw new Error('No hay correo electrónico para reenviar verificación');
-      const { error } = await supabase.auth.resend({ type: 'signup', email: user.email });
-      if (error) throw new Error(error.message);
+      if (!user?.email) {
+        throw new Error('No hay correo electrónico para reenviar verificación');
+      }
+      
+      const { error } = await supabase.auth.resend({ 
+        type: 'signup', 
+        email: user.email 
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
     } catch (error: any) {
       throw new Error(error?.message || 'No se pudo reenviar el correo de verificación');
     } finally {

@@ -2,31 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import ProductCard from '../product/ProductCard'
-import { getFeaturedProducts } from '@/services/product.service'
-
-interface Product {
-  id: string
-  name: string
-  description: string
-  price: number
-  original_price?: number
-  images: string[]
-  category_id: string
-  brand?: string
-  gender?: string
-  material?: string
-  season?: string
-  tags?: string[]
-  featured: boolean
-  sale: boolean
-  product_variants?: Array<{
-    id: string
-    color: string
-    size: string
-    stock: number
-    image?: string
-  }>
-}
+import { getFeaturedProducts, Product } from '@/services/product.service'
 
 // FeaturedProducts.tsx
 // This component displays a grid of featured products with images and links

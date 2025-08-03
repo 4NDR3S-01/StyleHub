@@ -798,8 +798,8 @@ export default function ProductsAdmin() {
                     <SelectValue placeholder="Selecciona género" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="hombre">Hombre</SelectItem>
-                    <SelectItem value="mujer">Mujer</SelectItem>
+                    <SelectItem value="masculino">Masculino</SelectItem>
+                    <SelectItem value="femenino">Femenino</SelectItem>
                     <SelectItem value="unisex">Unisex</SelectItem>
                   </SelectContent>
                 </Select>
@@ -829,7 +829,7 @@ export default function ProductsAdmin() {
                     <SelectItem value="verano">Verano</SelectItem>
                     <SelectItem value="otoño">Otoño</SelectItem>
                     <SelectItem value="invierno">Invierno</SelectItem>
-                    <SelectItem value="todo el año">Todo el año</SelectItem>
+                    <SelectItem value="todo_año">Todo el año</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -48,17 +48,21 @@ function SearchPageContent() {
             Buscar
           </button>
         </form>
-      {loading ? (
-        <p>Cargando...</p>
-      ) : results.length === 0 ? (
-        <p>No se encontraron productos.</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {results.map((product) => (
-            <ProductCard key={product.id} product={product} />
-          ))}
-        </div>
-      )}
+      {(() => {
+        if (loading) {
+          return <p>Cargando...</p>
+        }
+        if (results.length === 0) {
+          return <p>No se encontraron productos.</p>
+        }
+        return (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {results.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        )
+      })()}
     </div>
   )
 }

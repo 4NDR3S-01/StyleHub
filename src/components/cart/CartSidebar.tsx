@@ -6,7 +6,7 @@ import { useCart } from '../../context/CartContext';
 import Link from 'next/link';
 
 export default function CartSidebar() {
-  const { state, closeCart, updateQuantity, removeFromCart, totalPrice } = useCart();
+  const { state, toggleCart, updateQuantity, removeItem, total } = useCart();
 
   if (!state.isOpen) return null;
 
@@ -15,7 +15,7 @@ export default function CartSidebar() {
       {/* Backdrop */}
       <div
         className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
-        onClick={closeCart}
+        onClick={toggleCart}
       />
 
       {/* Sidebar */}
@@ -25,7 +25,7 @@ export default function CartSidebar() {
           <div className="flex items-center justify-between p-6 border-b">
             <h2 className="text-xl font-semibold text-slate-900">Carrito de Compras</h2>
             <button
-              onClick={closeCart}
+              onClick={toggleCart}
               className="p-2 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <X size={24} />
@@ -40,7 +40,7 @@ export default function CartSidebar() {
                 <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
                 <Link
                   href="/category/women"
-                  onClick={closeCart}
+                  onClick={toggleCart}
                   className="inline-block mt-4 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors"
                 >
                   Comenzar a Comprar
@@ -49,36 +49,38 @@ export default function CartSidebar() {
             ) : (
               <div className="space-y-6">
                 {state.items.map((item) => (
-                  <div key={`${item.producto.id}-${item.size}-${item.color}`} className="flex items-center space-x-4">
+                  <div key={item.id} className="flex items-center space-x-4">
                     <img
-                      src={item.producto.images[0]}
+                      src={item.producto.images?.[0] || '/placeholder.jpg'}
                       alt={item.producto.name}
                       className="w-20 h-20 object-cover rounded-lg"
                     />
                     <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">{item.producto.name}</h3>
                       <p className="text-sm text-gray-500">
-                        Size: {item.size} | Color: {item.color}
+                        {item.variant?.size && `Size: ${item.variant.size}`}
+                        {item.variant?.color && ` | Color: ${item.variant.color}`}
                       </p>
                       <p className="font-semibold text-lg">${item.producto.price.toFixed(2)}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.producto.id, item.quantity - 1, item.size, item.color)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                        disabled={item.quantity <= 1}
                       >
                         <Minus size={16} />
                       </button>
                       <span className="w-8 text-center">{item.quantity}</span>
                       <button
-                        onClick={() => updateQuantity(item.producto.id, item.quantity + 1, item.size, item.color)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
                         className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
                       >
                         <Plus size={16} />
                       </button>
                     </div>
                     <button
-                      onClick={() => removeFromCart(item.producto.id, item.size, item.color)}
+                      onClick={() => removeItem(item.id)}
                       className="p-1 text-gray-400 hover:text-red-500 transition-colors"
                     >
                       <X size={16} />
@@ -94,11 +96,11 @@ export default function CartSidebar() {
             <div className="border-t p-6 space-y-4">
               <div className="flex items-center justify-between text-xl font-semibold">
                 <span>Total:</span>
-                <span>${totalPrice.toFixed(2)}</span>
+                <span>${total.toFixed(2)}</span>
               </div>
               <Link
                 href="/checkout"
-                onClick={closeCart}
+                onClick={toggleCart}
                 className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold text-center block hover:bg-slate-800 transition-colors"
               >
                 Finalizar Compra

@@ -107,41 +107,58 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
     setError("");
     setSuccessMsg("");
     setInfoMsg("");
-    // Validaciones claras y específicas
-    if (!email || !password || (!isLogin && (!name || !lastname))) {
-      setError("Por favor completa todos los campos requeridos.");
+
+    // Enhanced validation
+    const validationErrors: string[] = [];
+
+    // Email validation
+    if (!email.trim()) {
+      validationErrors.push("El correo electrónico es requerido");
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      validationErrors.push("Formato de correo electrónico inválido");
+    }
+
+    // Password validation
+    if (!password) {
+      validationErrors.push("La contraseña es requerida");
+    } else if (password.length < 8) {
+      validationErrors.push("La contraseña debe tener al menos 8 caracteres");
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+      validationErrors.push("La contraseña debe contener al menos una mayúscula, una minúscula y un número");
+    }
+
+    // Registration-specific validation
+    if (!isLogin) {
+      if (!name.trim()) {
+        validationErrors.push("El nombre es requerido");
+      } else if (name.trim().length < 2) {
+        validationErrors.push("El nombre debe tener al menos 2 caracteres");
+      }
+
+      if (!lastname.trim()) {
+        validationErrors.push("El apellido es requerido");
+      } else if (lastname.trim().length < 2) {
+        validationErrors.push("El apellido debe tener al menos 2 caracteres");
+      }
+
+      if (password !== confirmPassword) {
+        validationErrors.push("Las contraseñas no coinciden");
+      }
+    }
+
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(". "));
       return;
     }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
-      setError("El correo electrónico no es válido. Verifica el formato.");
-      return;
-    }
-    if (!isLogin && name.length < 2) {
-      setError("El nombre debe tener al menos 2 caracteres.");
-      return;
-    }
-    if (!isLogin && lastname.length < 2) {
-      setError("El apellido debe tener al menos 2 caracteres.");
-      return;
-    }
-    if (!isLogin && password !== confirmPassword) {
-      setError("Las contraseñas no coinciden. Por favor verifica ambas.");
-      return;
-    }
+
     try {
       if (isLogin) {
-        await login(email, password);
-        // Consultar el rol directamente tras login
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('role')
-          .eq('email', email)
-          .single();
+        await login(email.trim().toLowerCase(), password);
         setError("");
         setInfoMsg("");
         setSuccessMsg('¡Inicio de sesión exitoso! Bienvenido a StyleHub. Serás redirigido al inicio...');
         setTimeout(() => {
-          if (!userError && userData?.role === 'admin') {
+          if (user?.role === 'admin') {
             router.push('/admin');
           } else {
             router.push('/');
@@ -150,32 +167,31 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           onClose();
         }, 1800);
       } else {
-        await register(email, password, name, lastname);
-        setSuccessMsg('¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta.<br>Si no recibiste el correo revisa tu bandeja de spam o <a href="mailto:soporte@stylehub.com" class="underline text-red-400">contáctanos</a>.');
+        await register(email.trim().toLowerCase(), password, name.trim(), lastname.trim());
+        setSuccessMsg('¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta. Si no recibiste el correo revisa tu bandeja de spam o contáctanos.');
         setError("");
         setInfoMsg("");
         return;
       }
     } catch (err) {
-      let msg = err instanceof Error ? err.message : "Ocurrió un error inesperado.";
-      if (msg.toLowerCase().includes("not allowed") || msg.toLowerCase().includes("email not confirmed") || msg.toLowerCase().includes("correo no verificado") || msg.toLowerCase().includes("not accepted")) {
-        setInfoMsg("Primero debes verificar tu correo electrónico. Revisa tu bandeja de entrada y confirma tu cuenta antes de iniciar sesión.");
-        msg = "";
+      let msg = err instanceof Error ? err.message : 'Error desconocido';
+      
+      // Enhanced error messages
+      if (msg.includes('Invalid login credentials')) {
+        msg = 'Correo electrónico o contraseña incorrectos';
+      } else if (msg.includes('Email not confirmed')) {
+        msg = 'Por favor confirma tu correo electrónico antes de iniciar sesión';
+      } else if (msg.includes('User already registered')) {
+        msg = 'Este correo electrónico ya está registrado. Intenta iniciar sesión';
+      } else if (msg.includes('Password should be at least 6 characters')) {
+        msg = 'La contraseña debe tener al menos 6 caracteres';
+      } else if (msg.includes('Unable to validate email address')) {
+        msg = 'Formato de correo electrónico inválido';
       }
-      if (msg.toLowerCase().includes("json object requested, multiple (or no) rows returned")) {
-        msg = "No se pudo iniciar sesión. Verifica tus datos o contacta soporte si el problema persiste.";
-      }
-      if (msg.toLowerCase().includes("invalid login credentials")) {
-        msg = "Credenciales incorrectas. Verifica tu correo y contraseña.";
-      }
-      if (msg.toLowerCase().includes("network error")) {
-        msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
-      }
-      if (msg.toLowerCase().includes("already registered")) {
-        setInfoMsg("Este correo ya está registrado. Si no recibiste el correo de confirmación, revisa tu bandeja de spam o solicita un nuevo correo.");
-        msg = "";
-      }
+      
       setError(msg);
+      setSuccessMsg("");
+      setInfoMsg("");
     }
   };
 
