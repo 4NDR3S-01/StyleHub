@@ -1,8 +1,8 @@
 -- =====================================================
--- STYLEHUB PRODUCTION DATABASE SCRIPT - FINAL VERSION
+-- STYLEHUB PRODUCTION DATABASE SCRIPT - CLEAN VERSION
 -- Complete database schema for production deployment
--- Total Tables: 27 | Functions: 8 | Triggers: 20+ | Policies: 80+
--- Updated: December 2024
+-- Total Tables: 27 | Functions: 6 | Triggers: 20+ | Policies: 80+
+-- Updated: Agosto 2025
 -- =====================================================
 
 -- Enable required extensions
@@ -16,7 +16,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Drop existing policies first (to avoid conflicts)
 DROP POLICY IF EXISTS "Users can read own data" ON public.users;
 DROP POLICY IF EXISTS "Categories are publicly readable" ON public.categories;
--- Note: Add other DROP POLICY statements if needed for re-runs
+DROP POLICY IF EXISTS "Products are publicly readable" ON public.products;
+DROP POLICY IF EXISTS "Reviews are publicly readable" ON public.reviews;
 
 -- =====================================================
 -- STORAGE BUCKETS CREATION
@@ -87,6 +88,8 @@ CREATE TABLE IF NOT EXISTS public.products (
   featured boolean DEFAULT false,
   sale boolean DEFAULT false,
   active boolean DEFAULT true,
+  is_active boolean DEFAULT true,
+  is_featured boolean DEFAULT false,
   sku text UNIQUE,
   weight numeric DEFAULT 0,
   dimensions jsonb,
@@ -113,47 +116,6 @@ CREATE TABLE IF NOT EXISTS public.product_variants (
 );
 
 -- =====================================================
--- INVENTORY & STOCK MANAGEMENT
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS public.stock_reservations (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
-  color text NOT NULL,
-  size text NOT NULL,
-  quantity integer NOT NULL CHECK (quantity > 0),
-  expires_at timestamp with time zone NOT NULL,
-  created_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.stock_movements (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
-  movement_type text NOT NULL CHECK (movement_type IN ('in', 'out', 'adjustment', 'reserved', 'released')),
-  quantity integer NOT NULL,
-  reason text,
-  reference_id uuid,
-  reference_type text,
-  user_id uuid REFERENCES public.users(id),
-  created_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.stock_alerts (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
-  current_stock integer NOT NULL,
-  threshold integer NOT NULL,
-  status text DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'resolved')),
-  acknowledged_by uuid REFERENCES public.users(id),
-  acknowledged_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now()
-);
-
--- =====================================================
 -- ORDER MANAGEMENT TABLES
 -- =====================================================
 
@@ -168,7 +130,7 @@ CREATE TABLE IF NOT EXISTS public.orders (
   discount numeric DEFAULT 0 CHECK (discount >= 0),
   status text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled', 'refunded')),
   payment_status text NOT NULL DEFAULT 'pending' CHECK (payment_status IN ('pending', 'paid', 'failed', 'refunded', 'partially_refunded')),
-  payment_method text NOT NULL CHECK (payment_method IN ('stripe', 'paypal', 'transfer', 'cash')),
+  payment_method text NOT NULL CHECK (payment_method IN ('stripe', 'paypal')),
   address jsonb NOT NULL,
   shipping_address jsonb,
   billing_address jsonb,
@@ -222,15 +184,6 @@ CREATE TABLE IF NOT EXISTS public.reviews (
   updated_at timestamp with time zone DEFAULT now()
 );
 
-CREATE TABLE IF NOT EXISTS public.review_votes (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  review_id uuid REFERENCES public.reviews(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
-  helpful boolean NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  UNIQUE (review_id, user_id)
-);
-
 CREATE TABLE IF NOT EXISTS public.wishlist (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
@@ -267,6 +220,47 @@ CREATE TABLE IF NOT EXISTS public.cart (
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   UNIQUE (user_id, product_id, variant_id)
+);
+
+-- =====================================================
+-- INVENTORY & STOCK MANAGEMENT
+-- =====================================================
+
+CREATE TABLE IF NOT EXISTS public.stock_reservations (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid REFERENCES public.users(id) ON DELETE CASCADE,
+  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
+  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
+  color text NOT NULL,
+  size text NOT NULL,
+  quantity integer NOT NULL CHECK (quantity > 0),
+  expires_at timestamp with time zone NOT NULL,
+  created_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.stock_movements (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
+  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
+  movement_type text NOT NULL CHECK (movement_type IN ('in', 'out', 'adjustment', 'reserved', 'released')),
+  quantity integer NOT NULL,
+  reason text,
+  reference_id uuid,
+  reference_type text,
+  user_id uuid REFERENCES public.users(id),
+  created_at timestamp with time zone DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS public.stock_alerts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
+  variant_id uuid REFERENCES public.product_variants(id) ON DELETE CASCADE,
+  current_stock integer NOT NULL,
+  threshold integer NOT NULL,
+  status text DEFAULT 'active' CHECK (status IN ('active', 'acknowledged', 'resolved')),
+  acknowledged_by uuid REFERENCES public.users(id),
+  acknowledged_at timestamp with time zone,
+  created_at timestamp with time zone DEFAULT now()
 );
 
 -- =====================================================
@@ -436,19 +430,6 @@ CREATE TABLE IF NOT EXISTS public.notifications (
   read_at timestamp with time zone
 );
 
-CREATE TABLE IF NOT EXISTS public.email_templates (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name text NOT NULL,
-  subject text NOT NULL,
-  html_content text NOT NULL,
-  text_content text,
-  variables jsonb,
-  active boolean DEFAULT true,
-  template_type text CHECK (template_type IN ('welcome', 'order_confirmation', 'shipping_notification', 'password_reset', 'newsletter', 'marketing')),
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now()
-);
-
 CREATE TABLE IF NOT EXISTS public.contact_messages (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
@@ -458,55 +439,6 @@ CREATE TABLE IF NOT EXISTS public.contact_messages (
   status text DEFAULT 'pending' CHECK (status IN ('pending', 'read', 'replied', 'resolved')),
   replied_at timestamp with time zone,
   created_at timestamp with time zone DEFAULT now()
-);
-
--- =====================================================
--- ANALYTICS & TRACKING
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS public.page_views (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  session_id text,
-  user_id uuid REFERENCES public.users(id),
-  page_url text NOT NULL,
-  page_title text,
-  referrer text,
-  user_agent text,
-  ip_address inet,
-  country text,
-  device_type text,
-  browser text,
-  viewed_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.product_views (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  product_id uuid REFERENCES public.products(id) ON DELETE CASCADE,
-  user_id uuid REFERENCES public.users(id),
-  session_id text,
-  source text,
-  viewed_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.search_queries (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  query text NOT NULL,
-  user_id uuid REFERENCES public.users(id),
-  session_id text,
-  results_count integer,
-  clicked_product_id uuid REFERENCES public.products(id),
-  searched_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.cart_abandonment (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id),
-  session_id text,
-  cart_value numeric,
-  items_count integer,
-  last_activity timestamp with time zone DEFAULT now(),
-  recovered boolean DEFAULT false,
-  recovered_at timestamp with time zone
 );
 
 -- =====================================================
@@ -541,45 +473,13 @@ CREATE TABLE IF NOT EXISTS public.shipping_methods (
 CREATE TABLE IF NOT EXISTS public.payment_methods (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name text NOT NULL,
-  type text NOT NULL CHECK (type IN ('stripe', 'paypal', 'transfer', 'cash')),
+  type text NOT NULL CHECK (type IN ('stripe', 'paypal')),
   description text,
   active boolean DEFAULT true,
   settings jsonb,
   sort_order integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now()
-);
-
--- =====================================================
--- LOGS & AUDIT TRAIL
--- =====================================================
-
-CREATE TABLE IF NOT EXISTS public.activity_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id),
-  action text NOT NULL,
-  entity_type text,
-  entity_id uuid,
-  old_values jsonb,
-  new_values jsonb,
-  ip_address inet,
-  user_agent text,
-  created_at timestamp with time zone DEFAULT now()
-);
-
-CREATE TABLE IF NOT EXISTS public.error_logs (
-  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id uuid REFERENCES public.users(id),
-  session_id text,
-  error_type text NOT NULL,
-  message text NOT NULL,
-  stack_trace text,
-  url text,
-  user_agent text,
-  ip_address inet,
-  resolved boolean DEFAULT false,
-  resolved_at timestamp with time zone,
-  created_at timestamp with time zone DEFAULT now()
 );
 
 -- =====================================================
@@ -621,114 +521,6 @@ BEGIN
 END;
 $$ language plpgsql SECURITY DEFINER;
 
--- Function to update product stock
-CREATE OR REPLACE FUNCTION update_product_stock(
-  p_product_id uuid,
-  p_color text,
-  p_size text,
-  p_quantity integer,
-  p_reason text DEFAULT 'manual_adjustment',
-  p_user_id uuid DEFAULT null
-)
-RETURNS boolean
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  v_variant_id uuid;
-  v_current_stock integer;
-  v_new_stock integer;
-BEGIN
-  -- Get variant ID and current stock
-  SELECT id, stock INTO v_variant_id, v_current_stock
-  FROM public.product_variants
-  WHERE product_id = p_product_id AND color = p_color AND size = p_size;
-  
-  IF v_variant_id IS NULL THEN
-    RAISE EXCEPTION 'Product variant not found';
-  END IF;
-  
-  v_new_stock := v_current_stock + p_quantity;
-  
-  IF v_new_stock < 0 THEN
-    RAISE EXCEPTION 'Insufficient stock';
-  END IF;
-  
-  -- Update stock
-  UPDATE public.product_variants
-  SET stock = v_new_stock, updated_at = now()
-  WHERE id = v_variant_id;
-  
-  -- Log stock movement
-  INSERT INTO public.stock_movements (
-    product_id, variant_id, movement_type, quantity, reason, user_id
-  ) VALUES (
-    p_product_id, v_variant_id, 
-    CASE WHEN p_quantity > 0 THEN 'in' ELSE 'out' END,
-    ABS(p_quantity), p_reason, p_user_id
-  );
-  
-  -- Check for low stock alert
-  PERFORM check_low_stock_alert(p_product_id, v_variant_id);
-  
-  RETURN true;
-EXCEPTION
-  WHEN OTHERS THEN
-    RETURN false;
-END;
-$$;
-
--- Function to check low stock alerts
-CREATE OR REPLACE FUNCTION check_low_stock_alert(
-  p_product_id uuid,
-  p_variant_id uuid
-)
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-DECLARE
-  v_current_stock integer;
-  v_threshold integer;
-  v_alert_exists boolean;
-BEGIN
-  -- Get current stock and threshold
-  SELECT pv.stock, COALESCE(p.stock_alert_threshold, 5)
-  INTO v_current_stock, v_threshold
-  FROM public.product_variants pv
-  JOIN public.products p ON pv.product_id = p.id
-  WHERE pv.id = p_variant_id;
-  
-  -- Check if alert already exists
-  SELECT EXISTS(
-    SELECT 1 FROM public.stock_alerts
-    WHERE variant_id = p_variant_id AND status = 'active'
-  ) INTO v_alert_exists;
-  
-  -- Create alert if stock is low and no active alert exists
-  IF v_current_stock <= v_threshold AND NOT v_alert_exists THEN
-    INSERT INTO public.stock_alerts (product_id, variant_id, current_stock, threshold)
-    VALUES (p_product_id, p_variant_id, v_current_stock, v_threshold);
-  END IF;
-  
-  -- Resolve alert if stock is sufficient
-  IF v_current_stock > v_threshold AND v_alert_exists THEN
-    UPDATE public.stock_alerts
-    SET status = 'resolved'
-    WHERE variant_id = p_variant_id AND status = 'active';
-  END IF;
-END;
-$$;
-
--- Function to clean expired stock reservations
-CREATE OR REPLACE FUNCTION clean_expired_reservations()
-RETURNS void
-LANGUAGE plpgsql
-AS $$
-BEGIN
-  DELETE FROM public.stock_reservations
-  WHERE expires_at < now();
-END;
-$$;
-
 -- =====================================================
 -- TRIGGERS
 -- =====================================================
@@ -751,7 +543,6 @@ CREATE TRIGGER update_footer_settings_updated_at BEFORE UPDATE ON public.footer_
 CREATE TRIGGER update_system_settings_updated_at BEFORE UPDATE ON public.system_settings FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_shipping_methods_updated_at BEFORE UPDATE ON public.shipping_methods FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 CREATE TRIGGER update_payment_methods_updated_at BEFORE UPDATE ON public.payment_methods FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
-CREATE TRIGGER update_email_templates_updated_at BEFORE UPDATE ON public.email_templates FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Order number generation trigger
 CREATE TRIGGER generate_order_number_trigger BEFORE INSERT ON public.orders FOR EACH ROW EXECUTE FUNCTION generate_order_number();
@@ -759,35 +550,50 @@ CREATE TRIGGER generate_order_number_trigger BEFORE INSERT ON public.orders FOR 
 -- New user registration trigger
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
--- Stock alert trigger
-CREATE TRIGGER check_stock_alert_trigger AFTER UPDATE ON public.product_variants FOR EACH ROW WHEN (OLD.stock IS DISTINCT FROM NEW.stock) EXECUTE FUNCTION check_low_stock_alert(NEW.product_id, NEW.id);
-
 -- =====================================================
 -- INDEXES FOR PERFORMANCE
 -- =====================================================
 
--- Core indexes
+-- Usuarios
 CREATE INDEX IF NOT EXISTS idx_users_email ON public.users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role ON public.users(role);
-CREATE INDEX IF NOT EXISTS idx_categories_slug ON public.categories(slug);
-CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON public.categories(parent_id);
+
+-- Productos
 CREATE INDEX IF NOT EXISTS idx_products_category_id ON public.products(category_id);
-CREATE INDEX IF NOT EXISTS idx_products_active ON public.products(active);
 CREATE INDEX IF NOT EXISTS idx_products_featured ON public.products(featured);
 CREATE INDEX IF NOT EXISTS idx_products_sale ON public.products(sale);
+CREATE INDEX IF NOT EXISTS idx_products_active ON public.products(active);
+CREATE INDEX IF NOT EXISTS idx_products_is_active ON public.products(is_active);
 CREATE INDEX IF NOT EXISTS idx_products_price ON public.products(price);
-CREATE INDEX IF NOT EXISTS idx_products_tags ON public.products USING GIN(tags);
+CREATE INDEX IF NOT EXISTS idx_products_created_at ON public.products(created_at);
+
+-- Categorías
+CREATE INDEX IF NOT EXISTS idx_categories_slug ON public.categories(slug);
+CREATE INDEX IF NOT EXISTS idx_categories_parent_id ON public.categories(parent_id);
+CREATE INDEX IF NOT EXISTS idx_categories_active ON public.categories(active);
+
+-- Variantes de productos
 CREATE INDEX IF NOT EXISTS idx_product_variants_product_id ON public.product_variants(product_id);
 CREATE INDEX IF NOT EXISTS idx_product_variants_stock ON public.product_variants(stock);
+
+-- Órdenes
 CREATE INDEX IF NOT EXISTS idx_orders_user_id ON public.orders(user_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON public.orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON public.orders(created_at);
 CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON public.order_items(order_id);
+
+-- Reviews
 CREATE INDEX IF NOT EXISTS idx_reviews_product_id ON public.reviews(product_id);
 CREATE INDEX IF NOT EXISTS idx_reviews_approved ON public.reviews(approved);
+
+-- Wishlist y Carrito
 CREATE INDEX IF NOT EXISTS idx_wishlist_user_id ON public.wishlist(user_id);
 CREATE INDEX IF NOT EXISTS idx_cart_user_id ON public.cart(user_id);
+
+-- Notificaciones
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON public.notifications(user_id);
+
+-- Stock
 CREATE INDEX IF NOT EXISTS idx_stock_reservations_expires_at ON public.stock_reservations(expires_at);
 
 -- =====================================================
@@ -820,7 +626,7 @@ ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
 
 -- Public read policies (for unauthenticated users)
 CREATE POLICY "Categories are publicly readable" ON public.categories FOR SELECT USING (active = true);
-CREATE POLICY "Products are publicly readable" ON public.products FOR SELECT USING (active = true);
+CREATE POLICY "Products are publicly readable" ON public.products FOR SELECT USING (active = true AND is_active = true);
 CREATE POLICY "Product variants are publicly readable" ON public.product_variants FOR SELECT USING (true);
 CREATE POLICY "Reviews are publicly readable" ON public.reviews FOR SELECT USING (approved = true);
 CREATE POLICY "Testimonials are publicly readable" ON public.testimonials FOR SELECT USING (approved = true);
@@ -848,7 +654,6 @@ CREATE POLICY "Users can create reviews" ON public.reviews FOR INSERT WITH CHECK
 CREATE POLICY "Users can read own reviews" ON public.reviews FOR SELECT USING (auth.uid() = user_id OR approved = true);
 CREATE POLICY "Users can update own reviews" ON public.reviews FOR UPDATE USING (auth.uid() = user_id);
 CREATE POLICY "Users can read own notifications" ON public.notifications FOR SELECT USING (auth.uid() = user_id);
-CREATE POLICY "Users can update own notifications" ON public.notifications FOR UPDATE USING (auth.uid() = user_id);
 
 -- Admin policies
 CREATE POLICY "Admins can read all users" ON public.users FOR SELECT USING (EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
@@ -875,23 +680,29 @@ CREATE POLICY "Admins can manage payment methods" ON public.payment_methods FOR 
 -- STORAGE POLICIES
 -- =====================================================
 
--- Avatar bucket policies
+-- Avatar policies
 CREATE POLICY "Avatar images are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'avatar');
-CREATE POLICY "Users can upload their own avatar" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatar' AND auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can update their own avatar" ON storage.objects FOR UPDATE USING (bucket_id = 'avatar' AND auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text);
-CREATE POLICY "Users can delete their own avatar" ON storage.objects FOR DELETE USING (bucket_id = 'avatar' AND auth.role() = 'authenticated' AND (storage.foldername(name))[1] = auth.uid()::text);
+CREATE POLICY "Users can upload own avatar" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'avatar' AND auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "Users can update own avatar" ON storage.objects FOR UPDATE USING (bucket_id = 'avatar' AND auth.uid()::text = (storage.foldername(name))[1]);
+CREATE POLICY "Users can delete own avatar" ON storage.objects FOR DELETE USING (bucket_id = 'avatar' AND auth.uid()::text = (storage.foldername(name))[1]);
 
--- Product images bucket policies
+-- Product images policies
 CREATE POLICY "Product images are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'productos');
 CREATE POLICY "Admins can manage product images" ON storage.objects FOR ALL USING (bucket_id = 'productos' AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
 
--- Other bucket policies
+-- Banner policies
 CREATE POLICY "Banners are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'banners');
 CREATE POLICY "Admins can manage banners storage" ON storage.objects FOR ALL USING (bucket_id = 'banners' AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Category images policies
 CREATE POLICY "Category images are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'categories');
 CREATE POLICY "Admins can manage category images" ON storage.objects FOR ALL USING (bucket_id = 'categories' AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Testimonial images policies
 CREATE POLICY "Testimonial images are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'testimonials');
 CREATE POLICY "Admins can manage testimonial images" ON storage.objects FOR ALL USING (bucket_id = 'testimonials' AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
+
+-- Branding images policies
 CREATE POLICY "Branding images are publicly accessible" ON storage.objects FOR SELECT USING (bucket_id = 'branding');
 CREATE POLICY "Admins can manage branding images" ON storage.objects FOR ALL USING (bucket_id = 'branding' AND EXISTS (SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'));
 
@@ -905,26 +716,40 @@ INSERT INTO public.system_settings (key, value, data_type, description, category
   ('site_description', 'Tu destino para la moda y el estilo', 'string', 'Descripción del sitio web', 'general', true),
   ('currency', 'COP', 'string', 'Moneda por defecto', 'general', true),
   ('tax_rate', '19', 'number', 'Tasa de impuesto por defecto (%)', 'general', false),
-  ('free_shipping_threshold', '150000', 'number', 'Umbral para envío gratuito', 'shipping', true),
-  ('max_cart_items', '50', 'number', 'Máximo de items en el carrito', 'cart', true),
-  ('stock_alert_threshold', '5', 'number', 'Umbral de alerta de stock bajo', 'inventory', false),
-  ('order_confirmation_email', 'true', 'boolean', 'Enviar email de confirmación de pedido', 'email', false),
-  ('newsletter_enabled', 'true', 'boolean', 'Newsletter habilitado', 'marketing', true),
-  ('reviews_require_approval', 'true', 'boolean', 'Reseñas requieren aprobación', 'reviews', false)
+  ('free_shipping_threshold', '200000', 'number', 'Monto mínimo para envío gratis', 'shipping', true),
+  ('default_shipping_cost', '15000', 'number', 'Costo de envío por defecto', 'shipping', true),
+  ('max_items_per_cart', '50', 'number', 'Máximo de artículos por carrito', 'cart', true),
+  ('allow_guest_checkout', 'false', 'boolean', 'Permitir checkout sin registro', 'checkout', true),
+  ('maintenance_mode', 'false', 'boolean', 'Modo de mantenimiento', 'general', false),
+  ('contact_email', 'soporte@stylehub.com', 'string', 'Email de contacto', 'contact', true),
+  ('contact_phone', '+57-1-XXX-XXXX', 'string', 'Teléfono de contacto', 'contact', true)
 ON CONFLICT (key) DO NOTHING;
 
 -- Default shipping methods
-INSERT INTO public.shipping_methods (name, description, price, estimated_days, active) VALUES
-  ('Envío Estándar', 'Entrega en 3-5 días hábiles', 15000, '3-5 días', true),
-  ('Envío Express', 'Entrega en 1-2 días hábiles', 25000, '1-2 días', true),
-  ('Envío Gratuito', 'Entrega gratuita en compras superiores a $150,000', 0, '5-7 días', true)
+INSERT INTO public.shipping_methods (name, description, price, free_over_amount, estimated_days, active) VALUES
+  ('Envío Estándar', 'Entrega en 3-5 días hábiles', 15000, 200000, '3-5 días', true),
+  ('Envío Express', 'Entrega en 1-2 días hábiles', 25000, NULL, '1-2 días', true),
+  ('Recogida en Tienda', 'Recoge tu pedido en nuestra tienda física', 0, NULL, 'Inmediato', true)
 ON CONFLICT DO NOTHING;
 
 -- Default payment methods
-INSERT INTO public.payment_methods (name, type, description, active) VALUES
-  ('Tarjeta de Crédito/Débito', 'stripe', 'Pago seguro con tarjeta a través de Stripe', true),
-  ('PayPal', 'paypal', 'Pago seguro a través de PayPal', true),
-  ('Transferencia Bancaria', 'transfer', 'Transferencia bancaria directa', true)
+INSERT INTO public.payment_methods (name, type, description, active, settings) VALUES
+  ('Tarjeta de Crédito/Débito', 'stripe', 'Pago seguro con tarjeta a través de Stripe', true, '{"supported_cards": ["visa", "mastercard", "amex"]}'),
+  ('PayPal', 'paypal', 'Pago rápido y seguro con PayPal', true, '{"environment": "sandbox"}')
+ON CONFLICT DO NOTHING;
+
+-- Default categories
+INSERT INTO public.categories (name, slug, description, active, sort_order) VALUES
+  ('Mujeres', 'women', 'Ropa y accesorios para mujeres', true, 1),
+  ('Hombres', 'men', 'Ropa y accesorios para hombres', true, 2),
+  ('Zapatos', 'shoes', 'Calzado para toda ocasión', true, 3),
+  ('Accesorios', 'accessories', 'Complementos y accesorios de moda', true, 4),
+  ('Deportivo', 'sports', 'Ropa deportiva y activewear', true, 5)
+ON CONFLICT (slug) DO NOTHING;
+
+-- Default theme settings
+INSERT INTO public.theme_settings (name, colors, fonts, layout_settings, is_active, is_default) VALUES
+  ('Tema Clásico', '{"primary": "#dc2626", "secondary": "#f59e0b", "accent": "#3b82f6", "background": "#ffffff", "text": "#1f2937"}', '{"primary": "Inter", "secondary": "Poppins"}', '{"header_height": "80px", "footer_style": "minimal", "product_grid": "4"}', true, true)
 ON CONFLICT DO NOTHING;
 
 -- Default branding settings
@@ -941,8 +766,8 @@ ON CONFLICT DO NOTHING;
 INSERT INTO public.footer_links (title, url, category, active) VALUES
   ('Sobre Nosotros', '/about', 'company', true),
   ('Contacto', '/contacto', 'company', true),
-  ('Política de Privacidad', '/legal/privacy', 'legal', true),
-  ('Términos y Condiciones', '/legal/terms', 'legal', true),
+  ('Política de Privacidad', '/legal/politica-privacidad', 'legal', true),
+  ('Términos y Condiciones', '/legal/terminos-servicio', 'legal', true),
   ('Política de Devoluciones', '/legal/returns', 'legal', true),
   ('Preguntas Frecuentes', '/faq', 'support', true),
   ('Envíos', '/shipping', 'support', true),
@@ -966,18 +791,16 @@ BEGIN
   RAISE NOTICE '✅ Features implemented:';
   RAISE NOTICE '   ✓ Complete user management & authentication';
   RAISE NOTICE '   ✓ Product catalog with variants & stock management';
-  RAISE NOTICE '   ✓ Order processing & payment integration';
+  RAISE NOTICE '   ✓ Order processing & payment integration (Stripe & PayPal only)';
   RAISE NOTICE '   ✓ Review & rating system';
   RAISE NOTICE '   ✓ Shopping cart & wishlist';
   RAISE NOTICE '   ✓ Coupon & discount system';
   RAISE NOTICE '   ✓ Complete personalization system';
-  RAISE NOTICE '   ✓ Analytics & tracking';
   RAISE NOTICE '   ✓ Notification system';
   RAISE NOTICE '   ✓ Newsletter management';
   RAISE NOTICE '   ✓ Admin panel functionality';
   RAISE NOTICE '   ✓ Comprehensive security (RLS)';
   RAISE NOTICE '   ✓ Storage bucket configuration';
-  RAISE NOTICE '   ✓ Audit trail & logging';
   RAISE NOTICE '';
   RAISE NOTICE '🚀 The database is now ready for production use!';
   RAISE NOTICE '📝 Next steps: Configure environment variables and deploy the application.';

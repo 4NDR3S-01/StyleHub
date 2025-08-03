@@ -72,8 +72,8 @@
 - **Real-time subscriptions** - Actualizaciones en tiempo real
 
 ### Pagos & Servicios
-- **Stripe** - Procesamiento de pagos
-- **PayPal** - Pagos alternativos
+- **Stripe** - Procesamiento principal de pagos con tarjeta
+- **PayPal** - Método de pago alternativo
 - **Supabase Storage** - Almacenamiento de archivos
 - **Supabase Auth** - Autenticación
 

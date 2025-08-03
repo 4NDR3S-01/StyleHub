@@ -368,13 +368,13 @@ export class CartService {
       }
 
       // Obtener categorías de productos en el carrito
-      const categories = Array.from(new Set(cartItems.map(item => item.product.category)));
+      const categories = Array.from(new Set(cartItems.map(item => item.product.category_id)));
       
       // Obtener productos relacionados de las mismas categorías
       const { data, error } = await supabase
         .from('products')
         .select('*')
-        .in('category', categories)
+        .in('category_id', categories)
         .not('id', 'in', `(${cartItems.map(item => item.product.id).join(',')})`)
         .limit(limit);
 

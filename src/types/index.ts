@@ -3,26 +3,32 @@ export interface productos {
   name: string;
   description: string;
   price: number;
-  originalPrice?: number;
-  original_price?: number;
+  original_price?: number; // ✅ SOLO snake_case para match con DB
   images: string[];
-  category: string;
-  category_id?: string;
-  sizes: string[];
-  colors: string[];
+  category_id: string; // ✅ SOLO usar ID para referencia a la DB
   stock: number;
   rating: number;
   reviews: number;
   featured?: boolean;
   sale?: boolean;
   brand?: string;
-  gender?: 'hombre' | 'mujer' | 'unisex' | 'niño';
+  gender?: 'masculino' | 'femenino' | 'unisex'; // ✅ Match con DB
   material?: string;
-  season?: 'verano' | 'invierno' | 'otoño' | 'primavera';
+  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año'; // ✅ Match con DB
   tags?: string[];
-  variants?: ProductVariant[];
-  product_variants?: ProductVariant[];
+  product_variants?: ProductVariant[]; // ✅ SOLO una forma, match con DB
   created_at?: string;
+  updated_at?: string;
+  // Campos adicionales disponibles en DB
+  sku?: string;
+  weight?: number;
+  dimensions?: any;
+  meta_title?: string;
+  meta_description?: string;
+  active?: boolean;
+  is_active?: boolean;
+  is_featured?: boolean;
+  stock_alert_threshold?: number;
 }
 
 export interface ProductVariant {
@@ -32,6 +38,11 @@ export interface ProductVariant {
   size: string;
   stock: number;
   image?: string;
+  price_adjustment?: number; // ✅ Campo adicional de DB
+  sku?: string; // ✅ Campo adicional de DB
+  weight_adjustment?: number; // ✅ Campo adicional de DB
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CartItem {

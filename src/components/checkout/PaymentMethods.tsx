@@ -3,48 +3,24 @@
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { CreditCard, Smartphone, Building, Banknote } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 export function PaymentMethods() {
   const paymentMethods = [
     {
       id: 'credit_card',
-      name: 'Tarjeta de Crédito',
-      description: 'Visa, Mastercard, American Express',
+      name: 'Tarjeta de Crédito/Débito',
+      description: 'Visa, Mastercard, American Express - Procesado por Stripe',
       icon: CreditCard,
       available: true,
       recommended: true
     },
     {
-      id: 'debit_card',
-      name: 'Tarjeta Débito',
-      description: 'Débito Visa, Mastercard',
+      id: 'paypal',
+      name: 'PayPal',
+      description: 'Pago rápido y seguro con PayPal',
       icon: CreditCard,
       available: true,
-      recommended: false
-    },
-    {
-      id: 'mobile_payment',
-      name: 'Pago Móvil',
-      description: 'Nequi, Daviplata, Bancolombia',
-      icon: Smartphone,
-      available: false,
-      recommended: false
-    },
-    {
-      id: 'bank_transfer',
-      name: 'Transferencia Bancaria',
-      description: 'PSE - Débito en línea',
-      icon: Building,
-      available: false,
-      recommended: false
-    },
-    {
-      id: 'cash',
-      name: 'Pago Contraentrega',
-      description: 'Pago en efectivo al recibir',
-      icon: Banknote,
-      available: false,
       recommended: false
     }
   ];
@@ -109,8 +85,8 @@ export function PaymentMethods() {
         
         <div className="mt-4 p-3 bg-blue-50 rounded-lg">
           <p className="text-sm text-blue-700">
-            💡 <strong>Tip:</strong> Los pagos con tarjeta de crédito se procesan de forma inmediata y segura. 
-            Próximamente habilitaremos más métodos de pago.
+            💡 <strong>Tip:</strong> Aceptamos pagos con tarjetas de crédito/débito a través de Stripe y PayPal. 
+            Ambos métodos garantizan transacciones seguras y rápidas.
           </p>
         </div>
       </CardContent>

@@ -153,8 +153,16 @@ export default function CheckoutPage() {
               <p className="text-gray-600">Tu carrito está vacío.</p>
             ) : (
               <ul className="space-y-2">
-                {state.items.map((item, idx) => (
-                  <li key={idx} className="flex justify-between border-b pb-2">
+                {state.items.map((item) => (
+                  <li
+                    key={
+                      item.producto.id +
+                      (item.variant
+                        ? `-${item.variant.color}-${item.variant.size}`
+                        : '')
+                    }
+                    className="flex justify-between border-b pb-2"
+                  >
                     <span>
                       {item.producto.name} {item.variant && `(${item.variant.color}/${item.variant.size})`} × {item.quantity}
                     </span>

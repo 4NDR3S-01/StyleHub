@@ -525,7 +525,7 @@ export default function FooterPage() {
                 <h3 className="font-semibold text-lg">{category}</h3>
                 <div className="space-y-2">
                   {links
-                    .sort((a, b) => a.sort_order - b.sort_order)
+                    .toSorted((a, b) => a.sort_order - b.sort_order)
                     .map((link) => (
                       <div key={link.id} className="flex items-center justify-between p-2 border rounded">
                         <div className="flex items-center space-x-2">
@@ -642,7 +642,7 @@ export default function FooterPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {socialMedia
-              .sort((a, b) => a.platform.localeCompare(b.platform))
+              .toSorted((a, b) => a.platform.localeCompare(b.platform))
               .map((social) => {
                 const platform = SOCIAL_MEDIA_PLATFORMS.find(p => p.value === social.platform);
                 const IconComponent = platform?.icon;

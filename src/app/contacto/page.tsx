@@ -48,7 +48,7 @@ const faqData = [
   },
   {
     question: "¿Qué métodos de pago aceptan?",
-    answer: "Aceptamos tarjetas de crédito/débito, PayPal, transferencias bancarias y pagos contra entrega en algunas zonas."
+    answer: "Aceptamos tarjetas de crédito/débito a través de Stripe y pagos con PayPal para mayor conveniencia y seguridad."
   }
 ];
 
@@ -155,10 +155,11 @@ export default function ContactPage() {
                   <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
                           Nombre completo *
                         </label>
                         <Input
+                          id="contact-name"
                           required
                           value={formData.name}
                           onChange={(e) => handleInputChange('name', e.target.value)}
@@ -166,10 +167,11 @@ export default function ContactPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                        <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">
                           Email *
                         </label>
                         <Input
+                          id="contact-email"
                           type="email"
                           required
                           value={formData.email}
@@ -180,10 +182,11 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="contact-subject" className="block text-sm font-medium text-gray-700 mb-1">
                         Asunto *
                       </label>
                       <Input
+                        id="contact-subject"
                         required
                         value={formData.subject}
                         onChange={(e) => handleInputChange('subject', e.target.value)}
@@ -192,10 +195,11 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="contact-type" className="block text-sm font-medium text-gray-700 mb-1">
                         Tipo de consulta
                       </label>
                       <select
+                        id="contact-type"
                         value={formData.type}
                         onChange={(e) => handleInputChange('type', e.target.value)}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -209,10 +213,11 @@ export default function ContactPage() {
                     </div>
 
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label htmlFor="contact-message" className="block text-sm font-medium text-gray-700 mb-1">
                         Mensaje *
                       </label>
                       <Textarea
+                        id="contact-message"
                         required
                         rows={5}
                         value={formData.message}
@@ -303,8 +308,8 @@ export default function ContactPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {faqData.map((faq, index) => (
-              <Card key={index}>
+            {faqData.map((faq) => (
+              <Card key={faq.question}>
                 <CardContent className="p-6">
                   <h3 className="font-semibold text-gray-900 mb-3">
                     {faq.question}

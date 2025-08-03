@@ -61,7 +61,7 @@ export default function ProductGrid({
   sale, 
   searchTerm: initialSearchTerm,
   limit
-}: ProductGridProps) {
+}: Readonly<ProductGridProps>) {
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,10 +227,9 @@ export default function ProductGrid({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="">Todos</SelectItem>
-                <SelectItem value="hombre">Hombre</SelectItem>
-                <SelectItem value="mujer">Mujer</SelectItem>
+                <SelectItem value="masculino">Masculino</SelectItem>
+                <SelectItem value="femenino">Femenino</SelectItem>
                 <SelectItem value="unisex">Unisex</SelectItem>
-                <SelectItem value="niño">Niño</SelectItem>
               </SelectContent>
             </Select>
 

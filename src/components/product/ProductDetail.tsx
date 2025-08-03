@@ -43,15 +43,15 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         </div>
         
         <div className="flex space-x-2 overflow-x-auto">
-          {product.images?.map((img, idx) => (
+          {product.images?.map((img) => (
             <button
-              key={`img-${idx}`}
+              key={img}
               className="w-20 h-20 flex-shrink-0 overflow-hidden rounded-lg border-2 border-transparent hover:border-blue-500"
               onClick={() => setMainImage(img)}
             >
               <img
                 src={img}
-                alt={`${product.name} ${idx + 1}`}
+                alt={`${product.name}`}
                 className="w-full h-full object-cover"
               />
             </button>
@@ -89,7 +89,12 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         )}
 
         <div className="text-sm text-gray-600">
-          Stock: <span className="font-medium">{product.stock > 0 ? `${product.stock} disponibles` : "Sin stock"}</span>
+          Stock: <span className="font-medium">
+            {product.product_variants && product.product_variants.length > 0 
+              ? `${product.product_variants.reduce((total, variant) => total + variant.stock, 0)} disponibles`
+              : "Consultar disponibilidad"
+            }
+          </span>
         </div>
 
         <div className="flex items-center space-x-4">
@@ -100,7 +105,11 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             onChange={(e) => setSelectedQuantity(Number(e.target.value))}
             className="border border-gray-300 rounded px-3 py-2"
           >
-            {Array.from({ length: Math.min(10, product.stock) }, (_, i) => i + 1).map((num) => (
+            {Array.from({ length: Math.min(10, 
+              product.product_variants && product.product_variants.length > 0 
+                ? Math.max(...product.product_variants.map(v => v.stock))
+                : 10
+            ) }, (_, i) => i + 1).map((num) => (
               <option key={num} value={num}>{num}</option>
             ))}
           </select>
@@ -109,10 +118,17 @@ export default function ProductDetail({ product }: ProductDetailProps) {
         <div className="space-y-3">
           <button
             onClick={handleAddToCart}
-            disabled={product.stock <= 0}
+            disabled={
+              !product.product_variants || 
+              product.product_variants.length === 0 || 
+              product.product_variants.every(v => v.stock <= 0)
+            }
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            {product.stock > 0 ? "Agregar al carrito" : "Sin stock"}
+            {product.product_variants?.some(v => v.stock > 0) 
+              ? "Agregar al carrito" 
+              : "Sin stock"
+            }
           </button>
           
           <button

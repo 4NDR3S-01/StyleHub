@@ -150,10 +150,8 @@ export default function TermsOfServicePage() {
 
               <h4 className="font-semibold text-gray-900 mb-3 mt-6">Métodos de pago:</h4>
               <ul className="list-disc pl-6 space-y-2 text-gray-700">
-                <li>Tarjetas de crédito y débito</li>
+                <li>Tarjetas de crédito/débito (a través de Stripe)</li>
                 <li>PayPal</li>
-                <li>Transferencias bancarias</li>
-                <li>Pago contra entrega (zonas seleccionadas)</li>
               </ul>
 
               <h4 className="font-semibold text-gray-900 mb-3 mt-6">Confirmación:</h4>

@@ -5,13 +5,26 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  original_price?: number; // ✅ Match con DB
   images: string[];
   category_id: string;
-  subcategory_id?: string;
-  sku: string;
-  stock: number;
-  is_featured: boolean;
-  is_active: boolean;
+  brand?: string;
+  gender?: 'masculino' | 'femenino' | 'unisex'; // ✅ Match con DB
+  material?: string;
+  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año'; // ✅ Match con DB
+  tags?: string[];
+  featured?: boolean;
+  sale?: boolean;
+  active?: boolean;
+  is_active?: boolean;
+  is_featured?: boolean;
+  sku?: string;
+  weight?: number;
+  dimensions?: any;
+  stock_alert_threshold?: number;
+  meta_title?: string;
+  meta_description?: string;
+  product_variants?: ProductVariant[]; // ✅ Consistente con DB
   created_at: string;
   updated_at: string;
   category?: {
@@ -19,11 +32,20 @@ export interface Product {
     name: string;
     slug: string;
   };
-  subcategory?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
+}
+
+export interface ProductVariant {
+  id: string;
+  product_id?: string;
+  color: string;
+  size: string;
+  stock: number;
+  image?: string;
+  price_adjustment?: number;
+  sku?: string;
+  weight_adjustment?: number;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface Category {
@@ -39,12 +61,14 @@ export interface Category {
 
 export interface ProductFilters {
   category?: string;
-  subcategory?: string;
   minPrice?: number;
   maxPrice?: number;
   featured?: boolean;
   sale?: boolean;
-  gender?: string;
+  gender?: 'masculino' | 'femenino' | 'unisex'; // ✅ Match con DB
+  material?: string;
+  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año'; // ✅ Match con DB
+  brand?: string;
   active?: boolean;
   search?: string;
 }
@@ -74,10 +98,6 @@ export async function getProducts(
     // Aplicar filtros
     if (filters.category) {
       query = query.eq('category_id', filters.category);
-    }
-
-    if (filters.subcategory) {
-      query = query.eq('subcategory_id', filters.subcategory);
     }
 
     if (filters.minPrice !== undefined) {

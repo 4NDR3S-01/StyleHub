@@ -82,7 +82,7 @@ export default function BannersPage() {
       }
 
       const bannerData: Omit<Banner, 'id' | 'created_at' | 'updated_at'> = {
-        title: bannerForm.title!,
+        title: bannerForm.title,
         subtitle: bannerForm.subtitle || '',
         description: bannerForm.description || '',
         image: imageUrl,
