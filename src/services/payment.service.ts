@@ -59,7 +59,7 @@ export class PaymentService {
 
     // Validar que todos los items tengan precio válido
     data.cartItems?.forEach((item, index) => {
-      if (!item.product || !item.product.price || item.product.price <= 0) {
+      if (!item.product?.price || item.product.price <= 0) {
         errors.push(`Producto ${index + 1} tiene precio inválido`);
       }
       if (!item.quantity || item.quantity <= 0) {

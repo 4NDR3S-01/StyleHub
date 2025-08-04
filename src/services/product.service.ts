@@ -83,11 +83,34 @@ export interface ProductSort {
 }
 
 /**
+ * Helper para aplicar filtros a la consulta de productos
+ */
+function applyProductFilters(query: any, filters: ProductFilters) {
+  if (filters.category) query = query.eq('category_id', filters.category);
+  if (filters.minPrice !== undefined) query = query.gte('price', filters.minPrice);
+  if (filters.maxPrice !== undefined) query = query.lte('price', filters.maxPrice);
+  if (filters.brand) query = query.eq('brand', filters.brand);
+  if (filters.gender) query = query.eq('gender', filters.gender);
+  if (filters.season) query = query.eq('season', filters.season);
+  if (filters.featured !== undefined) query = query.eq('featured', filters.featured);
+  if (filters.sale !== undefined) query = query.eq('sale', filters.sale);
+  if (filters.active !== undefined) {
+    query = query.eq('active', filters.active).eq('is_active', filters.active);
+  } else {
+    query = query.eq('active', true).eq('is_active', true);
+  }
+  if (filters.search) {
+    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
+  }
+  return query;
+}
+
+/**
  * Obtiene productos con filtros
  */
 export async function getProducts(
-  filters: ProductFilters = {}, 
-  sort?: ProductSort, 
+  filters: ProductFilters = {},
+  sort?: ProductSort,
   limit?: number
 ): Promise<Product[]> {
   try {
@@ -99,64 +122,13 @@ export async function getProducts(
         product_variants:product_variants(*)
       `);
 
-    // Aplicar filtros
-    if (filters.category) {
-      query = query.eq('category_id', filters.category);
-    }
+    query = applyProductFilters(query, filters);
 
-    if (filters.minPrice !== undefined) {
-      query = query.gte('price', filters.minPrice);
-    }
+    query = sort
+      ? query.order(sort.field, { ascending: sort.direction === 'asc' })
+      : query.order('created_at', { ascending: false });
 
-    if (filters.maxPrice !== undefined) {
-      query = query.lte('price', filters.maxPrice);
-    }
-
-    if (filters.brand) {
-      query = query.eq('brand', filters.brand);
-    }
-
-    if (filters.gender) {
-      query = query.eq('gender', filters.gender);
-    }
-
-    if (filters.season) {
-      query = query.eq('season', filters.season);
-    }
-
-    if (filters.featured !== undefined) {
-      query = query.eq('featured', filters.featured);
-    }
-
-    if (filters.sale !== undefined) {
-      query = query.eq('sale', filters.sale);
-    }
-
-    if (filters.active !== undefined) {
-      query = query.eq('active', filters.active).eq('is_active', filters.active);
-    }
-
-    // Siempre filtrar productos activos por defecto si no se especifica
-    if (filters.active === undefined) {
-      query = query.eq('active', true).eq('is_active', true);
-    }
-
-    // Aplicar filtro de búsqueda si existe
-    if (filters.search) {
-      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
-    }
-
-    // Aplicar ordenamiento
-    if (sort) {
-      query = query.order(sort.field, { ascending: sort.direction === 'asc' });
-    } else {
-      query = query.order('created_at', { ascending: false });
-    }
-
-    // Aplicar límite si se especifica
-    if (limit) {
-      query = query.limit(limit);
-    }
+    if (limit) query = query.limit(limit);
 
     const { data, error } = await query;
 
