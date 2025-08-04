@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import ProductCard from "../../../components/product/ProductCard";
-import { getProductsByCategorySlug, Product } from "../../../services/product.service";
+import { getProductsByCategory, Product } from "../../../services/product.service";
 
 export default function MenCategoryPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -16,7 +16,7 @@ export default function MenCategoryPage() {
   async function loadMenProducts() {
     try {
       setLoading(true);
-      const menProducts = await getProductsByCategorySlug('men');
+      const menProducts = await getProductsByCategory('men');
       setProducts(menProducts);
     } catch (error) {
       console.error('Error loading men products:', error);

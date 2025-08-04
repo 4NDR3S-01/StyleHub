@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Filter, X, ChevronDown } from 'lucide-react';
 import ProductCard from '../../../components/product/ProductCard';
-import { getProductsByCategorySlug, getCategoryBySlug } from '@/services/product.service';
+import { getProductsByCategory, getCategoryBySlug } from '@/services/product.service';
 
 interface Product {
   id: string;
@@ -66,7 +66,7 @@ export default function AccessoriesCategoryPage() {
         setCategory(categoryData);
         
         // Obtener productos de la categoría
-        const productsData = await getProductsByCategorySlug('accessories');
+        const productsData = await getProductsByCategory('accessories');
         setProducts(productsData);
         
         // Extraer colores y tallas únicos de las variantes

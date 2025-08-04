@@ -393,7 +393,7 @@ export default function OrdersPage() {
       ) : (
         <div className="space-y-6">
           {filteredOrders.map((order) => {
-            const orderNumber = generateOrderNumber(order.id, order.created_at || order.createdAt || '');
+            const orderNumber = generateOrderNumber(order.id, order.created_at || '');
             const parsedAddress = parseAddress(order.address);
 
             return (
@@ -411,7 +411,7 @@ export default function OrdersPage() {
                         </h3>
                         <div className="flex items-center gap-2 text-gray-600">
                           <Calendar className="h-4 w-4" />
-                          <span>{formatDate(order.created_at || order.createdAt || '')}</span>
+                          <span>{formatDate(order.created_at || '')}</span>
                         </div>
                       </div>
                     </div>
@@ -488,7 +488,7 @@ export default function OrdersPage() {
                             </div>
                           </div>
                           <p className="text-blue-600">
-                            Método de pago: {order.payment_method || order.paymentMethod || 'No especificado'}
+                            Método de pago: {order.payment_method || 'No especificado'}
                           </p>
                           {order.tracking_number && (
                             <p className="text-green-600">

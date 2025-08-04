@@ -74,12 +74,22 @@ export interface ProductFilters {
   sale?: boolean;
   active?: boolean;
   tags?: string[];
+  search?: string;
+}
+
+export interface ProductSort {
+  field: 'created_at' | 'name' | 'price';
+  direction: 'asc' | 'desc';
 }
 
 /**
  * Obtiene productos con filtros
  */
-export async function getProducts(filters: ProductFilters = {}): Promise<Product[]> {
+export async function getProducts(
+  filters: ProductFilters = {}, 
+  sort?: ProductSort, 
+  limit?: number
+): Promise<Product[]> {
   try {
     let query = supabase
       .from('products')
@@ -131,7 +141,24 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Product
       query = query.eq('active', true).eq('is_active', true);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    // Aplicar filtro de búsqueda si existe
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
+    }
+
+    // Aplicar ordenamiento
+    if (sort) {
+      query = query.order(sort.field, { ascending: sort.direction === 'asc' });
+    } else {
+      query = query.order('created_at', { ascending: false });
+    }
+
+    // Aplicar límite si se especifica
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       console.error('Error fetching products:', error);

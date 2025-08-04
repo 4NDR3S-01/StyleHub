@@ -59,7 +59,7 @@ export class PaymentService {
 
     // Validar que todos los items tengan precio válido
     data.cartItems?.forEach((item, index) => {
-      if (!item.producto || !item.producto.price || item.producto.price <= 0) {
+      if (!item.product || !item.product.price || item.product.price <= 0) {
         errors.push(`Producto ${index + 1} tiene precio inválido`);
       }
       if (!item.quantity || item.quantity <= 0) {
@@ -274,7 +274,7 @@ export class PaymentService {
 
     const subtotal = cartItems.reduce(
       (sum, item) => {
-        const itemPrice = item.producto?.price || 0;
+        const itemPrice = item.product?.price || 0;
         const itemQuantity = item.quantity || 0;
         return sum + (itemPrice * itemQuantity);
       },

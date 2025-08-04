@@ -1,5 +1,5 @@
 import supabase from '@/lib/supabaseClient';
-import type { productos } from '@/types';
+import type { Product } from '@/types';
 
 export interface CartItem {
   id: string;
@@ -9,7 +9,7 @@ export interface CartItem {
   size?: string;
   color?: string;
   created_at: string;
-  product: productos;
+  product: Product;
 }
 
 export interface AddToCartData {
@@ -207,12 +207,26 @@ export class CartService {
       const lowStockItems: { productId: string; available: number; requested: number }[] = [];
 
       for (const item of cartItems) {
-        if (item.product.stock === 0) {
+        // Obtener el stock de la variante específica o usar 0 si no hay variantes
+        let availableStock = 0;
+        
+        if (item.product.product_variants && item.product.product_variants.length > 0) {
+          // Si hay variantes, buscar la que coincida con color/size del carrito
+          const matchingVariant = item.product.product_variants.find(variant => 
+            variant.color === item.color && variant.size === item.size
+          );
+          availableStock = matchingVariant ? matchingVariant.stock : 0;
+        } else {
+          // Si no hay variantes, asumir stock limitado (puedes cambiar esta lógica)
+          availableStock = 100; // valor por defecto o podrías añadir un campo stock al Product
+        }
+
+        if (availableStock === 0) {
           outOfStockItems.push(item.product.id);
-        } else if (item.product.stock < item.quantity) {
+        } else if (availableStock < item.quantity) {
           lowStockItems.push({
             productId: item.product.id,
-            available: item.product.stock,
+            available: availableStock,
             requested: item.quantity,
           });
         }
@@ -346,7 +360,7 @@ export class CartService {
   /**
    * Obtener productos relacionados basados en el carrito
    */
-  static async getRecommendedProducts(userId: string, limit: number = 4): Promise<productos[]> {
+  static async getRecommendedProducts(userId: string, limit: number = 4): Promise<Product[]> {
     try {
       const cartItems = await this.getCart(userId);
       
@@ -359,7 +373,7 @@ export class CartService {
           .limit(limit);
 
         if (error) throw error;
-        return data as productos[];
+        return data as Product[];
       }
 
       // Obtener categorías de productos en el carrito
@@ -374,7 +388,7 @@ export class CartService {
         .limit(limit);
 
       if (error) throw error;
-      return data as productos[];
+      return data as Product[];
     } catch (error: any) {
       console.error('Error getting recommended products:', error);
       return [];

@@ -1,5 +1,5 @@
 import { notFound } from 'next/navigation'
-import { getCategoryBySlug, getProductsByCategorySlug } from '@/services/product.service'
+import { getCategoryBySlug, getProductsByCategory } from '@/services/product.service'
 import ProductCard from '@/components/product/ProductCard'
 
 interface CategoryPageProps {
@@ -15,7 +15,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const { slug } = await params
   const category = await getCategoryBySlug(slug)
   if (!category) notFound()
-  const products = await getProductsByCategorySlug(slug)
+  const products = await getProductsByCategory(slug)
   return (
     <section className="max-w-7xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-8 text-slate-900">

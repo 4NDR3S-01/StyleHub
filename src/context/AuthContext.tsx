@@ -19,6 +19,7 @@ interface AuthContextType {
   resetPassword: (email: string) => Promise<void>;
   resendVerification: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  changePassword: (newPassword: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -405,6 +406,30 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   };
 
+  const changePassword = async (newPassword: string) => {
+    setIsLoading(true);
+    try {
+      if (!user) {
+        throw new Error('No hay usuario autenticado');
+      }
+      
+      const { error } = await supabase.auth.updateUser({ 
+        password: newPassword 
+      });
+      
+      if (error) {
+        throw new Error(error.message);
+      }
+      
+      console.log('[AuthContext] Password changed successfully');
+    } catch (error: any) {
+      setIsLoading(false);
+      throw new Error(error?.message || 'No se pudo cambiar la contraseña');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const refreshUser = async () => {
     if (!user?.id) return;
     
@@ -438,7 +463,7 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   };
 
   const contextValue = React.useMemo(
-    () => ({ user, login, register, logout, isLoading, resetPassword, resendVerification, refreshUser }),
+    () => ({ user, login, register, logout, isLoading, resetPassword, resendVerification, refreshUser, changePassword }),
     [user, isLoading]
   );
 

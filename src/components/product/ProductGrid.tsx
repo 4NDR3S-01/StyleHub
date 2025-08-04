@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProducts, ProductFilters, ProductSort } from '@/services/product.service';
+import { getProducts, ProductFilters, ProductSort, Product } from '@/services/product.service';
 import { getCategoriesByType } from '@/services/category.service';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
@@ -9,37 +9,6 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Search, Filter, X, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-
-interface Product {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  original_price?: number;
-  images: string[];
-  category_id: string;
-  brand?: string;
-  gender?: string;
-  material?: string;
-  season?: string;
-  tags?: string[];
-  featured: boolean;
-  sale: boolean;
-  active: boolean;
-  created_at: string;
-  category?: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-  product_variants?: Array<{
-    id: string;
-    color: string;
-    size: string;
-    stock: number;
-    image?: string;
-  }>;
-}
 
 interface Category {
   id: string;

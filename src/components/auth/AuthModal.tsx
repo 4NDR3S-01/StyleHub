@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -10,8 +10,23 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-// --- Helpers ---
-function validateForm({ email, password, isLogin, name, lastname, confirmPassword }: {
+// --- Helpers fuera del componente ---
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateEmail(email: string) {
+  if (!email.trim()) return "El correo electrónico es requerido";
+  if (!emailRegex.test(email.trim())) return "Formato de correo electrónico inválido";
+  return "";
+}
+
+function validateForm({
+  email,
+  password,
+  isLogin,
+  name,
+  lastname,
+  confirmPassword,
+}: {
   email: string;
   password: string;
   isLogin: boolean;
@@ -20,11 +35,9 @@ function validateForm({ email, password, isLogin, name, lastname, confirmPasswor
   confirmPassword: string;
 }) {
   const validationErrors: string[] = [];
-  if (!email.trim()) {
-    validationErrors.push("El correo electrónico es requerido");
-  } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-    validationErrors.push("Formato de correo electrónico inválido");
-  }
+  const emailError = validateEmail(email);
+  if (emailError) validationErrors.push(emailError);
+
   if (!password) {
     validationErrors.push("La contraseña es requerida");
   } else if (password.length < 8) {
@@ -32,6 +45,7 @@ function validateForm({ email, password, isLogin, name, lastname, confirmPasswor
   } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
     validationErrors.push("La contraseña debe contener al menos una mayúscula, una minúscula y un número");
   }
+
   if (!isLogin) {
     if (!name.trim()) {
       validationErrors.push("El nombre es requerido");
@@ -73,6 +87,47 @@ function getPasswordStrength(password: string): number {
   return strength;
 }
 
+function getBarClass(passwordStrength: number) {
+  switch (passwordStrength) {
+    case 1:
+      return "bg-red-400 w-1/4";
+    case 2:
+      return "bg-yellow-400 w-2/4";
+    case 3:
+      return "bg-blue-400 w-3/4";
+    case 4:
+      return "bg-green-500 w-full";
+    default:
+      return "bg-gray-200 w-0";
+  }
+}
+
+function renderMainIcon(isLogin: boolean, showReset: boolean) {
+  if (showReset) return <Mail size={40} className="text-white drop-shadow-lg" />;
+  if (isLogin) return <User size={40} className="text-white drop-shadow-lg" />;
+  return <Lock size={40} className="text-white drop-shadow-lg" />;
+}
+
+function getMainButtonText(isLogin: boolean, isLoading: boolean) {
+  if (isLogin) return "Iniciar Sesión";
+  if (isLoading) return "Cargando...";
+  return "Crear Cuenta";
+}
+
+function getTitle(isLogin: boolean, showReset: boolean) {
+  if (showReset) return "Recuperar contraseña";
+  if (isLogin) return "Bienvenido de Vuelta";
+  return "Crear Cuenta";
+}
+
+function getSubtitle(isLogin: boolean, showReset: boolean) {
+  if (showReset) return "Te enviaremos un enlace para restablecer tu contraseña.";
+  if (isLogin) return "Inicia sesión en tu cuenta";
+  return "Únete a StyleHub hoy";
+}
+
+// ----------- COMPONENTE PRINCIPAL -----------------
+
 export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>) {
   const [successMsg, setSuccessMsg] = useState("");
   const [infoMsg, setInfoMsg] = useState("");
@@ -100,18 +155,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const { login, register, isLoading, resetPassword, resendVerification, user } = useAuth();
   const router = useRouter();
 
-  // --- Render helpers ---
-  const renderMainIcon = () => {
-    if (showReset) return <Mail size={40} className="text-white drop-shadow-lg" />;
-    if (isLogin) return <User size={40} className="text-white drop-shadow-lg" />;
-    return <Lock size={40} className="text-white drop-shadow-lg" />;
-  };
-  const getMainButtonText = () => {
-    if (isLogin) return "Iniciar Sesión";
-    if (isLoading) return "Cargando...";
-    return "Crear Cuenta";
-  };
-
+  // --- Effects ---
   useEffect(() => {
     if (isOpen && modalRef.current) {
       const timer = setTimeout(() => {
@@ -150,121 +194,114 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
     }
   }, [pendingRedirect, user, router, onClose]);
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
+  // --- Handlers (useCallback para evitar recreaciones) ---
+  const handleOverlayClick = useCallback(
+    (e: React.MouseEvent<HTMLDivElement>) => {
+      if (e.target === e.currentTarget) {
+        onClose();
+        setError("");
+        setSuccessMsg("");
+        setInfoMsg("");
+        setResendMsg("");
+        setResendLoading(false);
+        setShowReset(false);
+        setResetEmail("");
+        setResetMsg("");
+        setEmail("");
+        setPassword("");
+        setName("");
+        setLastname("");
+        setConfirmPassword("");
+        setPasswordStrength(0);
+        setShowResendButton(false);
+      }
+    },
+    [onClose]
+  );
+
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "Escape") handleOverlayClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+    },
+    [handleOverlayClick]
+  );
+
+  const handleSubmit = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
       setError("");
       setSuccessMsg("");
       setInfoMsg("");
-      setResendMsg("");
-      setResendLoading(false);
-      setShowReset(false);
-      setResetEmail("");
-      setResetMsg("");
-      setEmail("");
-      setPassword("");
-      setName("");
-      setLastname("");
-      setConfirmPassword("");
-      setPasswordStrength(0);
       setShowResendButton(false);
-    }
-  };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setError("");
-    setSuccessMsg("");
-    setInfoMsg("");
-    setShowResendButton(false);
+      const validationErrors = validateForm({ email, password, isLogin, name, lastname, confirmPassword });
 
-    const validationErrors = validateForm({ email, password, isLogin, name, lastname, confirmPassword });
-
-    if (validationErrors.length > 0) {
-      setError(validationErrors.join(". "));
-      return;
-    }
-
-    try {
-      if (isLogin) {
-        await login(email.trim().toLowerCase(), password);
-        setError("");
-        setInfoMsg("");
-        setSuccessMsg("¡Inicio de sesión exitoso! Bienvenido a StyleHub. Serás redirigido al inicio...");
-        setPendingRedirect(true);
-      } else {
-        await register(email.trim().toLowerCase(), password, name.trim(), lastname.trim());
-        setSuccessMsg("¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta. Si no recibiste el correo revisa tu bandeja de spam o contáctanos.");
-        setError("");
-        setInfoMsg("");
-        setShowResendButton(true);
+      if (validationErrors.length > 0) {
+        setError(validationErrors.join(". "));
         return;
       }
-    } catch (err: any) {
-      setError(getErrorMessage(err));
-      setSuccessMsg("");
-      setInfoMsg("");
-      const msg = err?.message?.toLowerCase() || "";
-      if (msg.includes("email not confirmed") || msg.includes("email no confirmado")) {
-        setShowResendButton(true);
+
+      try {
+        if (isLogin) {
+          await login(email.trim().toLowerCase(), password);
+          setError("");
+          setInfoMsg("");
+          setSuccessMsg("¡Inicio de sesión exitoso! Bienvenido a StyleHub. Serás redirigido al inicio...");
+          setPendingRedirect(true);
+        } else {
+          await register(email.trim().toLowerCase(), password, name.trim(), lastname.trim());
+          setSuccessMsg("¡Registro exitoso! Confirma tu correo electrónico para activar tu cuenta. Si no recibiste el correo revisa tu bandeja de spam o contáctanos.");
+          setError("");
+          setInfoMsg("");
+          setShowResendButton(true);
+          return;
+        }
+      } catch (err: unknown) {
+        setError(getErrorMessage(err));
+        setSuccessMsg("");
+        setInfoMsg("");
+        const msg = err instanceof Error ? err.message.toLowerCase() : "";
+        if (msg.includes("email not confirmed") || msg.includes("email no confirmado")) {
+          setShowResendButton(true);
+        }
+        setPendingRedirect(false);
       }
-      setPendingRedirect(false);
-    }
-  };
+    },
+    [email, password, isLogin, name, lastname, confirmPassword, login, register]
+  );
 
-  const handleReset = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setResetMsg("");
-    if (!resetEmail) {
-      setResetMsg("Por favor ingresa tu correo electrónico.");
-      return;
-    }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(resetEmail)) {
-      setResetMsg("El correo electrónico no es válido. Verifica el formato.");
-      return;
-    }
-    try {
-      await resetPassword(resetEmail);
-      setResetMsg("¡Listo! Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.");
-      setResetEmail("");
-    } catch (err) {
-      let msg = err instanceof Error ? err.message : "Error al enviar el correo.";
-      if (msg.toLowerCase().includes("network error")) {
-        msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
+  const handleReset = useCallback(
+    async (e: React.FormEvent<HTMLFormElement>) => {
+      e.preventDefault();
+      setResetMsg("");
+      const emailError = validateEmail(resetEmail);
+      if (emailError) {
+        setResetMsg(emailError);
+        return;
       }
-      setResetMsg(msg);
-    }
-  };
+      try {
+        await resetPassword(resetEmail);
+        setResetMsg("¡Listo! Te enviamos un correo para restablecer tu contraseña. Revisa tu bandeja de entrada y spam.");
+        setResetEmail("");
+      } catch (err: unknown) {
+        let msg = err instanceof Error ? err.message : "Error al enviar el correo.";
+        if (typeof msg === "string" && msg.toLowerCase().includes("network error")) {
+          msg = "No se pudo conectar con el servidor. Intenta de nuevo más tarde.";
+        }
+        setResetMsg(msg as string);
+      }
+    },
+    [resetEmail, resetPassword]
+  );
 
-  const getBarClass = () => {
-    switch (passwordStrength) {
-      case 1: return "bg-red-400 w-1/4";
-      case 2: return "bg-yellow-400 w-2/4";
-      case 3: return "bg-blue-400 w-3/4";
-      case 4: return "bg-green-500 w-full";
-      default: return "bg-gray-200 w-0";
-    }
-  };
-
-  const getTitle = () => {
-    if (showReset) return "Recuperar contraseña";
-    if (isLogin) return "Bienvenido de Vuelta";
-    return "Crear Cuenta";
-  };
-
-  const getSubtitle = () => {
-    if (showReset) return "Te enviaremos un enlace para restablecer tu contraseña.";
-    if (isLogin) return "Inicia sesión en tu cuenta";
-    return "Únete a StyleHub hoy";
-  };
-
+  // --- Render ---
   if (!isOpen) return null;
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-[#1a1a1a]/80 transition-opacity duration-500"
       onClick={handleOverlayClick}
-      onKeyDown={e => { if (e.key === "Escape") handleOverlayClick(e as any); }}
+      onKeyDown={handleKeyDown}
       aria-modal="true"
       role="dialog"
       tabIndex={-1}
@@ -277,14 +314,12 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         {/* Header */}
         <div className="relative w-full h-44 bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] rounded-t-3xl flex flex-col items-center justify-center z-10 pt-8 pb-8 shadow-lg">
           <span className="rounded-full bg-[#ff6f61]/20 p-5 shadow-xl border border-[#ff6f61]/30 mb-3 flex items-center justify-center">
-            {renderMainIcon()}
+            {renderMainIcon(isLogin, showReset)}
           </span>
-          <h2 className="text-3xl font-extrabold text-white tracking-tight drop-shadow-xl mb-2 text-center leading-tight">{getTitle()}</h2>
-          <p className="text-lg text-white/80 font-medium mt-0 mb-0 drop-shadow px-6 text-center leading-relaxed">{getSubtitle()}</p>
+          <h2 className="text-3xl font-extrabold text-white tracking-tight drop-shadow-xl mb-2 text-center leading-tight">{getTitle(isLogin, showReset)}</h2>
+          <p className="text-lg text-white/80 font-medium mt-0 mb-0 drop-shadow px-6 text-center leading-relaxed">{getSubtitle(isLogin, showReset)}</p>
         </div>
-        {/* Espacio extra */}
         <div className="w-full h-6" />
-        {/* Botón cerrar */}
         <button
           type="button"
           tabIndex={0}
@@ -297,7 +332,6 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
         >
           <X size={26} />
         </button>
-        {/* Mensajes */}
         <div className="overflow-y-auto max-h-[70vh] px-0 sm:px-0 mt-2">
           {(error?.trim() || infoMsg || successMsg) && (
             <div className="mb-6 flex flex-col items-center justify-center text-center animate-fadeInDown">
@@ -313,7 +347,11 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     <span className="rounded-full bg-red-500 p-2 shadow-lg"><X size={18} className="text-white"/></span>
                     <span className="text-white">¡Ups! Ocurrió un error:</span>
                   </span>
-                  <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: error.replace(/\n/g, "<br />") }} />
+                  <div className="mt-2 text-sm text-white">
+                    {error.split("\n").map((line, idx) => (
+                      <span key={idx}>{line}<br /></span>
+                    ))}
+                  </div>
                   {showResendButton && (
                     <div className="mt-4">
                       <button
@@ -327,8 +365,9 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                           try {
                             await resendVerification();
                             setResendMsg("¡Correo de confirmación reenviado! Revisa tu bandeja de entrada y spam.");
-                          } catch (error: any) {
-                            setResendMsg(error.message || "No se pudo reenviar el correo. Intenta de nuevo o contáctanos.");
+                          } catch (error: unknown) {
+                            const msg = error instanceof Error ? error.message : "No se pudo reenviar el correo. Intenta de nuevo o contáctanos.";
+                            setResendMsg(msg);
                           }
                           setResendLoading(false);
                         }}
@@ -355,7 +394,11 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     <span className="rounded-full bg-blue-500 p-2 shadow-lg"><Mail size={18} className="text-white"/></span>
                     <span className="text-white">Información:</span>
                   </span>
-                  <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: infoMsg.replace(/\n/g, "<br />") }} />
+                  <div className="mt-2 text-sm text-white">
+                    {infoMsg.split("\n").map((line, idx) => (
+                      <span key={idx}>{line}<br /></span>
+                    ))}
+                  </div>
                 </div>
               )}
               {successMsg && (
@@ -369,7 +412,11 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     <span className="rounded-full bg-green-500 p-2 shadow-lg"><User size={18} className="text-white"/></span>
                     <span className="text-white">¡Exitoso!</span>
                   </span>
-                  <div className="mt-2 text-sm text-white" dangerouslySetInnerHTML={{ __html: successMsg.replace(/\n/g, "<br />") }} />
+                  <div className="mt-2 text-sm text-white">
+                    {successMsg.split("\n").map((line, idx) => (
+                      <span key={idx}>{line}<br /></span>
+                    ))}
+                  </div>
                   {pendingRedirect && !user && (
                     <div className="mt-4 text-center">
                       <span className="text-gray-200 text-base font-semibold">Procesando inicio de sesión...</span>
@@ -388,8 +435,9 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                           try {
                             await resendVerification();
                             setResendMsg("¡Correo de confirmación reenviado! Revisa tu bandeja de entrada y spam.");
-                          } catch (error: any) {
-                            setResendMsg(error.message || "No se pudo reenviar el correo. Intenta de nuevo o contáctanos.");
+                          } catch (error: unknown) {
+                            const msg = error instanceof Error ? error.message : "No se pudo reenviar el correo. Intenta de nuevo o contáctanos.";
+                            setResendMsg(msg);
                           }
                           setResendLoading(false);
                         }}
@@ -412,8 +460,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
           {showReset ? (
             <form onSubmit={handleReset} className="space-y-6 px-4 sm:px-6">
               <div className="relative mb-4 w-full">
+                <label htmlFor="resetEmail" className="sr-only">Correo electrónico</label>
                 <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
+                  id="resetEmail"
                   type="email"
                   value={resetEmail}
                   onChange={e => setResetEmail(e.target.value)}
@@ -449,8 +499,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
               {!isLogin && (
                 <div className="flex flex-col sm:flex-row gap-4 mb-2">
                   <div className="relative flex-1">
+                    <label htmlFor="name" className="sr-only">Nombre</label>
                     <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
+                      id="name"
                       type="text"
                       value={name}
                       onChange={e => setName(e.target.value)}
@@ -461,8 +513,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     />
                   </div>
                   <div className="relative flex-1">
+                    <label htmlFor="lastname" className="sr-only">Apellido</label>
                     <User size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                     <input
+                      id="lastname"
                       type="text"
                       value={lastname}
                       onChange={e => setLastname(e.target.value)}
@@ -475,8 +529,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 </div>
               )}
               <div className="relative mb-2">
+                <label htmlFor="email" className="sr-only">Correo electrónico</label>
                 <Mail size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
+                  id="email"
                   type="email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
@@ -486,8 +542,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 />
               </div>
               <div className="relative mb-2">
+                <label htmlFor="password" className="sr-only">Contraseña</label>
                 <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={e => {
@@ -514,7 +572,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
               {!isLogin && (
                 <>
                   <div className="w-full h-2 rounded bg-gray-200 mt-3 mb-3">
-                    <div className={`h-2 rounded transition-all duration-300 ${getBarClass()}`} />
+                    <div className={`h-2 rounded transition-all duration-300 ${getBarClass(passwordStrength)}`} />
                   </div>
                   <ul className="text-xs text-gray-500 mb-3 pl-4 list-disc">
                     <li>Al menos 8 caracteres</li>
@@ -523,8 +581,10 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                     <li>Un símbolo especial</li>
                   </ul>
                   <div className="relative mb-2">
+                    <label htmlFor="confirmPassword" className="sr-only">Confirmar contraseña</label>
                     <Lock size={20} className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
                     <input
+                      id="confirmPassword"
                       type={showConfirmPassword ? "text" : "password"}
                       value={confirmPassword}
                       onChange={e => setConfirmPassword(e.target.value)}
@@ -550,7 +610,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
                 disabled={isLoading}
                 className="w-full bg-gradient-to-r from-[#ff6f61] via-[#d7263d] to-[#2d2327] text-white py-4 rounded-xl font-semibold hover:scale-[1.03] hover:shadow-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow mb-2"
               >
-                {getMainButtonText()}
+                {getMainButtonText(isLogin, isLoading)}
               </button>
               {isLogin && (
                 <button

@@ -16,21 +16,19 @@ const WishlistContext = createContext<WishlistContextValue | undefined>(undefine
 export const WishlistProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth()
   const [items, setItems] = useState<WishlistItem[]>([])
-  const [loading, setLoading] = useState(false)
+  // Removed unused loading state
 
   const loadWishlist = async () => {
     if (!user) {
       setItems([])
       return
     }
-    setLoading(true)
     try {
       const result = await getWishlist(user.id)
       setItems(result)
     } catch (error) {
       console.error('Error loading wishlist', error)
     }
-    setLoading(false)
   }
 
   useEffect(() => {

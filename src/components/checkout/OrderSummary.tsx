@@ -5,12 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { Truck, ShieldCheck } from 'lucide-react';
-import { CartItem } from '@/types';
+import { CartItem } from '@/context/CartContext';
 import Image from 'next/image';
 
 interface OrderSummaryProps {
-  items: CartItem[];
-  isProcessing?: boolean;
+  readonly items: readonly CartItem[];
+  readonly isProcessing?: boolean;
 }
 
 export function OrderSummary({ items, isProcessing = false }: OrderSummaryProps) {

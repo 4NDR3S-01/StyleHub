@@ -1,5 +1,5 @@
 import supabase from '@/lib/supabaseClient'
-import type { CartItem } from '@/types'
+import type { CartItem } from '@/context/CartContext'
 
 /**
  * Obtener orden por ID
@@ -91,7 +91,7 @@ export async function getUserOrders() {
     console.log('Usuario autenticado:', user.id);
 
     // Primero verificar si la tabla orders existe
-    const { data: tableCheck, error: tableError } = await supabase
+    const { error: tableError } = await supabase
       .from('orders')
       .select('count')
       .limit(1);
