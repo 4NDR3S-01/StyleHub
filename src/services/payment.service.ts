@@ -315,6 +315,38 @@ export class PaymentService {
   /**
    * Validar datos de tarjeta
    */
+  private static isValidLuhn(cardNumber: string): boolean {
+    let sum = 0;
+    let shouldDouble = false;
+    for (let i = cardNumber.length - 1; i >= 0; i--) {
+      let digit = parseInt(cardNumber[i]);
+      if (shouldDouble) {
+        digit *= 2;
+        if (digit > 9) digit -= 9;
+      }
+      sum += digit;
+      shouldDouble = !shouldDouble;
+    }
+    return sum % 10 === 0;
+  }
+
+  private static isValidExpiry(expiry: string): string | null {
+    const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
+    if (!expiryRegex.test(expiry)) {
+      return 'Fecha de expiración inválida (MM/YY)';
+    }
+    const [month, year] = expiry.split('/');
+    const expiryDate = new Date(2000 + parseInt(year), parseInt(month) - 1, 1);
+    const now = new Date();
+    // Set to last day of expiry month
+    expiryDate.setMonth(expiryDate.getMonth() + 1);
+    expiryDate.setDate(0);
+    if (expiryDate < now) {
+      return 'La tarjeta ha expirado';
+    }
+    return null;
+  }
+
   static validateCardData(cardData: {
     number: string;
     expiry: string;
@@ -323,45 +355,18 @@ export class PaymentService {
   }): { isValid: boolean; errors: string[] } {
     const errors: string[] = [];
 
-    // Validar número de tarjeta (Luhn algorithm)
+    // Validar número de tarjeta
     const cardNumber = cardData.number.replace(/\s/g, '');
     if (!/^\d{13,19}$/.test(cardNumber)) {
       errors.push('Número de tarjeta inválido');
-    } else {
-      // Luhn algorithm validation
-      let sum = 0;
-      let shouldDouble = false;
-      
-      for (let i = cardNumber.length - 1; i >= 0; i--) {
-        let digit = parseInt(cardNumber[i]);
-        
-        if (shouldDouble) {
-          digit *= 2;
-          if (digit > 9) {
-            digit -= 9;
-          }
-        }
-        
-        sum += digit;
-        shouldDouble = !shouldDouble;
-      }
-      
-      if (sum % 10 !== 0) {
-        errors.push('Número de tarjeta inválido');
-      }
+    } else if (!this.isValidLuhn(cardNumber)) {
+      errors.push('Número de tarjeta no pasó la validación de Luhn');
     }
 
     // Validar fecha de expiración
-    const expiryRegex = /^(0[1-9]|1[0-2])\/\d{2}$/;
-    if (!expiryRegex.test(cardData.expiry)) {
-      errors.push('Fecha de expiración inválida (MM/YY)');
-    } else {
-      const [month, year] = cardData.expiry.split('/');
-      const expiry = new Date(2000 + parseInt(year), parseInt(month) - 1);
-      const now = new Date();
-      if (expiry < now) {
-        errors.push('La tarjeta ha expirado');
-      }
+    const expiryError = this.isValidExpiry(cardData.expiry);
+    if (expiryError) {
+      errors.push(expiryError);
     }
 
     // Validar CVC
