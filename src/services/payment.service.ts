@@ -444,6 +444,95 @@ export class PaymentService {
     
     return sanitized;
   }
+
+  /**
+   * Obtener métodos de pago del usuario desde Supabase
+   */
+  static async getUserPaymentMethods(userId: string) {
+    try {
+      const supabase = (await import('@/lib/supabaseClient')).default;
+      
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .select('*')
+        .eq('user_id', userId)
+        .eq('active', true)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      
+      return data || [];
+    } catch (error: any) {
+      console.error('Error fetching user payment methods:', error);
+      throw new Error(error.message || 'Error al obtener métodos de pago');
+    }
+  }
+
+  /**
+   * Crear método de pago del usuario
+   */
+  static async createUserPaymentMethod(paymentMethodData: any) {
+    try {
+      const supabase = (await import('@/lib/supabaseClient')).default;
+      
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .insert([paymentMethodData])
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return data;
+    } catch (error: any) {
+      console.error('Error creating payment method:', error);
+      throw new Error(error.message || 'Error al crear método de pago');
+    }
+  }
+
+  /**
+   * Actualizar método de pago del usuario
+   */
+  static async updateUserPaymentMethod(id: string, updateData: any) {
+    try {
+      const supabase = (await import('@/lib/supabaseClient')).default;
+      
+      const { data, error } = await supabase
+        .from('payment_methods')
+        .update(updateData)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      
+      return data;
+    } catch (error: any) {
+      console.error('Error updating payment method:', error);
+      throw new Error(error.message || 'Error al actualizar método de pago');
+    }
+  }
+
+  /**
+   * Eliminar método de pago del usuario
+   */
+  static async deleteUserPaymentMethod(id: string) {
+    try {
+      const supabase = (await import('@/lib/supabaseClient')).default;
+      
+      const { error } = await supabase
+        .from('payment_methods')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting payment method:', error);
+      throw new Error(error.message || 'Error al eliminar método de pago');
+    }
+  }
 }
 
 export { getStripe };
