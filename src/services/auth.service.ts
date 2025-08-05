@@ -224,18 +224,18 @@ export class AuthService {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `${userId}/avatar.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
+      const filePath = `users/${fileName}`;
 
-      // Subir archivo
+      // Subir archivo (usando bucket correcto 'avatar')
       const { error: uploadError } = await supabase.storage
-        .from('avatars')
+        .from('avatar')
         .upload(filePath, file, { upsert: true });
 
       if (uploadError) throw uploadError;
 
       // Obtener URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('avatar')
         .getPublicUrl(filePath);
 
       // Actualizar usuario con nueva URL

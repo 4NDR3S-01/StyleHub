@@ -16,7 +16,7 @@ import {
 import { usePersonalizationContext } from '@/context/PersonalizationContext';
 
 interface PersonalizationOverviewProps {
-  onNavigate?: (section: string) => void;
+  readonly onNavigate?: (section: string) => void;
 }
 
 export default function PersonalizationOverview({ onNavigate }: PersonalizationOverviewProps) {
@@ -26,7 +26,7 @@ export default function PersonalizationOverview({ onNavigate }: PersonalizationO
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await refreshData();
+      refreshData();
       toast.success('Datos actualizados correctamente');
     } catch (error) {
       console.error('Error refreshing personalization data:', error);

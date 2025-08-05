@@ -129,7 +129,7 @@ export class StorageService {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `avatar.${fileExt}`;
-      const filePath = `avatars/${userId}/${fileName}`;
+      const filePath = `users/${userId}/${fileName}`;
 
       // Validaciones
       if (!file.type.startsWith('image/')) {
@@ -140,16 +140,16 @@ export class StorageService {
         throw new Error('El archivo es demasiado grande (máximo 1MB)');
       }
 
-      // Subir archivo (reemplazar si existe)
+      // Subir archivo (reemplazar si existe) - usando bucket correcto 'avatar'
       const { error } = await supabase.storage
-        .from('avatars')
+        .from('avatar')
         .upload(filePath, file, { upsert: true });
 
       if (error) throw error;
 
       // Obtener URL pública
       const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
+        .from('avatar')
         .getPublicUrl(filePath);
 
       return {

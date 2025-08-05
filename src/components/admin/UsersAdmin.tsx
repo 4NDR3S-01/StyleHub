@@ -42,12 +42,21 @@ export default function UsersAdmin() {
   const fetchCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
+      console.log('🔍 Auth User:', user);
+      console.log('🔍 JWT Metadata:', user.user_metadata);
+      console.log('🔍 App Metadata:', user.app_metadata);
+      
       const { data } = await supabase
         .from('users')
         .select('*')
         .eq('id', user.id)
         .single();
+      
+      console.log('🔍 Database User:', data);
       setCurrentUser(data);
+      
+      // Debug: verificar qué ve Supabase
+      console.log('🔍 Current user from database:', data);
     }
   };
 
