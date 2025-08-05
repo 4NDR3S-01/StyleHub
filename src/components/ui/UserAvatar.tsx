@@ -18,7 +18,7 @@ export default function UserAvatar({
   className = '', 
   alt = 'Avatar',
   onClick
-}: UserAvatarProps) {
+}: Readonly<UserAvatarProps>) {
   const [imageError, setImageError] = useState(false);
   
   // Configuraciones de tamaño
@@ -83,6 +83,35 @@ export default function UserAvatar({
         alt={alt}
         className={`${baseClasses} object-cover`}
         onError={() => setImageError(true)}
+      />
+    );
+  }
+
+  // Si no hay imagen o hubo error, pero tenemos un nombre vacío o por defecto, usar imagen por defecto
+  if (!name || name === 'Usuario' || name.trim() === '') {
+    const defaultSrc = '/default-avatar.svg';
+    
+    if (onClick) {
+      return (
+        <button
+          className={`${baseClasses} object-cover overflow-hidden border-0 p-0`}
+          onClick={onClick}
+          aria-label={alt}
+        >
+          <img
+            src={defaultSrc}
+            alt={alt}
+            className="w-full h-full object-cover"
+          />
+        </button>
+      );
+    }
+    
+    return (
+      <img
+        src={defaultSrc}
+        alt={alt}
+        className={`${baseClasses} object-cover`}
       />
     );
   }

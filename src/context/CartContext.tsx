@@ -1,7 +1,28 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
-import { CartItem, productos } from '@/types';
+import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { toast } from 'sonner';
+
+export interface CartItem {
+  id: string;
+  producto: {
+    id: string;
+    name: string;
+    price: number;
+    original_price?: number;
+    images: string[];
+    category_id: string;
+    brand?: string;
+    gender?: string;
+  };
+  variant?: {
+    id: string;
+    color: string;
+    size: string;
+    stock: number;
+  };
+  quantity: number;
+}
 
 interface CartState {
   items: CartItem[];
@@ -9,160 +30,180 @@ interface CartState {
 }
 
 type CartAction =
-  | { type: 'ADD_ITEM'; payload: { product: productos; size: string; color: string } }
-  | { type: 'REMOVE_ITEM'; payload: string } // formato: "productId-size-color"
-  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } } // formato: "productId-size-color"
+  | { type: 'ADD_ITEM'; payload: CartItem }
+  | { type: 'REMOVE_ITEM'; payload: string }
+  | { type: 'UPDATE_QUANTITY'; payload: { id: string; quantity: number } }
   | { type: 'CLEAR_CART' }
   | { type: 'TOGGLE_CART' }
-  | { type: 'OPEN_CART' }
-  | { type: 'CLOSE_CART' };
+  | { type: 'SET_CART'; payload: CartItem[] }
+  | { type: 'LOAD_CART'; payload: CartItem[] };
 
 const CartContext = createContext<{
   state: CartState;
-  dispatch: React.Dispatch<CartAction>;
-  addToCart: (product: productos, size: string, color: string) => void;
-  removeFromCart: (productId: string, size?: string, color?: string) => void;
-  updateQuantity: (productId: string, quantity: number, size?: string, color?: string) => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
   toggleCart: () => void;
-  openCart: () => void;
-  closeCart: () => void;
   itemsCount: number;
-  totalPrice: number;
+  total: number;
+  subtotal: number;
+  tax: number;
+  shipping: number;
 } | null>(null);
 
-function cartReducer(state: CartState, action: CartAction): CartState {
+const cartReducer = (state: CartState, action: CartAction): CartState => {
   switch (action.type) {
-    case 'ADD_ITEM':
-      const existingItem = state.items.find(
-        item => 
-          item.producto.id === action.payload.product.id && 
-          item.size === action.payload.size && 
-          item.color === action.payload.color
+    case 'ADD_ITEM': {
+      const existingItemIndex = state.items.findIndex(
+        item => item.id === action.payload.id
       );
 
-      if (existingItem) {
-        // Verificar stock antes de incrementar
-        if (existingItem.quantity < action.payload.product.stock) {
-          return {
-            ...state,
-            items: state.items.map(item =>
-              item.producto.id === action.payload.product.id &&
-              item.size === action.payload.size &&
-              item.color === action.payload.color
-                ? { ...item, quantity: item.quantity + 1 }
-                : item
-            ),
-          };
+      if (existingItemIndex > -1) {
+        // Item already exists, update quantity
+        const updatedItems = [...state.items];
+        const newQuantity = updatedItems[existingItemIndex].quantity + action.payload.quantity;
+        
+        // Check stock limit
+        const maxStock = action.payload.variant?.stock || 10;
+        if (newQuantity > maxStock) {
+          toast.error(`Solo hay ${maxStock} unidades disponibles`);
+          return state;
         }
-        return state; // No modificar si no hay stock
+        
+        updatedItems[existingItemIndex] = {
+          ...updatedItems[existingItemIndex],
+          quantity: newQuantity,
+        };
+        
+        toast.success('Cantidad actualizada en el carrito');
+        return { ...state, items: updatedItems };
+      } else {
+        // New item
+        toast.success('Producto agregado al carrito');
+        return { ...state, items: [...state.items, action.payload] };
       }
+    }
 
-      return {
-        ...state,
-        items: [
-          ...state.items,
-          {
-            producto: action.payload.product,
-            quantity: 1,
-            size: action.payload.size,
-            color: action.payload.color,
-          },
-        ],
-      };
+    case 'REMOVE_ITEM': {
+      const updatedItems = state.items.filter(item => item.id !== action.payload);
+      toast.success('Producto removido del carrito');
+      return { ...state, items: updatedItems };
+    }
 
-    case 'REMOVE_ITEM':
-      const [productId, size, color] = action.payload.split('-');
-      return {
-        ...state,
-        items: state.items.filter(item => {
-          if (size === '' && color === '') {
-            // Remover todos los items del producto
-            return item.producto.id !== productId;
+    case 'UPDATE_QUANTITY': {
+      const updatedItems = state.items.map(item => {
+        if (item.id === action.payload.id) {
+          // Check stock limit
+          const maxStock = item.variant?.stock || 10;
+          if (action.payload.quantity > maxStock) {
+            toast.error(`Solo hay ${maxStock} unidades disponibles`);
+            return item;
           }
-          // Remover item específico por producto, talla y color
-          return !(item.producto.id === productId && 
-                   item.size === size && 
-                   item.color === color);
-        }),
-      };
+          
+          if (action.payload.quantity <= 0) {
+            return null; // Remove item if quantity is 0 or negative
+          }
+          
+          return { ...item, quantity: action.payload.quantity };
+        }
+        return item;
+      }).filter(Boolean) as CartItem[];
 
-    case 'UPDATE_QUANTITY':
-      return {
-        ...state,
-        items: state.items.map(item => {
-          const itemKey = `${item.producto.id}-${item.size}-${item.color}`;
-          return itemKey === action.payload.id
-            ? { ...item, quantity: action.payload.quantity }
-            : item;
-        }),
-      };
+      return { ...state, items: updatedItems };
+    }
 
     case 'CLEAR_CART':
-      return {
-        ...state,
-        items: [],
-      };
+      toast.success('Carrito vaciado');
+      return { ...state, items: [] };
 
     case 'TOGGLE_CART':
-      return {
-        ...state,
-        isOpen: !state.isOpen,
-      };
+      return { ...state, isOpen: !state.isOpen };
 
-    case 'OPEN_CART':
-      return {
-        ...state,
-        isOpen: true,
-      };
+    case 'SET_CART':
+      return { ...state, items: action.payload };
 
-    case 'CLOSE_CART':
-      return {
-        ...state,
-        isOpen: false,
-      };
+    case 'LOAD_CART':
+      return { ...state, items: action.payload };
 
     default:
       return state;
   }
-}
+};
 
-export function CartProvider({ children }: { children: ReactNode }) {
+const CART_STORAGE_KEY = 'stylehub_cart';
+
+const loadCartFromStorage = (): CartItem[] => {
+  if (typeof window === 'undefined') return [];
+  
+  try {
+    const stored = localStorage.getItem(CART_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Error loading cart from storage:', error);
+    return [];
+  }
+};
+
+const saveCartToStorage = (items: CartItem[]): void => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items));
+  } catch (error) {
+    console.error('Error saving cart to storage:', error);
+  }
+};
+
+export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isOpen: false,
   });
 
-  const addToCart = (product: productos, size: string, color: string) => {
-    // Verificar stock disponible
-    const currentQuantity = state.items.find(
-      item => item.producto.id === product.id && 
-               item.size === size && 
-               item.color === color
-    )?.quantity || 0;
-    
-    if (currentQuantity < product.stock) {
-      dispatch({ type: 'ADD_ITEM', payload: { product, size, color } });
-    } else {
-      console.warn('Producto sin stock suficiente');
+  // Load cart from storage on mount
+  useEffect(() => {
+    const savedCart = loadCartFromStorage();
+    if (savedCart.length > 0) {
+      dispatch({ type: 'LOAD_CART', payload: savedCart });
     }
+  }, []);
+
+  // Save cart to storage whenever it changes
+  useEffect(() => {
+    saveCartToStorage(state.items);
+  }, [state.items]);
+
+  const addItem = (item: CartItem) => {
+    // Validate item
+    if (!item.producto || !item.producto.id || !item.producto.name || !item.producto.price) {
+      toast.error('Producto inválido');
+      return;
+    }
+
+    if (item.quantity <= 0) {
+      toast.error('Cantidad debe ser mayor a 0');
+      return;
+    }
+
+    // Check stock
+    if (item.variant && item.quantity > item.variant.stock) {
+      toast.error(`Solo hay ${item.variant.stock} unidades disponibles`);
+      return;
+    }
+
+    dispatch({ type: 'ADD_ITEM', payload: item });
   };
 
-  const removeFromCart = (productId: string, size?: string, color?: string) => {
-    if (size && color) {
-      dispatch({ type: 'REMOVE_ITEM', payload: `${productId}-${size}-${color}` });
-    } else {
-      // Remover todos los items del producto (compatibilidad hacia atrás)
-      dispatch({ type: 'REMOVE_ITEM', payload: `${productId}--` });
-    }
+  const removeItem = (id: string) => {
+    dispatch({ type: 'REMOVE_ITEM', payload: id });
   };
 
-  const updateQuantity = (productId: string, quantity: number, size?: string, color?: string) => {
+  const updateQuantity = (id: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromCart(productId, size, color);
+      dispatch({ type: 'REMOVE_ITEM', payload: id });
     } else {
-      const itemId = size && color ? `${productId}-${size}-${color}` : productId;
-      dispatch({ type: 'UPDATE_QUANTITY', payload: { id: itemId, quantity } });
+      dispatch({ type: 'UPDATE_QUANTITY', payload: { id, quantity } });
     }
   };
 
@@ -174,39 +215,33 @@ export function CartProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'TOGGLE_CART' });
   };
 
-  const openCart = () => {
-    dispatch({ type: 'OPEN_CART' });
-  };
-
-  const closeCart = () => {
-    dispatch({ type: 'CLOSE_CART' });
-  };
-
-  const itemsCount = state.items.reduce((total, item) => total + item.quantity, 0);
-  const totalPrice = state.items.reduce(
-    (total, item) => total + item.producto.price * item.quantity,
+  // Calculate totals
+  const subtotal = state.items.reduce(
+    (sum, item) => sum + (item.producto.price * item.quantity),
     0
   );
 
-  return (
-    <CartContext.Provider
-      value={{
-        state,
-        dispatch,
-        addToCart,
-        removeFromCart,
-        updateQuantity,
-        clearCart,
-        toggleCart,
-        openCart,
-        closeCart,
-        itemsCount,
-        totalPrice,
-      }}
-    >
-      {children}
-    </CartContext.Provider>
-  );
+  const tax = subtotal * 0.16; // 16% IVA
+  const shipping = subtotal >= 100000 ? 0 : 5000; // Free shipping over $100,000
+  const total = subtotal + tax + shipping;
+
+  const itemsCount = state.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  const value = {
+    state,
+    addItem,
+    removeItem,
+    updateQuantity,
+    clearCart,
+    toggleCart,
+    itemsCount,
+    total,
+    subtotal,
+    tax,
+    shipping,
+  };
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
 
 export function useCart() {

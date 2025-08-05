@@ -372,6 +372,12 @@ export default function AdminDashboard() {
           </ul>
         </div>
       </div>
+
+      {/* Herramientas de desarrollo */}
+      {/* <div className="border-t pt-8">
+        <h3 className="text-xl font-bold mb-4 text-gray-800">Herramientas de Desarrollo</h3>
+        <SampleDataLoader />
+      </div> */}
     </div>
   );
 }

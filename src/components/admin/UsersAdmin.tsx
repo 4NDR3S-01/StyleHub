@@ -37,18 +37,45 @@ export default function UsersAdmin() {
     role: 'cliente',
   });
   const [submitting, setSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const fetchCurrentUser = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      console.log('🔍 Auth User:', user);
+      console.log('🔍 JWT Metadata:', user.user_metadata);
+      console.log('🔍 App Metadata:', user.app_metadata);
+      
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      
+      console.log('🔍 Database User:', data);
+      setCurrentUser(data);
+      
+      // Debug: verificar qué ve Supabase
+      console.log('🔍 Current user from database:', data);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
     const { data, error } = await supabase.from('users').select('id, email, name, lastname, avatar, created_at, role');
     if (error) {
+      console.error('Error al cargar usuarios:', error);
       toast({ title: 'Error al cargar usuarios', description: error.message, variant: 'destructive' });
     }
-    if (data) setUsers(data);
+    if (data) {
+      console.log('Usuarios cargados:', data);
+      setUsers(data);
+    }
     setLoading(false);
   };
 
   useEffect(() => {
+    fetchCurrentUser();
     fetchUsers();
   }, []);
 
@@ -75,6 +102,7 @@ export default function UsersAdmin() {
   };
 
   const handleRoleChange = (value: string) => {
+    console.log('Cambiando rol a:', value); // Debug log
     setFormData((prev) => ({ ...prev, role: value }));
   };
 
@@ -91,12 +119,25 @@ export default function UsersAdmin() {
     setSubmitting(true);
     try {
       let result;
+      console.log('Datos a actualizar/crear:', formData); // Debug log
       if (editingUser) {
-        result = await supabase.from('users').update(formData).eq('id', editingUser.id).select();
+        console.log('Actualizando usuario ID:', editingUser.id); // Debug log
+        result = await supabase
+          .from('users')
+          .update({
+            name: formData.name,
+            lastname: formData.lastname,
+            email: formData.email,
+            role: formData.role
+          })
+          .eq('id', editingUser.id)
+          .select();
       } else {
         result = await supabase.from('users').insert([{ ...formData }]).select();
       }
+      console.log('Resultado de la operación:', result); // Debug log
       if (result.error) {
+        console.error('Error en la base de datos:', result.error); // Debug log
         toast({ title: 'Error', description: result.error.message, variant: 'destructive' });
         return;
       }
@@ -104,6 +145,7 @@ export default function UsersAdmin() {
       setIsModalOpen(false);
       fetchUsers();
     } catch (error: any) {
+      console.error('Error en catch:', error); // Debug log
       toast({ title: 'Error', description: error?.message || 'Error desconocido', variant: 'destructive' });
     } finally {
       setSubmitting(false);
@@ -141,6 +183,11 @@ export default function UsersAdmin() {
 
   return (
     <div className="max-w-5xl mx-auto mt-8">
+      {currentUser && currentUser.role !== 'admin' && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+          <strong>Advertencia:</strong> No tienes permisos de administrador. Algunas funciones pueden no estar disponibles.
+        </div>
+      )}
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <span className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 text-red-500 text-2xl shadow">

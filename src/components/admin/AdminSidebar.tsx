@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown } from 'lucide-react';
+import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown, PaletteIcon } from 'lucide-react';
 import { useState } from 'react';
 
 
@@ -17,6 +17,7 @@ const menuItems = [
 export default function AdminSidebar() {
   const [configOpen, setConfigOpen] = useState(false);
   const [categoriasOpen, setCategoriasOpen] = useState(false);
+  const [personalizacionOpen, setPersonalizacionOpen] = useState(false);
   const [open, setOpen] = useState(false);
   return (
     <>
@@ -112,6 +113,42 @@ export default function AdminSidebar() {
                   <li>
                     <Link href="/admin/usuarios" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
                       Gestión de usuarios
+                    </Link>
+                  </li>
+                </ul>
+              )}
+            </li>
+            {/* Personalización con submenú */}
+            <li className="mb-2">
+              <button
+                type="button"
+                className="flex items-center w-full px-3 py-2 rounded hover:bg-red-50 text-gray-700 focus:outline-none"
+                onClick={() => setPersonalizacionOpen((v) => !v)}
+              >
+                <PaletteIcon size={20} className="mr-3 text-red-600" />
+                Personalización
+                <ChevronDown size={16} className={`ml-auto text-slate-500 transition-transform ${personalizacionOpen ? 'rotate-180' : ''}`} />
+              </button>
+              {personalizacionOpen && (
+                <ul className="ml-8 mt-1">
+                  <li>
+                    <Link href="/admin/personalizacion/temas" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Temas y colores
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/personalizacion/logos" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Logos y branding
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/personalizacion/banners" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Banners y promociones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/personalizacion/footer" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Footer y enlaces
                     </Link>
                   </li>
                 </ul>

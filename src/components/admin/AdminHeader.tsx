@@ -6,6 +6,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from "react-dom";
 import supabase from '../../lib/supabaseClient';
+import UserAvatar from '../ui/UserAvatar';
+import { getAvatarUrl } from '../../utils/avatarUtils';
 
 const TITLES: Record<string, string> = {
   '/admin': 'Panel de Administración',
@@ -29,7 +31,7 @@ export default function AdminHeader({ onOpenSidebar }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null); // referencia al botón
   const menuPortalRef = useRef<HTMLDivElement>(null); // referencia al menú real
-  const [user, setUser] = useState<{ name: string; avatar: string } | null>(null);
+  const [user, setUser] = useState<{ name: string; lastname?: string; avatar: string } | null>(null);
   const [avatarUrl, setAvatarUrl] = useState<string>('');
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
 
@@ -44,20 +46,22 @@ export default function AdminHeader({ onOpenSidebar }: Props) {
       }
       const { data, error } = await supabase
         .from('users')
-        .select('name, avatar')
+        .select('name, lastname, avatar')
         .eq('id', authUser.id)
         .single();
       if (error || !data) {
         setUser({ name: authUser.email || 'Usuario', avatar: '' });
         setAvatarUrl('');
       } else {
-        setUser({ name: data.name || 'Usuario', avatar: data.avatar || '' });
-        if (data.avatar) {
-          const { data: urlData } = supabase.storage.from('avatar').getPublicUrl(data.avatar);
-          setAvatarUrl(urlData.publicUrl);
-        } else {
-          setAvatarUrl('');
-        }
+        setUser({ 
+          name: data.name || 'Usuario', 
+          lastname: data.lastname || '',
+          avatar: data.avatar || '' 
+        });
+        
+        // Usar la utilidad para obtener la URL del avatar
+        setAvatarUrl(getAvatarUrl(data.avatar));
+        console.log('Avatar URL from utility:', getAvatarUrl(data.avatar));
       }
     }
     fetchUser();
@@ -146,13 +150,17 @@ export default function AdminHeader({ onOpenSidebar }: Props) {
         role="menu"
       >
         <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-100 mb-2">
-          <img
-            src={avatarUrl || (user?.name ? `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=ff6f61&color=fff` : '/default-avatar.png')}
-            alt={user?.name || 'Avatar'}
-            className="w-10 h-10 rounded-full border border-slate-200"
+          <UserAvatar
+            src={avatarUrl}
+            name={user?.name ? `${user.name} ${user.lastname || ''}`.trim() : 'Usuario'}
+            size="md"
+            alt="Avatar del usuario"
+            className="border border-slate-200"
           />
           <div className="flex flex-col">
-            <span className="font-semibold text-slate-800 text-base leading-tight">{user?.name || 'Usuario'}</span>
+            <span className="font-semibold text-slate-800 text-base leading-tight">
+              {user?.name ? `${user.name} ${user.lastname || ''}`.trim() : 'Usuario'}
+            </span>
             <span className="text-xs text-slate-400">Administrador</span>
           </div>
         </div>

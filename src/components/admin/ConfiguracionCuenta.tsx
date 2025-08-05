@@ -3,6 +3,8 @@
 import { useState, useEffect, useRef } from "react";
 import supabase from "@/lib/supabaseClient";
 import { Edit2, Eye, EyeOff } from "lucide-react";
+import UserAvatar from "@/components/ui/UserAvatar";
+import { getAvatarUrl } from "@/utils/avatarUtils";
 
 export default function ConfiguracionCuenta() {
   const [form, setForm] = useState({
@@ -56,11 +58,7 @@ export default function ConfiguracionCuenta() {
         setLoading(false);
         return;
       }
-      let avatarUrl = "";
-      if (data?.avatar) {
-        const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(data.avatar);
-        avatarUrl = urlData.publicUrl;
-      }
+      console.log('Final avatar URL:', getAvatarUrl(data?.avatar));
       setForm({
         nombre: data?.nombre || "",
         apellido: data?.apellido || "",
@@ -68,7 +66,7 @@ export default function ConfiguracionCuenta() {
         password: "",
         confirmPassword: "",
         avatar: null,
-        avatarUrl,
+        avatarUrl: getAvatarUrl(data?.avatar),
         currentPassword: "",
       });
       setOriginalEmail(data?.email || "");
@@ -212,11 +210,14 @@ export default function ConfiguracionCuenta() {
       setSuccess("¡Datos actualizados correctamente!");
       setError("");
       if (avatarPath) {
+        // Obtener la nueva URL del avatar
         const { data: urlData } = supabase.storage.from("avatar").getPublicUrl(avatarPath);
         setForm((f) => ({ ...f, avatar: null, avatarUrl: urlData.publicUrl }));
         if (fileInputRef.current) fileInputRef.current.value = "";
+        console.log('Avatar updated, new URL:', urlData.publicUrl);
       }
-      setForm((f) => ({ ...f, password: "", currentPassword: "" }));
+      // Limpiar campos de contraseña
+      setForm((f) => ({ ...f, password: "", confirmPassword: "", currentPassword: "" }));
     } catch (err: any) {
       setError(err.message || "Error desconocido");
     }
@@ -230,10 +231,12 @@ export default function ConfiguracionCuenta() {
         <form onSubmit={handleSubmit} className="space-y-8">
           <div className="flex flex-col items-center gap-4">
             <div className="relative">
-              <img
-                src={form.avatarUrl || "/default-avatar.png"}
+              <UserAvatar
+                src={form.avatarUrl}
+                name={`${form.nombre} ${form.apellido}`.trim() || 'Usuario'}
+                size="xl"
                 alt="Avatar preview"
-                className="w-24 h-24 rounded-full border-4 border-red-200 object-cover shadow"
+                className="border-4 border-red-200 shadow"
               />
               <button
                 type="button"
