@@ -498,7 +498,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   const errorRef = useRef<HTMLDivElement>(null);
   const infoRef = useRef<HTMLDivElement>(null);
   const successRef = useRef<HTMLDivElement>(null);
-  const modalRef = useRef<HTMLDivElement>(null);
+  const modalRef = useRef<HTMLDialogElement>(null);
   const { login, register, isLoading, resetPassword, resendVerification, user } = useAuth();
   const router = useRouter();
 
@@ -541,7 +541,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   }, [pendingRedirect, user, router, onClose]);
 
   const handleOverlayClick = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+    (e: React.MouseEvent<HTMLElement>) => {
       if (e.target === e.currentTarget) {
         onClose();
         setError("");
@@ -565,8 +565,8 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   );
 
   const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLDivElement>) => {
-      if (e.key === "Escape") handleOverlayClick(e as unknown as React.MouseEvent<HTMLDivElement>);
+    (e: React.KeyboardEvent<HTMLElement>) => {
+      if (e.key === "Escape") handleOverlayClick(e as unknown as React.MouseEvent<HTMLElement>);
     },
     [handleOverlayClick]
   );
@@ -642,18 +642,19 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
   if (!isOpen) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-[#1a1a1a]/80 transition-opacity duration-500"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-      aria-modal="true"
-      role="dialog"
-      tabIndex={-1}
-    >
-      <div
+    <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-md bg-[#1a1a1a]/80 transition-opacity duration-500">
+      <button
+        className="absolute inset-0 w-full h-full bg-transparent border-none outline-none cursor-default"
+        onClick={handleOverlayClick}
+        onKeyDown={handleKeyDown}
+        aria-label="Cerrar modal haciendo clic fuera del contenido"
+        type="button"
+      />
+      <dialog
         ref={modalRef}
-        className="relative bg-gradient-to-br from-[#2d2327] via-[#2d2327] to-[#1a1a1a] rounded-3xl w-full max-w-lg mx-4 shadow-3xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white border border-[#d7263d]/30 scale-95 transition-transform duration-300"
+        className="relative bg-gradient-to-br from-[#2d2327] via-[#2d2327] to-[#1a1a1a] rounded-3xl w-full max-w-lg mx-4 shadow-3xl animate-modalPop overflow-hidden sm:p-0 p-0 pb-8 text-white border border-[#d7263d]/30 scale-95 transition-transform duration-300 z-10"
         style={{ minWidth: "340px", maxWidth: "480px" }}
+        open
       >
         {/* Header */}
         <div className="relative w-full h-44 bg-gradient-to-br from-[#ff6f61] via-[#d7263d] to-[#2d2327] rounded-t-3xl flex flex-col items-center justify-center z-10 pt-8 pb-8 shadow-lg">
@@ -759,7 +760,7 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
             </p>
           </div>
         </div>
-      </div>
+      </dialog>
     </div>
   );
 }
