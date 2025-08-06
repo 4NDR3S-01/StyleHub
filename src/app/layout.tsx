@@ -4,7 +4,6 @@
 import React from "react";
 import "./globals.css";
 import { usePathname } from "next/navigation";
-import { Toaster } from "sonner";
 
 // Importación de providers de contexto para manejo de estado global
 import { CartProvider } from "../context/CartContext";
@@ -48,9 +47,6 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                     {/* Renderizado condicional: Footer solo en rutas públicas */}
                     {!isAdmin && <Footer />}
                   </div>
-                  
-                  {/* Toaster para notificaciones */}
-                  <Toaster position="top-right" richColors />
                 </WishlistProvider>
               </CartProvider>
             </ThemeProvider>
