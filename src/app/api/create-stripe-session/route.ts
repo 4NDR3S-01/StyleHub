@@ -9,15 +9,28 @@ const stripe = new Stripe(stripeSecretKey, {
 export async function POST(req: Request) {
   try {
     const { 
+      cartItems,
+      email,
+      customerData,
+      userId,
+      metadata,
       orderId, 
       total, 
       amount, 
       currency = 'usd', 
       customerEmail, 
       savePaymentMethod = false,
-      userId,
       mode = 'checkout' // 'checkout' para Checkout Sessions, 'payment_intent' para PaymentIntents
     } = await req.json()
+
+    // Validar datos requeridos
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      return NextResponse.json({ error: 'Cart items are required' }, { status: 400 });
+    }
+
+    if (!email || typeof email !== 'string') {
+      return NextResponse.json({ error: 'Valid email is required' }, { status: 400 });
+    }
 
     if (mode === 'payment_intent') {
       // Crear PaymentIntent para pagos directos con Elements
@@ -25,8 +38,9 @@ export async function POST(req: Request) {
         amount: amount || Math.round(total * 100),
         currency,
         metadata: { 
-          orderId,
+          orderId: orderId || '',
           userId: userId || '',
+          ...(metadata || {})
         },
         automatic_payment_methods: {
           enabled: true,
@@ -36,10 +50,10 @@ export async function POST(req: Request) {
       // Si se va a guardar el método de pago, configurar para uso futuro
       if (savePaymentMethod && userId) {
         paymentIntentData.setup_future_usage = 'off_session';
-        if (customerEmail) {
+        if (customerEmail || email) {
           // Buscar o crear customer en Stripe
           const customers = await stripe.customers.list({
-            email: customerEmail,
+            email: customerEmail || email,
             limit: 1,
           });
           
@@ -65,28 +79,57 @@ export async function POST(req: Request) {
         paymentIntentId: paymentIntent.id 
       });
     } else {
-      // Crear Checkout Session (comportamiento original)
-      const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-          {
-            price_data: {
-              currency: 'usd',
-              product_data: {
-                name: `Pedido #${orderId}`,
-              },
-              unit_amount: Math.round(total * 100),
+      // Crear Checkout Session usando cartItems
+      const line_items = cartItems.map((item: any) => {
+        if (!item.producto || !item.producto.name || !item.producto.price) {
+          throw new Error('Invalid product data in cart item');
+        }
+
+        return {
+          price_data: {
+            currency: 'cop', // Usar COP para Colombia
+            product_data: {
+              name: item.producto.name,
+              description: item.producto.description || '',
+              images: item.producto.images ? [item.producto.images[0]] : [],
             },
-            quantity: 1,
+            unit_amount: Math.round(item.producto.price * 100), // Convertir a centavos
           },
-        ],
-        mode: 'payment',
-        success_url: `${process.env.NEXT_PUBLIC_URL}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${process.env.NEXT_PUBLIC_URL}/checkout/cancel`,
-        metadata: { orderId },
+          quantity: item.quantity,
+        };
       });
+
+      const sessionData: Stripe.Checkout.SessionCreateParams = {
+        payment_method_types: ['card'],
+        line_items,
+        mode: 'payment',
+        customer_email: email,
+        success_url: `${process.env.NEXT_PUBLIC_BASE_URL}/orden-confirmada?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${process.env.NEXT_PUBLIC_BASE_URL}/checkout?cancelled=true`,
+        metadata: {
+          userId: userId || '',
+          ...(metadata || {})
+        },
+      };
+
+      // Agregar información del cliente si está disponible
+      if (customerData) {
+        sessionData.shipping_address_collection = {
+          allowed_countries: ['CO', 'US', 'MX', 'PE', 'CL', 'AR'],
+        };
+        
+        if (customerData.name) {
+          // Note: customer_details is not available in sessions, use customer_email instead
+          // We'll handle customer details in the success callback
+        }
+      }
+
+      const session = await stripe.checkout.sessions.create(sessionData);
       
-      return NextResponse.json({ sessionId: session.id });
+      return NextResponse.json({ 
+        id: session.id,
+        url: session.url 
+      });
     }
   } catch (error: any) {
     console.error('Error in Stripe API:', error);
