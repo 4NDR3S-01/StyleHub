@@ -1,5 +1,9 @@
 import supabase from '@/lib/supabaseClient';
 
+// ============================================================================
+// REPOSITORY PATTERN - PRODUCT DATA ACCESS
+// ============================================================================
+
 export interface Product {
   id: string;
   name: string;
@@ -47,6 +51,551 @@ export interface ProductVariant {
   created_at?: string;
   updated_at?: string;
 }
+
+/**
+ * Filtros para búsqueda de productos
+ */
+export interface ProductFilters {
+  category?: string;
+  brand?: string;
+  gender?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  season?: string;
+  featured?: boolean;
+  sale?: boolean;
+  search?: string;
+  tags?: string[];
+}
+
+/**
+ * Opciones de paginación
+ */
+export interface PaginationOptions {
+  page: number;
+  limit: number;
+  sortBy?: 'name' | 'price' | 'created_at' | 'popularity';
+  sortOrder?: 'asc' | 'desc';
+}
+
+/**
+ * Resultado paginado
+ */
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+// ============================================================================
+// REPOSITORY INTERFACE
+// ============================================================================
+
+/**
+ * Interfaz del repositorio de productos
+ * Define todas las operaciones de acceso a datos para productos
+ */
+export interface IProductRepository {
+  // Operaciones básicas CRUD
+  findById(id: string): Promise<Product | null>;
+  findAll(filters?: ProductFilters, pagination?: PaginationOptions): Promise<PaginatedResult<Product>>;
+  create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product>;
+  update(id: string, updates: Partial<Product>): Promise<Product | null>;
+  delete(id: string): Promise<boolean>;
+  
+  // Operaciones específicas de búsqueda
+  findByCategory(categoryId: string, pagination?: PaginationOptions): Promise<PaginatedResult<Product>>;
+  findFeatured(limit?: number): Promise<Product[]>;
+  findOnSale(pagination?: PaginationOptions): Promise<PaginatedResult<Product>>;
+  search(query: string, filters?: ProductFilters, pagination?: PaginationOptions): Promise<PaginatedResult<Product>>;
+  
+  // Operaciones de variantes
+  findVariants(productId: string): Promise<ProductVariant[]>;
+  createVariant(variant: Omit<ProductVariant, 'id' | 'created_at' | 'updated_at'>): Promise<ProductVariant>;
+  updateVariant(id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | null>;
+  deleteVariant(id: string): Promise<boolean>;
+}
+
+// ============================================================================
+// REPOSITORY IMPLEMENTATION
+// ============================================================================
+
+/**
+ * Implementación del repositorio de productos usando Supabase
+ */
+class ProductRepository implements IProductRepository {
+  
+  async findById(id: string): Promise<Product | null> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name, slug),
+          product_variants(*)
+        `)
+        .eq('id', id)
+        .eq('is_active', true)
+        .single();
+
+      if (error) {
+        console.error('Error fetching product by ID:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Repository error in findById:', error);
+      return null;
+    }
+  }
+
+  async findAll(filters?: ProductFilters, pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    try {
+      let query = supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name, slug),
+          product_variants(*)
+        `, { count: 'exact' })
+        .eq('is_active', true);
+
+      // Aplicar filtros
+      if (filters) {
+        if (filters.category) {
+          query = query.eq('category_id', filters.category);
+        }
+        if (filters.brand) {
+          query = query.eq('brand', filters.brand);
+        }
+        if (filters.gender) {
+          query = query.eq('gender', filters.gender);
+        }
+        if (filters.minPrice) {
+          query = query.gte('price', filters.minPrice);
+        }
+        if (filters.maxPrice) {
+          query = query.lte('price', filters.maxPrice);
+        }
+        if (filters.featured !== undefined) {
+          query = query.eq('is_featured', filters.featured);
+        }
+        if (filters.sale !== undefined) {
+          query = query.eq('sale', filters.sale);
+        }
+        if (filters.search) {
+          query = query.or(`name.ilike.%${filters.search}%, description.ilike.%${filters.search}%`);
+        }
+      }
+
+      // Aplicar paginación y ordenamiento
+      if (pagination) {
+        const { page, limit, sortBy = 'created_at', sortOrder = 'desc' } = pagination;
+        const offset = (page - 1) * limit;
+        
+        query = query
+          .order(sortBy, { ascending: sortOrder === 'asc' })
+          .range(offset, offset + limit - 1);
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('Error fetching products:', error);
+        throw error;
+      }
+
+      const totalPages = pagination ? Math.ceil((count || 0) / pagination.limit) : 1;
+
+      return {
+        data: data || [],
+        total: count || 0,
+        page: pagination?.page || 1,
+        limit: pagination?.limit || data?.length || 0,
+        totalPages
+      };
+    } catch (error) {
+      console.error('Repository error in findAll:', error);
+      throw error;
+    }
+  }
+
+  async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert(product)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating product:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Repository error in create:', error);
+      throw error;
+    }
+  }
+
+  async update(id: string, updates: Partial<Product>): Promise<Product | null> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating product:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Repository error in update:', error);
+      return null;
+    }
+  }
+
+  async delete(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting product:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Repository error in delete:', error);
+      return false;
+    }
+  }
+
+  async findByCategory(categoryId: string, pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    return this.findAll({ category: categoryId }, pagination);
+  }
+
+  async findFeatured(limit: number = 10): Promise<Product[]> {
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          *,
+          category:categories(id, name, slug),
+          product_variants(*)
+        `)
+        .eq('is_active', true)
+        .eq('is_featured', true)
+        .order('created_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        console.error('Error fetching featured products:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Repository error in findFeatured:', error);
+      return [];
+    }
+  }
+
+  async findOnSale(pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    return this.findAll({ sale: true }, pagination);
+  }
+
+  async search(query: string, filters?: ProductFilters, pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    return this.findAll({ ...filters, search: query }, pagination);
+  }
+
+  async findVariants(productId: string): Promise<ProductVariant[]> {
+    try {
+      const { data, error } = await supabase
+        .from('product_variants')
+        .select('*')
+        .eq('product_id', productId)
+        .order('color')
+        .order('size');
+
+      if (error) {
+        console.error('Error fetching product variants:', error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error('Repository error in findVariants:', error);
+      return [];
+    }
+  }
+
+  async createVariant(variant: Omit<ProductVariant, 'id' | 'created_at' | 'updated_at'>): Promise<ProductVariant> {
+    try {
+      const { data, error } = await supabase
+        .from('product_variants')
+        .insert(variant)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error creating product variant:', error);
+        throw error;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Repository error in createVariant:', error);
+      throw error;
+    }
+  }
+
+  async updateVariant(id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | null> {
+    try {
+      const { data, error } = await supabase
+        .from('product_variants')
+        .update({ ...updates, updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Error updating product variant:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Repository error in updateVariant:', error);
+      return null;
+    }
+  }
+
+  async deleteVariant(id: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('product_variants')
+        .delete()
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error deleting product variant:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Repository error in deleteVariant:', error);
+      return false;
+    }
+  }
+}
+
+// ============================================================================
+// REPOSITORY SINGLETON INSTANCE
+// ============================================================================
+
+/**
+ * Instancia única del repositorio de productos
+ */
+const productRepository = new ProductRepository();
+
+// ============================================================================
+// SERVICE LAYER (USANDO REPOSITORY PATTERN)
+// ============================================================================
+
+/**
+ * Servicio de productos que utiliza el Repository Pattern
+ * Esta clase orquesta las operaciones de negocio usando el repositorio
+ */
+export class ProductService {
+  private readonly repository: IProductRepository;
+
+  constructor(repository?: IProductRepository) {
+    this.repository = repository || productRepository;
+  }
+
+  /**
+   * Obtener producto por ID con validaciones de negocio
+   */
+  async getProductById(id: string): Promise<Product | null> {
+    if (!id || typeof id !== 'string') {
+      throw new Error('ID de producto inválido');
+    }
+
+    try {
+      const product = await this.repository.findById(id);
+      
+      // Lógica de negocio: verificar disponibilidad
+      if (product && !product.is_active) {
+        return null; // Producto inactivo no se devuelve
+      }
+
+      return product;
+    } catch (error) {
+      console.error('Error in ProductService.getProductById:', error);
+      throw new Error('No se pudo obtener el producto');
+    }
+  }
+
+  /**
+   * Obtener productos con filtros y paginación
+   */
+  async getProducts(
+    filters?: ProductFilters, 
+    pagination?: PaginationOptions
+  ): Promise<PaginatedResult<Product>> {
+    try {
+      return await this.repository.findAll(filters, pagination);
+    } catch (error) {
+      console.error('Error in ProductService.getProducts:', error);
+      throw new Error('No se pudieron obtener los productos');
+    }
+  }
+
+  /**
+   * Obtener productos destacados
+   */
+  async getFeaturedProducts(limit: number = 10): Promise<Product[]> {
+    try {
+      return await this.repository.findFeatured(limit);
+    } catch (error) {
+      console.error('Error in ProductService.getFeaturedProducts:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Obtener productos en oferta
+   */
+  async getSaleProducts(pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    try {
+      return await this.repository.findOnSale(pagination);
+    } catch (error) {
+      console.error('Error in ProductService.getSaleProducts:', error);
+      throw new Error('No se pudieron obtener los productos en oferta');
+    }
+  }
+
+  /**
+   * Buscar productos
+   */
+  async searchProducts(
+    query: string, 
+    filters?: ProductFilters, 
+    pagination?: PaginationOptions
+  ): Promise<PaginatedResult<Product>> {
+    if (!query || query.trim().length < 2) {
+      throw new Error('La búsqueda debe tener al menos 2 caracteres');
+    }
+
+    try {
+      return await this.repository.search(query.trim(), filters, pagination);
+    } catch (error) {
+      console.error('Error in ProductService.searchProducts:', error);
+      throw new Error('Error en la búsqueda de productos');
+    }
+  }
+
+  /**
+   * Crear nuevo producto
+   */
+  async createProduct(productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {
+    // Validaciones de negocio
+    if (!productData.name || productData.name.trim().length === 0) {
+      throw new Error('El nombre del producto es obligatorio');
+    }
+
+    if (!productData.price || productData.price <= 0) {
+      throw new Error('El precio debe ser mayor a 0');
+    }
+
+    if (!productData.category_id) {
+      throw new Error('La categoría es obligatoria');
+    }
+
+    try {
+      // Establecer valores por defecto
+      const product = {
+        ...productData,
+        is_active: productData.is_active ?? true,
+        is_featured: productData.is_featured ?? false,
+        sale: productData.sale ?? false,
+      };
+
+      return await this.repository.create(product);
+    } catch (error) {
+      console.error('Error in ProductService.createProduct:', error);
+      throw new Error('No se pudo crear el producto');
+    }
+  }
+
+  /**
+   * Actualizar producto
+   */
+  async updateProduct(id: string, updates: Partial<Product>): Promise<Product | null> {
+    if (!id) {
+      throw new Error('ID de producto requerido');
+    }
+
+    // Validaciones de negocio
+    if (updates.price !== undefined && updates.price <= 0) {
+      throw new Error('El precio debe ser mayor a 0');
+    }
+
+    if (updates.name !== undefined && updates.name.trim().length === 0) {
+      throw new Error('El nombre del producto no puede estar vacío');
+    }
+
+    try {
+      return await this.repository.update(id, updates);
+    } catch (error) {
+      console.error('Error in ProductService.updateProduct:', error);
+      throw new Error('No se pudo actualizar el producto');
+    }
+  }
+
+  /**
+   * Eliminar producto (soft delete)
+   */
+  async deleteProduct(id: string): Promise<boolean> {
+    if (!id) {
+      throw new Error('ID de producto requerido');
+    }
+
+    try {
+      return await this.repository.delete(id);
+    } catch (error) {
+      console.error('Error in ProductService.deleteProduct:', error);
+      throw new Error('No se pudo eliminar el producto');
+    }
+  }
+}
+
+// ============================================================================
+// SINGLETON SERVICE INSTANCE
+// ============================================================================
+
+/**
+ * Instancia única del servicio de productos
+ */
+export const productService = new ProductService();
+
+// ============================================================================
+// COMPATIBILITY LAYER (MANTENER FUNCIONES EXISTENTES)
+// ============================================================================
 
 export interface Category {
   id: string;

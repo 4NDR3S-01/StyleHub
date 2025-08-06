@@ -1,7 +1,165 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
 import type { CartItem } from '@/types';
 
-// Inicializar Stripe en el cliente
+// ============================================================================
+// FACTORY METHOD PATTERN - PAYMENT PROCESSORS
+// ============================================================================
+
+/**
+ * Interfaz común para todos los procesadores de pago
+ */
+interface PaymentProcessor {
+  processCheckout(data: CheckoutSessionData): Promise<PaymentResult>;
+  validatePaymentData(data: any): boolean;
+  getPaymentMethods(): PaymentMethodInfo[];
+}
+
+/**
+ * Resultado estándar de procesamiento de pago
+ */
+interface PaymentResult {
+  success: boolean;
+  sessionId?: string;
+  sessionUrl?: string;
+  error?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Información de métodos de pago disponibles
+ */
+interface PaymentMethodInfo {
+  id: string;
+  name: string;
+  description: string;
+  fees: number;
+  supportedCurrencies: string[];
+}
+
+/**
+ * Procesador de pagos con Stripe
+ */
+class StripePaymentProcessor implements PaymentProcessor {
+  private readonly stripePromise: Promise<Stripe | null>;
+
+  constructor() {
+    if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+      throw new Error('Stripe publishable key is not configured');
+    }
+    this.stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+  }
+
+  async processCheckout(data: CheckoutSessionData): Promise<PaymentResult> {
+    try {
+      const response = await fetch('/api/create-stripe-session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+
+      const session = await response.json();
+      
+      if (!response.ok) {
+        return {
+          success: false,
+          error: session.error || 'Error creating Stripe session'
+        };
+      }
+
+      return {
+        success: true,
+        sessionId: session.id,
+        sessionUrl: session.url,
+        metadata: { processor: 'stripe' }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `Stripe payment failed: ${error}`
+      };
+    }
+  }
+
+  validatePaymentData(data: CheckoutSessionData): boolean {
+    return !!(data.cartItems?.length && data.email);
+  }
+
+  getPaymentMethods(): PaymentMethodInfo[] {
+    return [
+      {
+        id: 'stripe_card',
+        name: 'Tarjeta de Crédito/Débito',
+        description: 'Visa, Mastercard, American Express',
+        fees: 2.9,
+        supportedCurrencies: ['USD', 'EUR', 'COP']
+      }
+    ];
+  }
+}
+
+/**
+ * Procesador de pagos con PayPal
+ */
+class PayPalPaymentProcessor implements PaymentProcessor {
+  async processCheckout(data: CheckoutSessionData): Promise<PaymentResult> {
+    try {
+      // Integración con PayPal API
+      console.log('Processing PayPal payment');
+      
+      // Aquí iría la lógica específica de PayPal
+      // Por ahora simulamos una respuesta exitosa
+      return {
+        success: true,
+        sessionId: `paypal_${Date.now()}`,
+        sessionUrl: 'https://www.paypal.com/checkoutnow',
+        metadata: { processor: 'paypal' }
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: `PayPal payment failed: ${error}`
+      };
+    }
+  }
+
+  validatePaymentData(data: CheckoutSessionData): boolean {
+    return !!(data.cartItems?.length && data.email);
+  }
+
+  getPaymentMethods(): PaymentMethodInfo[] {
+    return [
+      {
+        id: 'paypal',
+        name: 'PayPal',
+        description: 'Paga con tu cuenta de PayPal',
+        fees: 3.4,
+        supportedCurrencies: ['USD', 'EUR', 'COP']
+      }
+    ];
+  }
+}
+
+/**
+ * Factory para crear procesadores de pago
+ */
+class PaymentProcessorFactory {
+  static createProcessor(type: 'stripe' | 'paypal'): PaymentProcessor {
+    switch (type) {
+      case 'stripe':
+        return new StripePaymentProcessor();
+      case 'paypal':
+        return new PayPalPaymentProcessor();
+      default:
+        throw new Error(`Unsupported payment processor type: ${type}`);
+    }
+  }
+
+  static getAvailableProcessors(): ('stripe' | 'paypal')[] {
+    return ['stripe', 'paypal'];
+  }
+}
+
+// Mantener compatibilidad con código existente
 let stripePromise: Promise<Stripe | null> | null = null;
 const getStripe = () => {
   if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
@@ -40,6 +198,62 @@ export interface PaymentIntent {
 
 export class PaymentService {
   /**
+   * FACTORY METHOD PATTERN: Crear sesión de checkout usando el procesador especificado
+   */
+  static async createCheckoutSession(
+    data: CheckoutSessionData, 
+    processorType: 'stripe' | 'paypal' = 'stripe'
+  ): Promise<PaymentResult> {
+    try {
+      // Validar datos primero
+      const validation = this.validateCheckoutData(data);
+      if (!validation.isValid) {
+        return {
+          success: false,
+          error: `Validation failed: ${validation.errors.join(', ')}`
+        };
+      }
+
+      // Usar Factory Method para crear el procesador apropiado
+      const processor = PaymentProcessorFactory.createProcessor(processorType);
+      
+      // Validar datos específicos del procesador
+      if (!processor.validatePaymentData(data)) {
+        return {
+          success: false,
+          error: 'Invalid payment data for selected processor'
+        };
+      }
+
+      // Procesar el checkout
+      return await processor.processCheckout(data);
+    } catch (error) {
+      return {
+        success: false,
+        error: `Payment processing failed: ${error}`
+      };
+    }
+  }
+
+  /**
+   * Obtener métodos de pago disponibles de todos los procesadores
+   */
+  static getAllPaymentMethods(): PaymentMethodInfo[] {
+    const allMethods: PaymentMethodInfo[] = [];
+    
+    PaymentProcessorFactory.getAvailableProcessors().forEach(type => {
+      try {
+        const processor = PaymentProcessorFactory.createProcessor(type);
+        allMethods.push(...processor.getPaymentMethods());
+      } catch (error) {
+        console.warn(`Failed to get payment methods for ${type}:`, error);
+      }
+    });
+
+    return allMethods;
+  }
+
+  /**
    * Validar datos de entrada para checkout
    */
   static validateCheckoutData(data: CheckoutSessionData): { isValid: boolean; errors: string[] } {
@@ -74,44 +288,7 @@ export class PaymentService {
   }
 
   /**
-   * Crear sesión de checkout de Stripe
-   */
-  static async createCheckoutSession(data: CheckoutSessionData) {
-    try {
-      // Validar datos de entrada
-      const validation = this.validateCheckoutData(data);
-      if (!validation.isValid) {
-        throw new Error(`Datos de checkout inválidos: ${validation.errors.join(', ')}`);
-      }
-
-      const response = await fetch('/api/stripe/checkout-session', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Error al crear sesión de checkout');
-      }
-
-      const session = await response.json();
-      
-      if (!session.id) {
-        throw new Error('Respuesta inválida del servidor de pagos');
-      }
-
-      return session;
-    } catch (error: any) {
-      console.error('Payment service error:', error);
-      throw new Error(error.message || 'Error al procesar pago');
-    }
-  }
-
-  /**
-   * Redirigir a Stripe Checkout
+   * MÉTODO LEGACY: Redirigir a Stripe Checkout (mantener compatibilidad)
    */
   static async redirectToCheckout(sessionId: string) {
     try {
@@ -138,17 +315,23 @@ export class PaymentService {
   }
 
   /**
-   * Procesar pago completo (crear sesión y redirigir)
+   * Procesar pago completo usando Factory Method Pattern
    */
-  static async processPayment(data: CheckoutSessionData) {
+  static async processPayment(data: CheckoutSessionData, processorType: 'stripe' | 'paypal' = 'stripe') {
     try {
-      // Crear sesión de checkout
-      const session = await this.createCheckoutSession(data);
+      // Usar el nuevo método que implementa Factory Pattern
+      const result = await this.createCheckoutSession(data, processorType);
       
-      // Redirigir a Stripe Checkout
-      await this.redirectToCheckout(session.id);
+      if (!result.success) {
+        throw new Error(result.error || 'Error al crear sesión de checkout');
+      }
       
-      return session;
+      // Redirigir a checkout solo si es Stripe y tenemos sessionId
+      if (processorType === 'stripe' && result.sessionId) {
+        await this.redirectToCheckout(result.sessionId);
+      }
+      
+      return result;
     } catch (error: any) {
       console.error('Payment processing error:', error);
       throw new Error(error.message || 'Error al procesar pago');
