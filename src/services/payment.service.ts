@@ -478,20 +478,21 @@ export class PaymentService {
   /**
    * Formatear precio para mostrar
    */
-  static formatPrice(amount: number, currency: string = 'COP'): string {
+  static formatPrice(amount: number, currency: string = 'USD'): string {
     if (!amount || isNaN(amount)) {
-      return '0';
+      return '$0.00';
     }
 
     try {
-      return new Intl.NumberFormat('es-CO', {
+      return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
-        minimumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(amount);
     } catch (error) {
       console.error('Price formatting error:', error);
-      return `$${amount.toFixed(0)}`;
+      return `$${amount.toFixed(2)}`;
     }
   }
 
