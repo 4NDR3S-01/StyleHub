@@ -4,6 +4,8 @@ import { checkoutService } from '@/services/checkout.service';
 export async function POST(request: NextRequest) {
   try {
     const checkoutData = await request.json();
+    
+    console.log('🛒 Datos recibidos en API checkout:', JSON.stringify(checkoutData, null, 2));
 
     // Validar que el usuario esté autenticado (podrías agregar JWT validation aquí)
     if (!checkoutData.userId) {
@@ -15,6 +17,8 @@ export async function POST(request: NextRequest) {
 
     // Procesar el checkout usando el servicio
     const result = await checkoutService.processCheckout(checkoutData);
+    
+    console.log('✅ Resultado del checkout:', result);
 
     return NextResponse.json(result);
 

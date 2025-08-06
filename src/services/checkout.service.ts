@@ -23,7 +23,7 @@ export interface CheckoutData {
     country: string;
   };
   paymentMethod: {
-    type: 'card' | 'paypal';
+    type: 'card' | 'paypal' | 'stripe';
     token?: string;
     savedMethodId?: string;
   };
@@ -210,19 +210,34 @@ class CheckoutService {
 
     // Validar disponibilidad de inventario
     for (const item of data.items) {
+      console.log('Validando stock para item:', { 
+        product_id: item.id, 
+        variant_id: item.variant_id, 
+        quantity: item.quantity,
+        color: item.color,
+        size: item.size 
+      });
+
       // Usar variant_id para validar stock específico de la variante
       if (!item.variant_id) {
         return { isValid: false, error: `Variante no especificada para el producto ${item.id}` };
       }
 
-      const { data: variant } = await supabase
+      const { data: variant, error: variantError } = await supabase
         .from('product_variants')
-        .select('stock')
+        .select('stock, color, size')
         .eq('id', item.variant_id)
         .single();
 
+      console.log('Resultado de consulta variant:', { variant, variantError });
+
+      if (variantError) {
+        console.error('Error al consultar variante:', variantError);
+        return { isValid: false, error: `Error al consultar variante ${item.variant_id}: ${variantError.message}` };
+      }
+
       if (!variant || variant.stock < item.quantity) {
-        return { isValid: false, error: `Stock insuficiente para el producto ${item.id}. Stock disponible: ${variant?.stock || 0}, solicitado: ${item.quantity}` };
+        return { isValid: false, error: `Stock insuficiente para la variante ${item.variant_id} (${variant?.color} ${variant?.size}). Stock disponible: ${variant?.stock || 0}, solicitado: ${item.quantity}` };
       }
     }
 
@@ -233,15 +248,18 @@ class CheckoutService {
    * Procesa el pago según el método seleccionado
    */
   private async processPayment(data: CheckoutData): Promise<PaymentResult> {
+    console.log('Procesando pago con método:', data.paymentMethod);
+    
     switch (data.paymentMethod.type) {
       case 'card':
+      case 'stripe':
         return this.processStripeCheckout(data);
       case 'paypal':
         return this.processPayPalCheckout(data);
       default:
         return {
           success: false,
-          error: 'Método de pago no soportado'
+          error: `Método de pago no soportado: ${data.paymentMethod.type}`
         };
     }
   }

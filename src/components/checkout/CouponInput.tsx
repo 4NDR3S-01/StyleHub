@@ -65,13 +65,28 @@ export default function CouponInput({
       const validation = await validateCoupon(
         couponCode.trim(),
         userId,
-        subtotal,
+        {
+          subtotal,
+          userId,
+          cartItems: [],
+          isFirstPurchase: false
+        },
         categoryIds,
         productIds
       );
 
       if (validation.valid && validation.coupon) {
-        onCouponApply(validation.coupon);
+        // Mapear solo los tipos básicos de cupón
+        const mappedCoupon = {
+          id: validation.coupon.id,
+          code: validation.coupon.code,
+          discount_type: validation.coupon.discount_type === 'percentage' ? 'percentage' as const : 'fixed' as const,
+          discount_value: validation.coupon.discount_value,
+          description: validation.coupon.description,
+          maximum_discount: validation.coupon.maximum_discount,
+          minimum_amount: validation.coupon.minimum_amount
+        };
+        onCouponApply(mappedCoupon);
         setCouponCode('');
         setError(null);
       } else {

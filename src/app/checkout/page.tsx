@@ -108,17 +108,25 @@ export default function CheckoutPage() {
     setLoading(true);
 
     try {
+      console.log('Items del carrito antes de checkout:', state.items);
+      console.log('PaymentData actual:', paymentData);
+      console.log('SelectedPaymentMethod actual:', selectedPaymentMethod);
+      
       // Usar el servicio ético de checkout
       const checkoutData = {
         userId: user.id,
-        items: state.items.map((item: any) => ({
-          id: item.producto.id,
-          quantity: item.quantity,
-          price: item.producto.price,
-          variant_id: item.variant?.id,
-          color: item.variant?.color,
-          size: item.variant?.size
-        })),
+        items: state.items.map((item: any) => {
+          const mappedItem = {
+            id: item.producto.id,
+            quantity: item.quantity,
+            price: item.producto.price,
+            variant_id: item.variant?.id,
+            color: item.variant?.color,
+            size: item.variant?.size
+          };
+          console.log('Item mapeado:', mappedItem);
+          return mappedItem;
+        }),
         shippingAddress: {
           street: selectedAddress.address,
           city: selectedAddress.city,
@@ -127,8 +135,8 @@ export default function CheckoutPage() {
           country: selectedAddress.country
         },
         paymentMethod: {
-          type: selectedPaymentMethod.type,
-          savedMethodId: selectedPaymentMethod.id
+          type: paymentData?.type || 'card',
+          savedMethodId: paymentData?.savedMethodId || selectedPaymentMethod
         },
         total,
         subtotal,
@@ -137,6 +145,8 @@ export default function CheckoutPage() {
         couponCode: appliedCoupon?.code,
         couponDiscount: couponDiscount
       };
+
+      console.log('CheckoutData final a enviar:', checkoutData);
 
       // Procesar checkout ético: pago primero, orden después usando la API
       const response = await fetch('/api/checkout', {

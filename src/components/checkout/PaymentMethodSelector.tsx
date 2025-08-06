@@ -91,8 +91,11 @@ export default function PaymentMethodSelector({
     if (type === 'saved') {
       const method = savedMethods.find((m: SavedPaymentMethod) => m.id === methodId);
       if (method) {
+        // Normalizar el tipo de pago
+        const normalizedType = method.type === 'stripe' ? 'card' : method.type;
+        
         onPaymentDataChange({
-          type: method.type,
+          type: normalizedType,
           savedMethodId: method.id,
           externalId: method.external_id
         });
