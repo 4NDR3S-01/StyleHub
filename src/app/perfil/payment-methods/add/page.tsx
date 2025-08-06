@@ -1,5 +1,6 @@
 'use client';
 
+import { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import StripePayment from '@/components/payments/StripePayment';
@@ -8,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, CreditCard, Wallet } from 'lucide-react';
 
-export default function AddPaymentMethodPage() {
+function AddPaymentMethodContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user } = useAuth();
@@ -117,5 +118,20 @@ export default function AddPaymentMethodPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function AddPaymentMethodPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto p-6 max-w-2xl">
+        <div className="animate-pulse">
+          <div className="h-8 bg-gray-200 rounded w-1/2 mb-6"></div>
+          <div className="bg-gray-200 rounded-lg h-96"></div>
+        </div>
+      </div>
+    }>
+      <AddPaymentMethodContent />
+    </Suspense>
   );
 }

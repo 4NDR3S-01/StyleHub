@@ -120,14 +120,7 @@ export default function CheckoutPage() {
 
     try {
       // Mapear el tipo de pago correctamente
-      let paymentMethod: 'stripe' | 'paypal';
-      if (paymentData.type === 'card') {
-        paymentMethod = 'stripe';
-      } else if (paymentData.type === 'paypal') {
-        paymentMethod = 'paypal';
-      } else {
-        paymentMethod = 'stripe'; // default
-      }
+      const paymentMethod = paymentData.type === 'card' ? 'stripe' : paymentData.type === 'paypal' ? 'paypal' : 'stripe';
       
       console.log('Creating order with:', {
         userId: user.id,
@@ -167,6 +160,9 @@ export default function CheckoutPage() {
           couponDiscount
         );
       }
+
+      // Limpiar carrito al completar la orden
+      clearCart();
 
       // Si es un método guardado, procesarlo directamente
       if (paymentData.savedMethodId) {
@@ -225,9 +221,6 @@ export default function CheckoutPage() {
         throw new Error(confirmError.message);
       }
 
-      // Limpiar carrito después del pago exitoso
-      clearCart();
-      
       // Redirigir a página de éxito
       window.location.href = `/orden-confirmada?orderId=${order.id}&paymentIntent=${payment_intent_id}`;
       
@@ -262,9 +255,6 @@ export default function CheckoutPage() {
       if (!response.ok) {
         throw new Error(data.error || 'Error al crear orden de PayPal');
       }
-
-      // Limpiar carrito antes de redirigir a PayPal
-      clearCart();
 
       // Redirigir al usuario a PayPal para completar el pago
       if (data.approval_url) {
@@ -452,7 +442,6 @@ export default function CheckoutPage() {
                           amount={total}
                           onSuccess={(paymentData) => {
                             console.log('Pago PayPal exitoso:', paymentData);
-                            clearCart();
                             window.location.href = `/orden-confirmada?orderId=${orderId}`;
                           }}
                           onError={(error) => {
@@ -473,7 +462,6 @@ export default function CheckoutPage() {
                           savePaymentMethod={true}
                           onSuccess={(paymentIntent) => {
                             console.log('Pago exitoso:', paymentIntent);
-                            clearCart();
                             window.location.href = `/orden-confirmada?orderId=${orderId}`;
                           }}
                           onError={(error) => {

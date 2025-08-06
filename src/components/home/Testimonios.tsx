@@ -64,8 +64,8 @@ export default function Testimonials() {
                   <div>
                     <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
                     <div className="flex">
-                      {[0, 1, 2, 3, 4].map((starIndex) => (
-                        <div key={`skeleton-star-${starIndex}`} className="w-4 h-4 bg-gray-200 rounded mr-1"></div>
+                      {[...Array(5)].map((_, i) => (
+                        <div key={i} className="w-4 h-4 bg-gray-200 rounded mr-1"></div>
                       ))}
                     </div>
                   </div>
@@ -106,11 +106,11 @@ export default function Testimonials() {
             >
               <div className="flex items-center mb-4">
                 <img
-                  src={testimonial.avatar || '/default-avatar.svg'}
+                  src={testimonial.avatar || '/default-avatar.png'}
                   alt={testimonial.name}
                   className="w-12 h-12 rounded-full object-cover mr-4"
                   onError={(e) => {
-                    e.currentTarget.src = '/default-avatar.svg';
+                    e.currentTarget.src = '/default-avatar.png';
                   }}
                 />
                 <div>
@@ -119,8 +119,8 @@ export default function Testimonials() {
                     <p className="text-xs text-slate-500">Dejo una reseña a: {testimonial.product_name}</p>
                   )}
                   <div className="flex">
-                    {Array.from({ length: testimonial.rating }, (_, i) => (
-                      <Star key={`star-${testimonial.id}-${i}`} size={16} className="text-yellow-400 fill-yellow-400" />
+                    {[...Array(testimonial.rating)].map((_, i) => (
+                      <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
                     ))}
                   </div>
                 </div>
