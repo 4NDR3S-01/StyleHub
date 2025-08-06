@@ -6,6 +6,7 @@ import { useWishlist } from '@/context/WishlistContext'
 import { useMemo } from 'react'
 import { Heart, ShoppingCart, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { formatPriceSimple } from '@/utils/currency'
 
 interface ProductCardProps {
   readonly product: any
@@ -115,17 +116,17 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <span className="text-2xl font-bold text-gray-900">
-                    ${product.price.toLocaleString()}
+                    {formatPriceSimple(product.price)}
                   </span>
                   {product.original_price && product.original_price > product.price && (
                     <span className="text-lg text-gray-500 line-through">
-                      ${product.original_price.toLocaleString()}
+                      {formatPriceSimple(product.original_price)}
                     </span>
                   )}
                 </div>
                 {discountPercentage && (
                   <span className="text-sm text-green-600 font-medium">
-                    Ahorras ${(product.original_price - product.price).toLocaleString()}
+                    Ahorras {formatPriceSimple(product.original_price - product.price)}
                   </span>
                 )}
               </div>
@@ -220,17 +221,17 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
         <div className="mt-3">
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold text-gray-900">
-              ${product.price.toLocaleString()}
+              {formatPriceSimple(product.price)}
             </span>
             {product.original_price && product.original_price > product.price && (
               <span className="text-sm text-gray-500 line-through">
-                ${product.original_price.toLocaleString()}
+                {formatPriceSimple(product.original_price)}
               </span>
             )}
           </div>
           {discountPercentage && (
             <span className="text-xs text-green-600 font-medium">
-              Ahorras ${(product.original_price - product.price).toLocaleString()}
+              Ahorras {formatPriceSimple(product.original_price - product.price)}
             </span>
           )}
         </div>

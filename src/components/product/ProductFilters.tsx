@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
+import { formatPriceSimple } from '@/utils/currency';
 
 interface ProductFiltersProps {
   products: Product[];
@@ -303,13 +304,13 @@ export default function ProductFilters({
               }
               max={priceRange.max}
               min={priceRange.min}
-              step={1000}
+              step={1}
               className="w-full"
             />
           </div>
           <div className="flex items-center justify-between text-sm text-gray-600">
-            <span>${filters.priceRange[0].toLocaleString()}</span>
-            <span>${filters.priceRange[1].toLocaleString()}</span>
+            <span>{formatPriceSimple(filters.priceRange[0])}</span>
+            <span>{formatPriceSimple(filters.priceRange[1])}</span>
           </div>
           <div className="flex gap-2">
             <Input

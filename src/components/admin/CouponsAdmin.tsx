@@ -9,14 +9,38 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
+interface Coupon {
+  id: string;
+  code: string;
+  description?: string;
+  discount_type: 'percentage' | 'fixed';
+  discount_value: number;
+  minimum_amount?: number;
+  maximum_discount?: number;
+  max_uses?: number;
+  used_count: number;
+  user_limit: number;
+  first_time_only: boolean;
+  categories?: string[];
+  products?: string[];
+  starts_at?: string;
+  expires_at?: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export default function CouponsAdmin() {
-  const [coupons, setCoupons] = useState<any[]>([]);
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [loading, setLoading] = useState(true);
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [filtro, setFiltro] = useState({ codigo: "", estado: "", descuento: "" });
-  const [modal, setModal] = useState<any>(null);
+  const [modal, setModal] = useState<{
+    tipo: 'ver' | 'crear' | 'editar' | 'eliminar';
+    coupon?: Coupon;
+  } | null>(null);
   const [toast, setToast] = useState<{ tipo: "exito" | "error"; mensaje: string } | null>(null);
   const [accionCargando, setAccionCargando] = useState(false);
 
@@ -29,11 +53,11 @@ export default function CouponsAdmin() {
     setLoading(true);
     let query = supabase
       .from("coupons")
-      .select("id, code, description, discount_percent, max_uses, expires_at, created_at", { count: "exact" })
+      .select("id, code, description, discount_type, discount_value, minimum_amount, maximum_discount, max_uses, used_count, user_limit, first_time_only, categories, products, starts_at, expires_at, active, created_at, updated_at", { count: "exact" })
       .order("created_at", { ascending: false })
       .range((pagina - 1) * porPagina, pagina * porPagina - 1);
     if (filtro.codigo) query = query.ilike("code", `%${filtro.codigo}%`);
-    if (filtro.descuento) query = query.eq("discount_percent", filtro.descuento);
+    if (filtro.descuento) query = query.eq("discount_value", filtro.descuento);
     const { data, count } = await query;
     let filtrados = (data || []);
     if (filtro.estado) {
@@ -67,16 +91,23 @@ export default function CouponsAdmin() {
     }
   }
 
-  async function crearEditarCoupon(e: any, editar = false, id = null) {
+  async function crearEditarCoupon(e: any, editar = false, id: string | null = null) {
     e.preventDefault();
     setAccionCargando(true);
     const form = e.target;
     const values = {
       code: form.code.value,
       description: form.description.value,
-      discount_percent: Number(form.discount_percent.value),
+      discount_type: form.discount_type.value,
+      discount_value: Number(form.discount_value.value),
+      minimum_amount: form.minimum_amount.value ? Number(form.minimum_amount.value) : 0,
+      maximum_discount: form.maximum_discount.value ? Number(form.maximum_discount.value) : null,
       max_uses: form.max_uses.value ? Number(form.max_uses.value) : null,
+      user_limit: form.user_limit.value ? Number(form.user_limit.value) : 1,
+      first_time_only: form.first_time_only.checked,
+      starts_at: form.starts_at.value ? form.starts_at.value : new Date().toISOString(),
       expires_at: form.expires_at.value ? form.expires_at.value : null,
+      active: true,
     };
     let res;
     if (editar && id) {
@@ -156,19 +187,55 @@ export default function CouponsAdmin() {
                   <th className="p-2">Código</th>
                   <th className="p-2">Descripción</th>
                   <th className="p-2">Descuento</th>
-                  <th className="p-2">Usos máximos</th>
-                  <th className="p-2">Expira</th>
+                  <th className="p-2">Mín/Máx</th>
+                  <th className="p-2">Usos</th>
+                  <th className="p-2">Estado</th>
+                  <th className="p-2">Vigencia</th>
                   <th className="p-2">Acciones</th>
                 </tr>
               </thead>
               <tbody>
                 {coupons.map(c => (
                   <tr key={c.id} className="border-b last:border-0 hover:bg-pink-50 transition">
-                    <td className="p-2 font-mono text-xs text-pink-800">{c.code}</td>
-                    <td className="p-2 max-w-xs truncate" title={c.description}>{c.description || <span className="italic text-slate-400">Sin descripción</span>}</td>
-                    <td className="p-2 font-bold text-pink-700">{c.discount_percent}%</td>
-                    <td className="p-2">{c.max_uses ?? <span className="italic text-slate-400">Ilimitado</span>}</td>
-                    <td className="p-2 text-xs text-slate-500">{c.expires_at ? c.expires_at.slice(0, 10) : <span className="italic text-slate-400">Sin expiración</span>}</td>
+                    <td className="p-2 font-mono text-xs text-pink-800">
+                      <div>{c.code}</div>
+                      {c.first_time_only && <div className="text-xs bg-blue-100 text-blue-800 px-1 rounded">Nuevos usuarios</div>}
+                    </td>
+                    <td className="p-2 max-w-xs truncate" title={c.description}>
+                      {c.description || <span className="italic text-slate-400">Sin descripción</span>}
+                    </td>
+                    <td className="p-2 font-bold text-pink-700">
+                      <div>{c.discount_type === 'percentage' ? `${c.discount_value}%` : `$${c.discount_value}`}</div>
+                      {c.maximum_discount && c.discount_type === 'percentage' && (
+                        <div className="text-xs text-slate-500">Máx: ${c.maximum_discount}</div>
+                      )}
+                    </td>
+                    <td className="p-2 text-xs">
+                      <div>Mín: ${c.minimum_amount || 0}</div>
+                      <div>x Usuario: {c.user_limit}</div>
+                    </td>
+                    <td className="p-2 text-xs">
+                      <div>{c.used_count || 0} / {c.max_uses ?? '∞'}</div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                        <div 
+                          className="bg-pink-600 h-1.5 rounded-full" 
+                          style={{ 
+                            width: c.max_uses ? `${Math.min((c.used_count || 0) / c.max_uses * 100, 100)}%` : '0%' 
+                          }}
+                        ></div>
+                      </div>
+                    </td>
+                    <td className="p-2 text-xs">
+                      {c.active ? (
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded">Activo</span>
+                      ) : (
+                        <span className="bg-red-100 text-red-800 px-2 py-1 rounded">Inactivo</span>
+                      )}
+                    </td>
+                    <td className="p-2 text-xs">
+                      <div>Desde: {c.starts_at ? new Date(c.starts_at).toLocaleDateString() : 'Ahora'}</div>
+                      <div>Hasta: {c.expires_at ? new Date(c.expires_at).toLocaleDateString() : 'Sin límite'}</div>
+                    </td>
                     <td className="p-2 flex gap-2">
                       <button
                         title="Ver"
@@ -217,8 +284,10 @@ export default function CouponsAdmin() {
       </div>
       {/* Modales */}
       {modal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
-          <div className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md relative animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 p-4">
+          <div className={`bg-white rounded-xl shadow-xl p-6 w-full relative animate-fade-in overflow-y-auto max-h-[90vh] ${
+            modal.tipo === 'crear' || modal.tipo === 'editar' ? 'max-w-4xl' : 'max-w-md'
+          }`}>
             <button
               className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
               onClick={() => setModal(null)}
@@ -226,7 +295,7 @@ export default function CouponsAdmin() {
             >
               <X size={20} />
             </button>
-            {modal.tipo === "ver" && (
+            {modal.tipo === "ver" && modal.coupon && (
               <Fragment>
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Eye size={20} /> Detalles del cupón
@@ -234,10 +303,32 @@ export default function CouponsAdmin() {
                 <div className="space-y-2">
                   <div><span className="font-semibold">Código:</span> {modal.coupon.code}</div>
                   <div><span className="font-semibold">Descripción:</span> {modal.coupon.description || <span className="italic text-slate-400">Sin descripción</span>}</div>
-                  <div><span className="font-semibold">Descuento:</span> {modal.coupon.discount_percent}%</div>
-                  <div><span className="font-semibold">Usos máximos:</span> {modal.coupon.max_uses ?? <span className="italic text-slate-400">Ilimitado</span>}</div>
-                  <div><span className="font-semibold">Expira:</span> {modal.coupon.expires_at ? modal.coupon.expires_at.slice(0, 10) : <span className="italic text-slate-400">Sin expiración</span>}</div>
-                  <div><span className="font-semibold">Creado:</span> {modal.coupon.created_at.slice(0, 10)}</div>
+                  <div><span className="font-semibold">Descuento:</span> 
+                    {modal.coupon.discount_type === 'percentage' 
+                      ? `${modal.coupon.discount_value}%` 
+                      : `$${modal.coupon.discount_value}`}
+                  </div>
+                  <div><span className="font-semibold">Monto mínimo:</span> ${modal.coupon.minimum_amount || 0}</div>
+                  {modal.coupon.maximum_discount && (
+                    <div><span className="font-semibold">Descuento máximo:</span> ${modal.coupon.maximum_discount}</div>
+                  )}
+                  <div><span className="font-semibold">Usos:</span> {modal.coupon.used_count || 0} / {modal.coupon.max_uses ?? <span className="italic text-slate-400">Ilimitado</span>}</div>
+                  <div><span className="font-semibold">Límite por usuario:</span> {modal.coupon.user_limit}</div>
+                  <div><span className="font-semibold">Solo nuevos usuarios:</span> {modal.coupon.first_time_only ? 'Sí' : 'No'}</div>
+                  <div><span className="font-semibold">Vigencia:</span> 
+                    <div className="text-sm">
+                      Desde: {modal.coupon.starts_at ? new Date(modal.coupon.starts_at).toLocaleString() : 'Ahora'}
+                    </div>
+                    <div className="text-sm">
+                      Hasta: {modal.coupon.expires_at ? new Date(modal.coupon.expires_at).toLocaleString() : 'Sin límite'}
+                    </div>
+                  </div>
+                  <div><span className="font-semibold">Estado:</span> 
+                    <span className={`ml-2 px-2 py-1 rounded text-xs ${modal.coupon.active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {modal.coupon.active ? 'Activo' : 'Inactivo'}
+                    </span>
+                  </div>
+                  <div><span className="font-semibold">Creado:</span> {new Date(modal.coupon.created_at).toLocaleString()}</div>
                 </div>
               </Fragment>
             )}
@@ -246,20 +337,88 @@ export default function CouponsAdmin() {
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   {modal.tipo === "crear" ? <Plus size={20} /> : <Pencil size={20} />} {modal.tipo === "crear" ? "Nuevo cupón" : "Editar cupón"}
                 </h2>
-                <form onSubmit={e => crearEditarCoupon(e, modal.tipo === "editar", modal.coupon?.id)}>
-                  <label className="block mb-1 font-semibold" htmlFor="code">Código</label>
-                  <input id="code" name="code" required className="border border-slate-300 rounded px-3 py-2 w-full mb-2" defaultValue={modal.coupon?.code || ""} />
-                  <label className="block mb-1 font-semibold" htmlFor="description">Descripción</label>
-                  <input id="description" name="description" className="border border-slate-300 rounded px-3 py-2 w-full mb-2" defaultValue={modal.coupon?.description || ""} />
-                  <label className="block mb-1 font-semibold" htmlFor="discount_percent">Descuento (%)</label>
-                  <input id="discount_percent" name="discount_percent" type="number" min={1} max={100} required className="border border-slate-300 rounded px-3 py-2 w-full mb-2" defaultValue={modal.coupon?.discount_percent || ""} />
-                  <label className="block mb-1 font-semibold" htmlFor="max_uses">Usos máximos</label>
-                  <input id="max_uses" name="max_uses" type="number" min={1} className="border border-slate-300 rounded px-3 py-2 w-full mb-2" defaultValue={modal.coupon?.max_uses || ""} />
-                  <label className="block mb-1 font-semibold" htmlFor="expires_at">Expira</label>
-                  <input id="expires_at" name="expires_at" type="date" className="border border-slate-300 rounded px-3 py-2 w-full mb-4" defaultValue={modal.coupon?.expires_at ? modal.coupon.expires_at.slice(0, 10) : ""} />
+                <form onSubmit={e => crearEditarCoupon(e, modal.tipo === "editar", modal.coupon?.id || null)}>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="code">Código *</label>
+                      <input id="code" name="code" required className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.code || ""} />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="description">Descripción</label>
+                      <input id="description" name="description" className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.description || ""} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="discount_type">Tipo de descuento *</label>
+                      <select id="discount_type" name="discount_type" required className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.discount_type || "percentage"}>
+                        <option value="percentage">Porcentaje (%)</option>
+                        <option value="fixed">Monto fijo ($)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="discount_value">Valor del descuento *</label>
+                      <input id="discount_value" name="discount_value" type="number" min={1} step="0.01" required className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.discount_value || ""} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="minimum_amount">Monto mínimo ($)</label>
+                      <input id="minimum_amount" name="minimum_amount" type="number" min={0} step="0.01" className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.minimum_amount || "0"} />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="maximum_discount">Descuento máximo ($)</label>
+                      <input id="maximum_discount" name="maximum_discount" type="number" min={0} step="0.01" className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.maximum_discount || ""} placeholder="Sin límite" />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="max_uses">Usos máximos totales</label>
+                      <input id="max_uses" name="max_uses" type="number" min={1} className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.max_uses || ""} placeholder="Ilimitado" />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="user_limit">Límite por usuario</label>
+                      <input id="user_limit" name="user_limit" type="number" min={1} className="border border-slate-300 rounded px-3 py-2 w-full" defaultValue={modal.coupon?.user_limit || "1"} />
+                    </div>
+                  </div>
+
+                  <div className="mt-4">
+                    <label className="flex items-center space-x-2">
+                      <input id="first_time_only" name="first_time_only" type="checkbox" className="rounded" defaultChecked={modal.coupon?.first_time_only || false} />
+                      <span className="font-semibold">Solo para nuevos usuarios</span>
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="starts_at">Fecha de inicio</label>
+                      <input 
+                        id="starts_at" 
+                        name="starts_at" 
+                        type="datetime-local" 
+                        className="border border-slate-300 rounded px-3 py-2 w-full" 
+                        defaultValue={modal.coupon?.starts_at ? new Date(modal.coupon.starts_at).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)} 
+                      />
+                    </div>
+                    <div>
+                      <label className="block mb-1 font-semibold" htmlFor="expires_at">Fecha de expiración</label>
+                      <input 
+                        id="expires_at" 
+                        name="expires_at" 
+                        type="datetime-local" 
+                        className="border border-slate-300 rounded px-3 py-2 w-full" 
+                        defaultValue={modal.coupon?.expires_at ? new Date(modal.coupon.expires_at).toISOString().slice(0, 16) : ""} 
+                        placeholder="Sin expiración" 
+                      />
+                    </div>
+                  </div>
+
                   <button
                     type="submit"
-                    className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded font-semibold w-full flex items-center justify-center gap-2 disabled:opacity-60"
+                    className="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded font-semibold w-full flex items-center justify-center gap-2 disabled:opacity-60 mt-6"
                     disabled={accionCargando}
                   >
                     {accionCargando && <Loader2 className="animate-spin" size={18} />} Guardar
@@ -267,7 +426,7 @@ export default function CouponsAdmin() {
                 </form>
               </Fragment>
             )}
-            {modal.tipo === "eliminar" && (
+            {modal.tipo === "eliminar" && modal.coupon && (
               <Fragment>
                 <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
                   <Trash2 size={20} /> Eliminar cupón
@@ -276,7 +435,7 @@ export default function CouponsAdmin() {
                 <button
                   className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded font-semibold w-full flex items-center justify-center gap-2 disabled:opacity-60 mb-2"
                   disabled={accionCargando}
-                  onClick={() => eliminarCoupon(modal.coupon.id)}
+                  onClick={() => eliminarCoupon(modal.coupon!.id)}
                 >
                   {accionCargando && <Loader2 className="animate-spin" size={18} />} Sí, eliminar cupón
                 </button>

@@ -2,6 +2,7 @@
 
 import { X, Heart, Eye } from 'lucide-react';
 import { useWishlist } from '../../context/WishlistContext';
+import { formatPrice } from '@/utils/currency';
 import Link from 'next/link';
 
 interface WishlistSidebarProps {
@@ -78,11 +79,11 @@ export default function WishlistSidebar({ isOpen, onClose }: WishlistSidebarProp
                         {item.products?.name || 'Producto sin nombre'}
                       </h4>
                       <p className="text-sm text-gray-500">
-                        ${item.products?.price || 0}
+                        {formatPrice(item.products?.price || 0)}
                       </p>
                       {item.products?.discount_price && (
                         <p className="text-sm text-pink-600 font-semibold">
-                          Oferta: ${item.products.discount_price}
+                          Oferta: {formatPrice(item.products.discount_price)}
                         </p>
                       )}
                     </div>

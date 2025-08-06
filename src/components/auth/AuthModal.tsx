@@ -531,11 +531,18 @@ export default function AuthModal({ isOpen, onClose }: Readonly<AuthModalProps>)
     if (pendingRedirect && user?.email) {
       setSuccessMsg("");
       onClose();
-      if (user.role === "admin") {
+      
+      // Verificar si hay una redirección pendiente desde el checkout
+      const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        router.push(redirectUrl);
+      } else if (user.role === "admin") {
         router.push("/admin");
       } else {
         router.push("/");
       }
+      
       setPendingRedirect(false);
     }
   }, [pendingRedirect, user, router, onClose]);

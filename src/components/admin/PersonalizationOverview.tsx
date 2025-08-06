@@ -11,7 +11,8 @@ import {
   SettingsIcon, 
   LinkIcon,
   ShareIcon,
-  MonitorIcon
+  MonitorIcon,
+  Truck
 } from 'lucide-react';
 import { usePersonalizationContext } from '@/context/PersonalizationContext';
 
@@ -63,6 +64,15 @@ export default function PersonalizationOverview({ onNavigate }: PersonalizationO
       status: banners.length > 0 ? 'Configurado' : 'No configurado',
       statusColor: banners.length > 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800',
       data: `${banners.length} banner(s) activo(s)`
+    },
+    {
+      id: 'metodos-envio',
+      title: 'Métodos de Envío',
+      description: 'Configura opciones de envío y tarifas',
+      icon: Truck,
+      status: 'Disponible',
+      statusColor: 'bg-blue-100 text-blue-800',
+      data: 'Gestionar métodos de envío'
     },
     {
       id: 'footer',

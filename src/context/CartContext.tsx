@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 
 export interface CartItem {
@@ -155,7 +155,7 @@ const saveCartToStorage = (items: CartItem[]): void => {
   }
 };
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({ children }: { readonly children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, {
     items: [],
     isOpen: false,
@@ -176,7 +176,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = (item: CartItem) => {
     // Validate item
-    if (!item.producto || !item.producto.id || !item.producto.name || !item.producto.price) {
+    if (!item.producto?.id || !item.producto?.name || !item.producto?.price) {
       toast.error('Producto inválido');
       return;
     }
@@ -221,13 +221,13 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     0
   );
 
-  const tax = subtotal * 0.16; // 16% IVA
-  const shipping = subtotal >= 100000 ? 0 : 5000; // Free shipping over $100,000
+  const tax = subtotal * 0.12; // 12% IVA Ecuador
+  const shipping = subtotal >= 50 ? 0 : 5; // Free shipping over $50 USD
   const total = subtotal + tax + shipping;
 
   const itemsCount = state.items.reduce((sum, item) => sum + item.quantity, 0);
 
-  const value = {
+  const value = useMemo(() => ({
     state,
     addItem,
     removeItem,
@@ -239,7 +239,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     subtotal,
     tax,
     shipping,
-  };
+  }), [state, itemsCount, total, subtotal, tax, shipping]);
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
 }
