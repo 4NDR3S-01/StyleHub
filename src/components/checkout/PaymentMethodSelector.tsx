@@ -203,8 +203,9 @@ export default function PaymentMethodSelector({
         </h4>
         
         {/* Nuevo método - Tarjeta */}
-        <div
-          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+        <button
+          type="button"
+          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors w-full text-left ${
             selectedMethod === 'new-card'
               ? 'border-blue-500 bg-blue-50'
               : 'border-gray-200 hover:bg-gray-50'
@@ -228,11 +229,12 @@ export default function PaymentMethodSelector({
             <span>💳</span>
             <span>Nueva tarjeta de crédito/débito</span>
           </label>
-        </div>
+        </button>
 
         {/* Nuevo método - PayPal */}
-        <div
-          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+        <button
+          type="button"
+          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors w-full text-left ${
             selectedMethod === 'new-paypal'
               ? 'border-blue-500 bg-blue-50'
               : 'border-gray-200 hover:bg-gray-50'
@@ -256,7 +258,7 @@ export default function PaymentMethodSelector({
             <span>🏛️</span>
             <span>PayPal</span>
           </label>
-        </div>
+        </button>
       </div>
 
       {/* Información de seguridad */}
