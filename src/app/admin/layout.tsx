@@ -16,9 +16,12 @@ export default function AdminLayout({ children }: Readonly<{ children: ReactNode
           <AdminSidebar />
         </aside>
         {/* Sidebar Mobile Overlay */}
-        <div
+        <button
+          type="button"
+          aria-label="Close sidebar overlay"
           className={`fixed inset-0 z-40 bg-black/40 transition-opacity lg:hidden ${sidebarOpen ? 'block' : 'hidden'}`}
           onClick={() => setSidebarOpen(false)}
+          tabIndex={0}
         />
         {/* Sidebar Mobile Drawer */}
         <aside

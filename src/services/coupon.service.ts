@@ -1,10 +1,214 @@
 import supabase from '@/lib/supabaseClient'
 
+// ============================================================================
+// STRATEGY PATTERN - DISCOUNT CALCULATION
+// ============================================================================
+
+/**
+ * Contexto del descuento - información necesaria para calcular descuentos
+ */
+export interface DiscountContext {
+  subtotal: number;
+  cartItems?: Array<{
+    product: { id: string; price: number; category_id?: string };
+    quantity: number;
+  }>;
+  userId?: string;
+  isFirstPurchase?: boolean;
+  membershipLevel?: 'bronze' | 'silver' | 'gold' | 'platinum';
+}
+
+/**
+ * Resultado del cálculo de descuento
+ */
+export interface DiscountResult {
+  discountAmount: number;
+  finalAmount: number;
+  description: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Interfaz Strategy para diferentes tipos de descuento
+ */
+export interface DiscountStrategy {
+  calculate(context: DiscountContext, value: number): DiscountResult;
+  isApplicable(context: DiscountContext): boolean;
+  getDescription(value: number): string;
+}
+
+/**
+ * Estrategia: Descuento por porcentaje
+ */
+export class PercentageDiscountStrategy implements DiscountStrategy {
+  calculate(context: DiscountContext, value: number): DiscountResult {
+    const discountAmount = (context.subtotal * value) / 100;
+    
+    return {
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      finalAmount: Math.round((context.subtotal - discountAmount) * 100) / 100,
+      description: `Descuento del ${value}%`,
+      metadata: { type: 'percentage', rate: value }
+    };
+  }
+
+  isApplicable(context: DiscountContext): boolean {
+    return context.subtotal > 0;
+  }
+
+  getDescription(value: number): string {
+    return `${value}% de descuento`;
+  }
+}
+
+/**
+ * Estrategia: Descuento por cantidad fija
+ */
+export class FixedDiscountStrategy implements DiscountStrategy {
+  calculate(context: DiscountContext, value: number): DiscountResult {
+    const discountAmount = Math.min(value, context.subtotal);
+    
+    return {
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      finalAmount: Math.round((context.subtotal - discountAmount) * 100) / 100,
+      description: `Descuento de $${value.toLocaleString()}`,
+      metadata: { type: 'fixed', amount: value }
+    };
+  }
+
+  isApplicable(context: DiscountContext): boolean {
+    return context.subtotal > 0;
+  }
+
+  getDescription(value: number): string {
+    return `$${value.toLocaleString()} de descuento`;
+  }
+}
+
+/**
+ * Estrategia: Descuento de membresía
+ */
+export class MembershipDiscountStrategy implements DiscountStrategy {
+  private readonly membershipRates = {
+    bronze: 5,
+    silver: 10,
+    gold: 15,
+    platinum: 20
+  };
+
+  calculate(context: DiscountContext, value: number): DiscountResult {
+    const membershipRate = context.membershipLevel 
+      ? this.membershipRates[context.membershipLevel] 
+      : 0;
+    
+    const totalRate = Math.min(value + membershipRate, 50); // Máximo 50%
+    const discountAmount = (context.subtotal * totalRate) / 100;
+    
+    return {
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      finalAmount: Math.round((context.subtotal - discountAmount) * 100) / 100,
+      description: `Descuento de membresía ${context.membershipLevel}: ${totalRate}%`,
+      metadata: { 
+        type: 'membership', 
+        baseRate: value, 
+        membershipRate,
+        totalRate 
+      }
+    };
+  }
+
+  isApplicable(context: DiscountContext): boolean {
+    return !!(context.subtotal > 0 && context.membershipLevel);
+  }
+
+  getDescription(value: number): string {
+    return `Descuento especial de membresía`;
+  }
+}
+
+/**
+ * Estrategia: Descuento primera compra
+ */
+export class FirstPurchaseDiscountStrategy implements DiscountStrategy {
+  calculate(context: DiscountContext, value: number): DiscountResult {
+    const discountAmount = (context.subtotal * value) / 100;
+    
+    return {
+      discountAmount: Math.round(discountAmount * 100) / 100,
+      finalAmount: Math.round((context.subtotal - discountAmount) * 100) / 100,
+      description: `¡Bienvenido! ${value}% de descuento en tu primera compra`,
+      metadata: { type: 'first_purchase', rate: value }
+    };
+  }
+
+  isApplicable(context: DiscountContext): boolean {
+    return !!(context.subtotal > 0 && context.isFirstPurchase);
+  }
+
+  getDescription(value: number): string {
+    return `${value}% descuento primera compra`;
+  }
+}
+
+/**
+ * Context class que maneja las diferentes estrategias de descuento
+ */
+export class DiscountCalculator {
+  private readonly strategies: Map<string, DiscountStrategy> = new Map();
+
+  constructor() {
+    this.registerStrategy('percentage', new PercentageDiscountStrategy());
+    this.registerStrategy('fixed', new FixedDiscountStrategy());
+    this.registerStrategy('membership', new MembershipDiscountStrategy());
+    this.registerStrategy('first_purchase', new FirstPurchaseDiscountStrategy());
+  }
+
+  registerStrategy(type: string, strategy: DiscountStrategy): void {
+    this.strategies.set(type, strategy);
+  }
+
+  getStrategy(type: string): DiscountStrategy | undefined {
+    return this.strategies.get(type);
+  }
+
+  calculateDiscount(
+    type: string, 
+    context: DiscountContext, 
+    value: number
+  ): DiscountResult | null {
+    const strategy = this.strategies.get(type);
+    
+    if (!strategy) {
+      console.warn(`Discount strategy '${type}' not found`);
+      return null;
+    }
+
+    if (!strategy.isApplicable(context)) {
+      return null;
+    }
+
+    return strategy.calculate(context, value);
+  }
+}
+
+// ============================================================================
+// SINGLETON DISCOUNT CALCULATOR INSTANCE
+// ============================================================================
+
+/**
+ * Instancia única del calculador de descuentos
+ */
+export const discountCalculator = new DiscountCalculator();
+
+// ============================================================================
+// COUPON INTERFACES (ACTUALIZADAS)
+// ============================================================================
+
 export interface Coupon {
   id: string;
   code: string;
   description?: string;
-  discount_type: 'percentage' | 'fixed';
+  discount_type: 'percentage' | 'fixed' | 'membership' | 'first_purchase';
   discount_value: number;
   minimum_amount: number;
   maximum_discount?: number;
@@ -25,16 +229,16 @@ export interface CouponValidationResult {
   valid: boolean;
   coupon?: Coupon;
   error?: string;
-  discountAmount?: number;
+  discountResult?: DiscountResult;
 }
 
 /**
- * Valida un cupón por su código y calcula el descuento aplicable
+ * Valida un cupón y calcula el descuento usando Strategy Pattern
  */
 export async function validateCoupon(
   code: string, 
   userId: string, 
-  subtotal: number, 
+  discountContext: DiscountContext,
   categories?: string[], 
   products?: string[]
 ): Promise<CouponValidationResult> {
@@ -49,7 +253,7 @@ export async function validateCoupon(
     const dateValidation = validateCouponDates(coupon);
     if (!dateValidation.valid) return dateValidation;
 
-    const minAmountValidation = validateMinimumAmount(coupon, subtotal);
+    const minAmountValidation = validateMinimumAmount(coupon, discountContext.subtotal);
     if (!minAmountValidation.valid) return minAmountValidation;
 
     const maxUsesValidation = validateMaxUses(coupon);
@@ -67,12 +271,31 @@ export async function validateCoupon(
     const productValidation = validateProducts(coupon, products);
     if (!productValidation.valid) return productValidation;
 
-    const discountAmount = calculateDiscount(coupon, subtotal);
+    // USAR STRATEGY PATTERN para calcular descuento
+    const discountResult = discountCalculator.calculateDiscount(
+      coupon.discount_type,
+      discountContext,
+      coupon.discount_value
+    );
+
+    if (!discountResult) {
+      return { 
+        valid: false, 
+        error: `Tipo de descuento '${coupon.discount_type}' no es aplicable` 
+      };
+    }
+
+    // Aplicar límite máximo de descuento si existe
+    if (coupon.maximum_discount && discountResult.discountAmount > coupon.maximum_discount) {
+      discountResult.discountAmount = coupon.maximum_discount;
+      discountResult.finalAmount = discountContext.subtotal - coupon.maximum_discount;
+      discountResult.description += ` (limitado a $${coupon.maximum_discount.toLocaleString()})`;
+    }
 
     return {
       valid: true,
       coupon,
-      discountAmount: Math.round(discountAmount * 100) / 100
+      discountResult
     };
 
   } catch (error: any) {
@@ -271,3 +494,44 @@ export async function recordCouponUsage(
     throw new Error('Error al registrar uso del cupón');
   }
 }
+
+// ============================================================================
+// STRATEGY PATTERN USAGE EXAMPLES
+// ============================================================================
+
+/**
+ * Ejemplo de uso del Strategy Pattern para cálculo de descuentos
+ * 
+ * // Descuento por porcentaje
+ * const context: DiscountContext = {
+ *   subtotal: 100000,
+ *   userId: 'user-123'
+ * };
+ * const result = discountCalculator.calculateDiscount('percentage', context, 15);
+ * 
+ * // Descuento de membresía
+ * const memberContext: DiscountContext = {
+ *   subtotal: 200000,
+ *   userId: 'user-456',
+ *   membershipLevel: 'gold'
+ * };
+ * const memberResult = discountCalculator.calculateDiscount('membership', memberContext, 10);
+ * 
+ * // Agregar nueva estrategia personalizada
+ * class CustomDiscountStrategy implements DiscountStrategy {
+ *   calculate(context: DiscountContext, value: number): DiscountResult {
+ *     // Lógica personalizada
+ *   }
+ * }
+ * discountCalculator.registerStrategy('custom', new CustomDiscountStrategy());
+ */
+
+/**
+ * BENEFICIOS DEL STRATEGY PATTERN IMPLEMENTADO:
+ * 
+ * 1. EXTENSIBILIDAD: Fácil agregar nuevos tipos de descuento sin modificar código existente
+ * 2. MANTENIBILIDAD: Cada estrategia está encapsulada en su propia clase
+ * 3. TESTABILIDAD: Cada estrategia se puede probar de forma independiente
+ * 4. FLEXIBILIDAD: Se pueden combinar estrategias o cambiar en tiempo de ejecución
+ * 5. PRINCIPIO ABIERTO/CERRADO: Abierto para extensión, cerrado para modificación
+ */
