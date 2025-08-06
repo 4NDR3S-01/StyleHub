@@ -29,7 +29,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
     toggleWishlist(product.id)
   }
 
-  const discountPercentage = product.original_price && product.price
+  const discountPercentage = product.original_price && product.price && product.original_price > product.price
     ? Math.round(((product.original_price - product.price) / product.original_price) * 100)
     : null
 
