@@ -64,6 +64,10 @@ export default function CategoryPage({ params }: CategoryPageProps) {
     try {
       setLoading(true);
       
+      // TEMPORALMENTE: usar productos ya cargados en lugar de hacer nueva consulta
+      setProducts(allProducts);
+      
+      /* Activar cuando sea necesario
       const filters: ServiceProductFilters = {
         category: category.id,
         brands: filterState.brands.length > 0 ? filterState.brands : undefined,
@@ -79,6 +83,7 @@ export default function CategoryPage({ params }: CategoryPageProps) {
 
       const filteredProducts = await getProductsWithFilters(filters, sortBy, sortOrder);
       setProducts(filteredProducts as Product[]);
+      */
     } catch (error) {
       console.error('Error applying filters:', error);
     } finally {

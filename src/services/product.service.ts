@@ -239,14 +239,43 @@ export async function searchProducts(searchTerm: string): Promise<Product[]> {
  */
 export async function getProductsByCategory(categorySlug: string, limit?: number): Promise<Product[]> {
   try {
+    // Primero, obtener la categoría y todas sus subcategorías
+    const { data: targetCategory, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('slug', categorySlug)
+      .single();
+
+    if (categoryError || !targetCategory) {
+      console.error('Category not found:', categorySlug);
+      return [];
+    }
+
+    // Obtener todas las subcategorías de esta categoría
+    const { data: subcategories, error: subcatError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('parent_id', targetCategory.id);
+
+    if (subcatError) {
+      console.error('Error fetching subcategories:', subcatError);
+      // Continuar solo con la categoría principal
+    }
+
+    // Crear array de IDs de categorías (principal + subcategorías)
+    const categoryIds = [targetCategory.id];
+    if (subcategories && subcategories.length > 0) {
+      categoryIds.push(...subcategories.map(sub => sub.id));
+    }
+
     let query = supabase
       .from('products')
       .select(`
         *,
-        category:categories!inner(id, name, slug),
+        category:categories!inner(id, name, slug, parent_id),
         product_variants:product_variants(*)
       `)
-      .eq('category.slug', categorySlug)
+      .in('category_id', categoryIds)
       .eq('active', true)
       .eq('is_active', true);
 
@@ -520,6 +549,20 @@ export async function getProductsWithFilters(
   limit?: number
 ): Promise<Product[]> {
   try {
+    // Si hay un filtro de categoría, expandir para incluir subcategorías
+    let expandedCategoryIds: string[] | undefined;
+    if (filters.category) {
+      const { data: subcategories } = await supabase
+        .from('categories')
+        .select('id')
+        .eq('parent_id', filters.category);
+
+      expandedCategoryIds = [filters.category];
+      if (subcategories && subcategories.length > 0) {
+        expandedCategoryIds.push(...subcategories.map(sub => sub.id));
+      }
+    }
+
     let query = supabase
       .from('products')
       .select(`
@@ -530,8 +573,8 @@ export async function getProductsWithFilters(
       .eq('active', true)
       .eq('is_active', true);
 
-    // Aplicar filtros básicos
-    query = applyBasicFilters(query, filters);
+    // Aplicar filtros básicos con categorías expandidas
+    query = applyBasicFilters(query, filters, expandedCategoryIds);
     
     // Aplicar filtros de precio
     query = applyPriceFilters(query, filters);
@@ -585,9 +628,15 @@ export async function getProductsWithFilters(
 }
 
 // Funciones auxiliares para reducir complejidad
-function applyBasicFilters(query: any, filters: ServiceProductFilters) {
+function applyBasicFilters(query: any, filters: ServiceProductFilters, categoryIds?: string[]) {
   if (filters.category) {
-    query = query.eq('category_id', filters.category);
+    if (categoryIds && categoryIds.length > 0) {
+      // Usar los IDs de categorías expandidos (incluyendo subcategorías)
+      query = query.in('category_id', categoryIds);
+    } else {
+      // Fallback al comportamiento original
+      query = query.eq('category_id', filters.category);
+    }
   }
 
   if (filters.brands && filters.brands.length > 0) {

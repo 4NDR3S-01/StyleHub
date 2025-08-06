@@ -1,9 +1,14 @@
 'use client';
 
+// Importaciones necesarias para el contexto de autenticación
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User } from '@/types';
 import supabase from '../lib/supabaseClient';
 
+/**
+ * Interface que define la estructura del contexto de autenticación
+ * Incluye estado del usuario y todas las funciones de autenticación
+ */
 interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
@@ -22,16 +27,22 @@ interface AuthContextType {
   changePassword: (newPassword: string) => Promise<void>;
 }
 
+// Creación del contexto de autenticación
 const AuthContext = createContext<AuthContextType | null>(null);
 
+/**
+ * Provider de autenticación que maneja el estado de usuario
+ * Integra con Supabase Auth y la tabla users personalizada
+ */
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Timeout de seguridad para prevenir loading infinito
+  // Timeout de seguridad para prevenir loading infinito en caso de errores
   useEffect(() => {
     const safetyTimeout = setTimeout(() => {
       if (isLoading) {
+        console.warn('AuthProvider: Timeout de seguridad activado');
         setIsLoading(false);
       }
     }, 5000); // 5 segundos máximo de loading
@@ -39,7 +50,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     return () => clearTimeout(safetyTimeout);
   }, [isLoading]);
 
-  // Helper para obtener datos del usuario desde public.users
+  /**
+   * Helper para obtener datos del usuario desde la tabla public.users
+   * Complementa los datos de Supabase Auth con información personalizada
+   */
   const fetchUserFromDB = async (userId: string) => {
     try {
       const { data, error } = await supabase

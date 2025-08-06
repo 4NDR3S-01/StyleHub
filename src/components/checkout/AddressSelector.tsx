@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Plus, Trash2, MapPin, Phone } from 'lucide-react';
 import { getUserAddresses, createAddress, deleteAddress, setDefaultAddress } from '@/services/address.service';
 import type { Address, CreateAddressData } from '@/services/address.service';
+import type { User } from '@/types';
 
 // Hook personalizado para gestionar datos de Ecuador (igual al de la página de direcciones)
 const useEcuadorianData = () => {
@@ -184,12 +185,12 @@ const useEcuadorianData = () => {
 };
 
 interface AddressSelectorProps {
-  readonly userId: string;
+  readonly user: User;
   readonly selectedAddress: Address | null;
   readonly onAddressSelect: (address: Address) => void;
 }
 
-export default function AddressSelector({ userId, selectedAddress, onAddressSelect }: AddressSelectorProps) {
+export default function AddressSelector({ user, selectedAddress, onAddressSelect }: AddressSelectorProps) {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -236,6 +237,22 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
     }));
   };
 
+  // Inicializar formulario con datos del usuario
+  const initializeForm = () => {
+    setFormData({
+      name: '',
+      phone: user.phone || '', // Pre-rellenar con el teléfono del usuario
+      address: '',
+      city: '',
+      state: '',
+      zip_code: '',
+      country: 'Ecuador',
+      is_default: false
+    });
+    setShowCustomCity(false);
+    setAvailableCities(getAllCities());
+  };
+
   // Inicializar ciudades disponibles
   useEffect(() => {
     const cities = formData.state ? getCitiesByProvince(formData.state) : getAllCities();
@@ -244,12 +261,12 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
 
   useEffect(() => {
     loadAddresses();
-  }, [userId]);
+  }, [user.id]);
 
   const loadAddresses = async () => {
     try {
       setLoading(true);
-      const data = await getUserAddresses(userId);
+      const data = await getUserAddresses(user.id);
       setAddresses(data);
       
       // Seleccionar la dirección por defecto si no hay ninguna seleccionada
@@ -290,7 +307,7 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
         alert('Función de edición aún no implementada');
         return;
       } else {
-        const newAddress = await createAddress(userId, formData);
+        const newAddress = await createAddress(user.id, formData);
         setAddresses(prev => [newAddress, ...prev]);
         
         // Si es la primera dirección o está marcada como default, seleccionarla
@@ -300,20 +317,9 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
       }
 
       // Resetear formulario
-      setFormData({
-        name: '',
-        phone: '',
-        address: '',
-        city: '',
-        state: '',
-        zip_code: '',
-        country: 'Ecuador',
-        is_default: false
-      });
+      initializeForm();
       setShowForm(false);
       setEditingAddress(null);
-      setShowCustomCity(false);
-      setAvailableCities(getAllCities());
     } catch (error) {
       console.error('Error saving address:', error);
       alert('Error al guardar la dirección');
@@ -326,7 +332,7 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
     if (!confirm('¿Estás seguro de eliminar esta dirección?')) return;
 
     try {
-      await deleteAddress(addressId, userId);
+      await deleteAddress(addressId, user.id);
       setAddresses(prev => prev.filter(addr => addr.id !== addressId));
       
       // Si se eliminó la dirección seleccionada, seleccionar otra
@@ -348,7 +354,7 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
 
   const handleSetDefault = async (addressId: string) => {
     try {
-      await setDefaultAddress(addressId, userId);
+      await setDefaultAddress(addressId, user.id);
       setAddresses(prev => prev.map(addr => ({
         ...addr,
         is_default: addr.id === addressId
@@ -373,7 +379,12 @@ export default function AddressSelector({ userId, selectedAddress, onAddressSele
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">Dirección de envío</h3>
         <button
-          onClick={() => setShowForm(!showForm)}
+          onClick={() => {
+            if (!showForm) {
+              initializeForm(); // Inicializar formulario con datos del usuario
+            }
+            setShowForm(!showForm);
+          }}
           className="flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700"
         >
           <Plus size={16} />

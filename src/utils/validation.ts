@@ -1,11 +1,28 @@
 import { z } from 'zod';
 
-// Esquemas de validación comunes
+/**
+ * ESQUEMAS DE VALIDACIÓN PARA LA APLICACIÓN
+ * Utiliza Zod para validación de tipos y datos en tiempo de ejecución
+ * Centraliza todas las reglas de validación para mantener consistencia
+ */
+
+// ============================================================================
+// ESQUEMAS BÁSICOS REUTILIZABLES
+// ============================================================================
+
+/**
+ * Validación de email con formato estándar
+ */
 export const emailSchema = z
   .string()
   .min(1, 'El email es requerido')
   .email('Formato de email inválido');
 
+/**
+ * Validación de contraseña con requisitos de seguridad
+ * - Mínimo 8 caracteres
+ * - Al menos una minúscula, mayúscula, número y carácter especial
+ */
 export const passwordSchema = z
   .string()
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
@@ -14,17 +31,30 @@ export const passwordSchema = z
   .regex(/(?=.*\d)/, 'Debe contener al menos un número')
   .regex(/(?=.*[@$!%*?&])/, 'Debe contener al menos un carácter especial');
 
+/**
+ * Validación de teléfono internacional
+ */
 export const phoneSchema = z
   .string()
   .min(10, 'El teléfono debe tener al menos 10 dígitos')
   .regex(/^\+?[\d\s-()]+$/, 'Formato de teléfono inválido');
 
+/**
+ * Validación de nombres (solo letras y espacios, incluye caracteres latinos)
+ */
 export const nameSchema = z
   .string()
   .min(2, 'Debe tener al menos 2 caracteres')
   .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras y espacios');
 
-// Esquema para registro de usuario
+// ============================================================================
+// ESQUEMAS COMPUESTOS PARA FORMULARIOS
+// ============================================================================
+
+/**
+ * Esquema para registro de usuario
+ * Combina validaciones básicas para el formulario de registro
+ */
 export const registerSchema = z.object({
   name: nameSchema,
   lastname: nameSchema,
