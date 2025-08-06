@@ -28,6 +28,17 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
+  // Timeout de seguridad para prevenir loading infinito
+  useEffect(() => {
+    const safetyTimeout = setTimeout(() => {
+      if (isLoading) {
+        setIsLoading(false);
+      }
+    }, 5000); // 5 segundos máximo de loading
+
+    return () => clearTimeout(safetyTimeout);
+  }, [isLoading]);
+
   // Helper para obtener datos del usuario desde public.users
   const fetchUserFromDB = async (userId: string) => {
     try {
@@ -137,30 +148,18 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     try {
       setIsLoading(true);
       
-      console.log(`[AuthContext] Loading user:`, authUser.id);
-      
       // 1. Obtener datos de public.users
       let { data: dbData, error: dbError } = await fetchUserFromDB(authUser.id);
       
-      console.log(`[AuthContext] Initial DB fetch result:`, {
-        hasData: !!dbData,
-        hasError: !!dbError,
-        errorMessage: dbError?.message
-      });
-      
       // 2. Si no existe en public.users, verificar y crear el registro solo si es necesario
       if (dbError || !dbData) {
-        console.log(`[AuthContext] User not found in DB, checking if user needs to be created for ${authUser.id}`);
-        
         // Verificar una vez más si el usuario existe (podría haber sido creado por trigger)
         const { data: existingUser, error: recheckError } = await fetchUserFromDB(authUser.id);
         
         if (!recheckError && existingUser) {
-          console.log(`[AuthContext] User found on recheck, using existing data`);
           dbData = existingUser;
         } else {
           // Solo crear si realmente no existe
-          console.log(`[AuthContext] User confirmed not exists, creating new user`);
           const { error: createError } = await createUserInDB(authUser);
           
           // Solo logear errores reales con mensaje
@@ -171,10 +170,6 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
           // Obtener datos después de crear
           const { data: newData } = await fetchUserFromDB(authUser.id);
           dbData = newData || null;
-        }
-        
-        if (!dbData) {
-          console.log('[AuthContext] No DB data available, using auth data only');
         }
       }
       
@@ -189,21 +184,24 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       const userObject = buildUserObject(dbData, authUser);
       setUser(userObject);
       
-      console.log('[AuthContext] User loaded successfully:', userObject);
-      
     } catch (error) {
       console.error('[AuthContext] Error loading user:', error);
       setUser(null);
     } finally {
+      // Garantizar que siempre se ponga isLoading en false
       setIsLoading(false);
     }
   };
 
   useEffect(() => {
+    let isMounted = true; // Flag para prevenir updates después de unmount
+    
     // Restaurar sesión al cargar
     const restoreSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (!isMounted) return; // Prevenir updates si el componente se desmontó
         
         if (error) {
           console.error('[AuthContext] Session error:', error);
@@ -220,8 +218,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         }
       } catch (error) {
         console.error('[AuthContext] Session restoration error:', error);
-        setUser(null);
-        setIsLoading(false);
+        if (isMounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
       }
     };
 
@@ -229,7 +229,12 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
 
     // Escuchar cambios de autenticación
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log(`[AuthContext] Auth state changed: ${event}`);
+      if (!isMounted) return; // Prevenir updates si el componente se desmontó
+      
+      // Evitar procesar eventos redundantes
+      if (event === 'TOKEN_REFRESHED') {
+        return;
+      }
       
       if (session?.user) {
         await loadUser(session.user);
@@ -240,12 +245,14 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
     });
 
     return () => {
+      isMounted = false; // Marcar como desmontado
       subscription.unsubscribe();
     };
   }, []);
 
   const login = async (email: string, password: string) => {
     setIsLoading(true);
+    
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ 
         email: email.trim().toLowerCase(), 
@@ -264,28 +271,30 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
         throw new Error('No se pudo autenticar al usuario');
       }
       
-      // Actualizar estadísticas de login en background
-      try {
-        const currentTime = new Date().toISOString();
-        const { data: currentUser } = await supabase
-          .from('users')
-          .select('login_count')
-          .eq('id', data.user.id)
-          .single();
-        
-        const newLoginCount = (currentUser?.login_count || 0) + 1;
-        
-        await supabase
-          .from('users')
-          .update({ 
-            last_login: currentTime,
-            login_count: newLoginCount,
-            updated_at: currentTime
-          })
-          .eq('id', data.user.id);
-      } catch (updateError) {
-        console.error('[AuthContext] Error updating login stats:', updateError);
-      }
+      // Actualizar estadísticas de login en background (no bloquear)
+      setTimeout(async () => {
+        try {
+          const currentTime = new Date().toISOString();
+          const { data: currentUser } = await supabase
+            .from('users')
+            .select('login_count')
+            .eq('id', data.user.id)
+            .single();
+          
+          const newLoginCount = (currentUser?.login_count || 0) + 1;
+          
+          await supabase
+            .from('users')
+            .update({ 
+              last_login: currentTime,
+              login_count: newLoginCount,
+              updated_at: currentTime
+            })
+            .eq('id', data.user.id);
+        } catch (updateError) {
+          console.error('[AuthContext] Error updating login stats:', updateError);
+        }
+      }, 0);
 
       // Manejar redirección después del login exitoso
       const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
@@ -298,9 +307,13 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       }
       
     } catch (error: any) {
-      setIsLoading(false);
+      console.error('[AuthContext] Login error:', error);
+      setIsLoading(false); // Solo setear en false en caso de error
       throw new Error(error?.message || 'Inicio de sesión fallido');
     }
+    
+    // No seteamos isLoading(false) aquí porque onAuthStateChange se encargará
+    // de llamar a loadUser que manejará el estado de loading
   };
 
   const register = async (

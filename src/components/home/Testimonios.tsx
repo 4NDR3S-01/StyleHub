@@ -116,7 +116,7 @@ export default function Testimonials() {
                 <div>
                   <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
                   {testimonial.product_name && (
-                    <p className="text-xs text-slate-500">Compró: {testimonial.product_name}</p>
+                    <p className="text-xs text-slate-500">Dejo una reseña a: {testimonial.product_name}</p>
                   )}
                   <div className="flex">
                     {[...Array(testimonial.rating)].map((_, i) => (
