@@ -5,6 +5,7 @@ import { Product } from "@/services/product.service"
 import { useCart } from "@/context/CartContext"
 import { useWishlist } from "@/context/WishlistContext"
 import { getProductColors, getProductSizes, getProductVariant } from "@/services/variant.service"
+import { formatPrice } from "@/utils/currency"
 import ProductReviews from "./ProductReviews"
 import ReviewForm from "./ReviewForm"
 
@@ -200,7 +201,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
       return
     }
 
-    const finalPrice = product.price + (selectedVariant.price_adjustment || 0)
+    // Calcular precio final con redondeo para evitar problemas de precisión
+    const finalPrice = Math.round((product.price + (selectedVariant.price_adjustment || 0)) * 100) / 100
     
     const cartItem = {
       id: `${product.id}-${selectedVariant.id}-${Date.now()}`,
@@ -222,10 +224,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
     addItem(cartItem)
   }
 
-  // Calcular precio final con ajuste de variante
+  // Calcular precio final con ajuste de variante (redondeado a 2 decimales)
   const finalPrice = selectedVariant 
-    ? product.price + (selectedVariant.price_adjustment || 0)
-    : product.price
+    ? Math.round((product.price + (selectedVariant.price_adjustment || 0)) * 100) / 100
+    : Math.round(product.price * 100) / 100
 
   return (
     <>
@@ -312,10 +314,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="text-2xl font-semibold text-green-600">
-            ${finalPrice.toFixed(2)}
+            {formatPrice(finalPrice)}
             {selectedVariant?.price_adjustment && selectedVariant.price_adjustment !== 0 && (
               <span className="text-sm text-gray-500 ml-2">
-                (${product.price.toFixed(2)} + ${selectedVariant.price_adjustment.toFixed(2)})
+                ({formatPrice(product.price)} + {formatPrice(selectedVariant.price_adjustment)})
               </span>
             )}
           </div>
@@ -470,8 +472,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="border-t pt-6 space-y-2 text-sm text-gray-600">
-            <p>• Envío gratis en compras superiores a $50</p>
-            <p>• Devoluciones gratuitas dentro de 30 días</p>
+            <p>• Envío gratis en compras superiores dese $50</p>
+            <p>• Devoluciones gratuitas si cumple con nuestra política de devoluciones</p>
             <p>• Garantía de satisfacción</p>
           </div>
         </div>

@@ -16,6 +16,8 @@ interface Category {
   id: string;
   name: string;
   slug: string;
+  parent_id?: string;
+  parent_name?: string;
 }
 
 interface ProductVariant {
@@ -74,13 +76,24 @@ export default function UploadProduct() {
 
   const fetchCategories = async () => {
     try {
+      // Obtener todas las categorías con información del padre
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, slug')
+        .select(`
+          id, name, slug, parent_id,
+          parent:categories!parent_id(name)
+        `)
         .order('name');
 
       if (error) throw error;
-      setCategories(data || []);
+      
+      // Mapear los datos para incluir el nombre del padre
+      const categoriesWithParent = (data || []).map(cat => ({
+        ...cat,
+        parent_name: cat.parent ? (cat.parent as any).name : null
+      }));
+      
+      setCategories(categoriesWithParent);
     } catch (error) {
       console.error('Error fetching categories:', error);
       toast({
@@ -181,7 +194,7 @@ export default function UploadProduct() {
 
       toast({
         title: "¡Éxito!",
-        description: "Producto creado correctamente",
+        description: `Producto "${product.name}" creado correctamente en la categoría seleccionada`,
       });
 
       // Resetear formulario
@@ -257,25 +270,47 @@ export default function UploadProduct() {
             {/* Precios */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <Label htmlFor="price">Precio *</Label>
+                <Label htmlFor="price">Precio (USD) *</Label>
                 <Input
                   id="price"
                   type="number"
                   step="0.01"
+                  placeholder="25.09"
                   value={productData.price}
-                  onChange={(e) => setProductData({...productData, price: parseFloat(e.target.value)})}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setProductData({...productData, price: 0});
+                    } else {
+                      // Redondear a 2 decimales para evitar problemas de precisión
+                      const numValue = Math.round(parseFloat(value) * 100) / 100;
+                      setProductData({...productData, price: numValue});
+                    }
+                  }}
                   required
                 />
+                <small className="text-gray-500">Ejemplo: 25.09 para $25.09 USD</small>
               </div>
               <div>
-                <Label htmlFor="original_price">Precio Original (si está en oferta)</Label>
+                <Label htmlFor="original_price">Precio Original (USD) - Si está en oferta</Label>
                 <Input
                   id="original_price"
                   type="number"
                   step="0.01"
+                  placeholder="30.00"
                   value={productData.original_price || ''}
-                  onChange={(e) => setProductData({...productData, original_price: parseFloat(e.target.value)})}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '') {
+                      setProductData({...productData, original_price: undefined});
+                    } else {
+                      // Redondear a 2 decimales para evitar problemas de precisión
+                      const numValue = Math.round(parseFloat(value) * 100) / 100;
+                      setProductData({...productData, original_price: numValue});
+                    }
+                  }}
                 />
+                <small className="text-gray-500">Solo si el producto está en descuento</small>
               </div>
               <div className="flex items-center space-x-4 pt-6">
                 <label className="flex items-center">
@@ -303,18 +338,30 @@ export default function UploadProduct() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <Label htmlFor="category">Categoría *</Label>
-                <Select value={productData.category_id} onValueChange={(value) => setProductData({...productData, category_id: value})}>
-                  <SelectTrigger>
+                <Select 
+                  value={productData.category_id} 
+                  onValueChange={(value) => {
+                    console.log('Categoría seleccionada:', value);
+                    setProductData({...productData, category_id: value});
+                  }}
+                >
+                  <SelectTrigger className={!productData.category_id ? 'border-red-300' : ''}>
                     <SelectValue placeholder="Selecciona una categoría" />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((category) => (
                       <SelectItem key={category.id} value={category.id}>
-                        {category.name}
+                        {category.parent_name 
+                          ? `${category.parent_name} > ${category.name}` 
+                          : category.name
+                        }
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
+                {!productData.category_id && (
+                  <small className="text-red-500">Selecciona una categoría</small>
+                )}
               </div>
               <div>
                 <Label htmlFor="gender">Género</Label>
@@ -344,7 +391,7 @@ export default function UploadProduct() {
               <Label>Imágenes del Producto *</Label>
               <div className="space-y-2">
                 {imageUrls.map((url, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={url || `image-${index}`} className="flex gap-2">
                     <Input
                       placeholder="URL de la imagen"
                       value={url}
@@ -382,15 +429,20 @@ export default function UploadProduct() {
                   placeholder="Agregar etiqueta"
                   value={currentTag}
                   onChange={(e) => setCurrentTag(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      addTag();
+                    }
+                  }}
                 />
                 <Button type="button" onClick={addTag}>
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>
               <div className="flex flex-wrap gap-2">
-                {productData.tags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
+                {productData.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="cursor-pointer" onClick={() => removeTag(tag)}>
                     {tag} <X className="h-3 w-3 ml-1" />
                   </Badge>
                 ))}
@@ -423,7 +475,10 @@ export default function UploadProduct() {
               </div>
               <div className="space-y-2">
                 {variants.map((variant, index) => (
-                  <div key={index} className="flex items-center gap-2 p-2 border rounded">
+                  <div
+                    key={`${variant.color}-${variant.size}-${variant.stock}-${variant.image || ''}`}
+                    className="flex items-center gap-2 p-2 border rounded"
+                  >
                     <span>{variant.color}</span>
                     <span>-</span>
                     <span>{variant.size}</span>

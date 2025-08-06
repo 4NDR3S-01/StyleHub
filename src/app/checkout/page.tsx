@@ -231,7 +231,7 @@ export default function CheckoutPage() {
             {user && (
               <div className="bg-white rounded-lg shadow-md p-6">
                 <AddressSelector
-                  userId={user.id}
+                  user={user}
                   selectedAddress={selectedAddress}
                   onAddressSelect={setSelectedAddress}
                 />
