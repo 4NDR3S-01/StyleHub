@@ -27,12 +27,12 @@ interface Product {
   images?: string[];
   category_id?: string;
   brand?: string;
-  gender?: string;
   material?: string;
   season?: string;
   tags?: string[];
   featured: boolean;
   sale: boolean;
+  sku?: string;
 }
 
 interface Category {
@@ -60,12 +60,12 @@ export default function ProductsAdmin() {
     original_price: '',
     category_id: '',
     brand: '',
-    gender: '',
     material: '',
     season: '',
     tags: '',
     featured: false,
-    sale: false
+    sale: false,
+    sku: ''
   });
 
   // Estado para variantes
@@ -77,6 +77,8 @@ export default function ProductsAdmin() {
     image?: string;
     imageFile?: File | null;
     imagePreview?: string | null;
+    sku?: string;
+    price_adjustment?: number;
   }[]>([]);
   const [editingVariantIndex, setEditingVariantIndex] = useState<number | null>(null);
   const [variantForm, setVariantForm] = useState({
@@ -84,7 +86,9 @@ export default function ProductsAdmin() {
     size: '',
     stock: '',
     imageFile: null as File | null,
-    imagePreview: null as string | null
+    imagePreview: null as string | null,
+    sku: '',
+    price_adjustment: ''
   });
   const [variantError, setVariantError] = useState<string | null>(null);
 
@@ -129,12 +133,12 @@ export default function ProductsAdmin() {
       original_price: product.original_price ? product.original_price.toString() : '',
       category_id: product.category_id || '',
       brand: product.brand || '',
-      gender: product.gender || '',
       material: product.material || '',
       season: product.season || '',
       tags: product.tags ? product.tags.join(', ') : '',
       featured: product.featured,
-      sale: product.sale
+      sale: product.sale,
+      sku: product.sku || ''
     });
     if (product.images?.[0]) {
       setImagePreview(product.images[0]);
@@ -142,7 +146,7 @@ export default function ProductsAdmin() {
     // Cargar variantes del producto
     const { data: variantData } = await supabase
       .from('product_variants')
-      .select('id, color, size, stock, image')
+      .select('id, color, size, stock, image, sku, price_adjustment')
       .eq('product_id', product.id);
     setVariants(
       (variantData || []).map((v: any) => ({
@@ -152,7 +156,9 @@ export default function ProductsAdmin() {
         stock: v.stock,
         image: v.image,
         imageFile: null,
-        imagePreview: v.image || null
+        imagePreview: v.image || null,
+        sku: v.sku || '',
+        price_adjustment: v.price_adjustment || 0
       }))
     );
     setIsModalOpen(true);
@@ -167,17 +173,25 @@ export default function ProductsAdmin() {
       original_price: '',
       category_id: '',
       brand: '',
-      gender: '',
       material: '',
       season: '',
       tags: '',
       featured: false,
-      sale: false
+      sale: false,
+      sku: ''
     });
     setSelectedImage(null);
     setImagePreview(null);
     setVariants([]);
-    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+    setVariantForm({ 
+      color: '', 
+      size: '', 
+      stock: '', 
+      imageFile: null, 
+      imagePreview: null,
+      sku: '',
+      price_adjustment: ''
+    });
     setEditingVariantIndex(null);
   };
   // Subir imagen de variante a Supabase
@@ -241,6 +255,18 @@ export default function ProductsAdmin() {
       });
       return;
     }
+
+    const priceAdjustment = variantForm.price_adjustment ? parseFloat(variantForm.price_adjustment) : 0;
+    if (isNaN(priceAdjustment)) {
+      setVariantError('El ajuste de precio debe ser un número válido.');
+      toast({
+        title: 'Error en variante',
+        description: 'El ajuste de precio debe ser un número válido.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // Prevención de duplicados (color + talla)
     const isDuplicate = variants.some((v, i) =>
       v.color.trim().toLowerCase() === variantForm.color.trim().toLowerCase() &&
@@ -261,7 +287,9 @@ export default function ProductsAdmin() {
       size: variantForm.size,
       stock: stockNum,
       imageFile: variantForm.imageFile,
-      imagePreview: variantForm.imagePreview
+      imagePreview: variantForm.imagePreview,
+      sku: variantForm.sku,
+      price_adjustment: priceAdjustment
     };
     if (editingVariantIndex !== null) {
       setVariants(prev => prev.map((v, i) => (i === editingVariantIndex ? { ...v, ...newVariant } : v)));
@@ -279,7 +307,15 @@ export default function ProductsAdmin() {
         variant: 'default',
       });
     }
-    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+    setVariantForm({ 
+      color: '', 
+      size: '', 
+      stock: '', 
+      imageFile: null, 
+      imagePreview: null,
+      sku: '',
+      price_adjustment: ''
+    });
   };
   const handleEditVariant = (idx: number) => {
     const v = variants[idx];
@@ -288,7 +324,9 @@ export default function ProductsAdmin() {
       size: v.size,
       stock: v.stock.toString(),
       imageFile: v.imageFile || null,
-      imagePreview: v.imagePreview || v.image || null
+      imagePreview: v.imagePreview || v.image || null,
+      sku: v.sku || '',
+      price_adjustment: v.price_adjustment?.toString() || ''
     });
     setEditingVariantIndex(idx);
     setVariantError(null);
@@ -302,7 +340,15 @@ export default function ProductsAdmin() {
     const v = variants[idx];
     setVariants(prev => prev.filter((_, i) => i !== idx));
     setEditingVariantIndex(null);
-    setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+    setVariantForm({ 
+      color: '', 
+      size: '', 
+      stock: '', 
+      imageFile: null, 
+      imagePreview: null,
+      sku: '',
+      price_adjustment: ''
+    });
     setVariantError(null);
     toast({
       title: 'Variante eliminada',
@@ -375,12 +421,12 @@ export default function ProductsAdmin() {
     images: imageUrl ? [imageUrl] : (editingProduct?.images || null),
     category_id: formData.category_id || null,
     brand: formData.brand || null,
-    gender: formData.gender || null,
     material: formData.material || null,
     season: formData.season || null,
     tags: formData.tags ? formData.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : null,
     featured: formData.featured,
-    sale: formData.sale
+    sale: formData.sale,
+    sku: formData.sku || null
   });
 
   // Helper to upload product image and return URL or null
@@ -430,12 +476,18 @@ export default function ProductsAdmin() {
       if (v.imageFile) {
         variantImageUrl = (await uploadVariantImageToSupabase(v.imageFile)) ?? undefined;
       }
+      
+      // Generar SKU automático si no se proporciona
+      const variantSku = v.sku || `${formData.sku || formData.name.replace(/\s+/g, '')}-${v.color}-${v.size}`.toUpperCase();
+      
       await supabase.from('product_variants').insert({
         product_id: productId,
         color: v.color,
         size: v.size,
         stock: v.stock,
-        image: variantImageUrl ?? undefined
+        image: variantImageUrl ?? undefined,
+        sku: variantSku,
+        price_adjustment: v.price_adjustment || 0
       });
     }
   };
@@ -486,7 +538,8 @@ export default function ProductsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, original_price, images, brand, gender, material, season, tags, featured, sale');
+      .select('id, name, description, price, original_price, images, brand, material, season, tags, featured, sale, sku, categories(name, parent_id, categories!parent_id(name))')
+      .order('created_at', { ascending: false });
     if (!error && data) setProducts(data);
     setLoading(false);
   };
@@ -765,46 +818,45 @@ export default function ProductsAdmin() {
 
             <div>
               <Label htmlFor="category_id">Subcategoría *</Label>
-              <Select onValueChange={handleSelectChange} required>
+              <Select onValueChange={handleSelectChange} value={formData.category_id} required>
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona una subcategoría" />
                 </SelectTrigger>
                 <SelectContent>
                   {subcategories.map(sub => (
                     <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}{sub.parent_name ? ` (${sub.parent_name})` : ''}
+                      {sub.parent_name && `${sub.parent_name} > `}{sub.name}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="brand">Marca</Label>
-              <Input
-                id="brand"
-                name="brand"
-                value={formData.brand}
-                onChange={handleInputChange}
-                placeholder="Marca del producto"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="brand">Marca</Label>
+                <Input
+                  id="brand"
+                  name="brand"
+                  value={formData.brand}
+                  onChange={handleInputChange}
+                  placeholder="Marca del producto"
+                />
+              </div>
+              
+              <div>
+                <Label htmlFor="sku">SKU</Label>
+                <Input
+                  id="sku"
+                  name="sku"
+                  value={formData.sku}
+                  onChange={handleInputChange}
+                  placeholder="Código único del producto"
+                />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="gender">Género</Label>
-                <Select onValueChange={(value) => setFormData(prev => ({ ...prev, gender: value }))}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecciona género" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="masculino">Masculino</SelectItem>
-                    <SelectItem value="femenino">Femenino</SelectItem>
-                    <SelectItem value="unisex">Unisex</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              
               <div>
                 <Label htmlFor="material">Material</Label>
                 <Input
@@ -815,9 +867,7 @@ export default function ProductsAdmin() {
                   placeholder="Material del producto"
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
+              
               <div>
                 <Label htmlFor="season">Temporada</Label>
                 <Select onValueChange={(value) => setFormData(prev => ({ ...prev, season: value }))}>
@@ -833,20 +883,20 @@ export default function ProductsAdmin() {
                   </SelectContent>
                 </Select>
               </div>
-              
-              <div>
-                <Label htmlFor="tags">Etiquetas</Label>
-                <Input
-                  id="tags"
-                  name="tags"
-                  value={formData.tags}
-                  onChange={handleInputChange}
-                  placeholder="casual, elegante, deportivo, cómodo..."
-                />
-                <p className="text-xs text-gray-500 mt-1">
-                  Separa las etiquetas con comas
-                </p>
-              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="tags">Etiquetas</Label>
+              <Input
+                id="tags"
+                name="tags"
+                value={formData.tags}
+                onChange={handleInputChange}
+                placeholder="casual, elegante, deportivo, cómodo..."
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Separa las etiquetas con comas
+              </p>
             </div>
 
             <div className="flex space-x-6">
@@ -873,7 +923,7 @@ export default function ProductsAdmin() {
             <div>
               <Label>Variantes y stock</Label>
               <div className="space-y-2 mt-2">
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-6 gap-2">
                   <Input
                     name="color"
                     value={variantForm.color}
@@ -894,6 +944,20 @@ export default function ProductsAdmin() {
                     onChange={handleVariantInputChange}
                     placeholder="Stock"
                   />
+                  <Input
+                    name="sku"
+                    value={variantForm.sku}
+                    onChange={handleVariantInputChange}
+                    placeholder="SKU variante"
+                  />
+                  <Input
+                    name="price_adjustment"
+                    type="number"
+                    step="0.01"
+                    value={variantForm.price_adjustment}
+                    onChange={handleVariantInputChange}
+                    placeholder="Ajuste $"
+                  />
                   <div>
                     <input
                       type="file"
@@ -913,7 +977,15 @@ export default function ProductsAdmin() {
                   {editingVariantIndex !== null && (
                     <Button type="button" size="sm" variant="outline" onClick={() => {
                       setEditingVariantIndex(null);
-                      setVariantForm({ color: '', size: '', stock: '', imageFile: null, imagePreview: null });
+                      setVariantForm({ 
+                        color: '', 
+                        size: '', 
+                        stock: '', 
+                        imageFile: null, 
+                        imagePreview: null,
+                        sku: '',
+                        price_adjustment: ''
+                      });
                       setVariantError(null);
                     }} aria-label="Cancelar edición de variante">
                       Cancelar edición
@@ -926,25 +998,29 @@ export default function ProductsAdmin() {
                 {/* Lista de variantes */}
                 {variants.length > 0 && (
                   <div className="mt-2 border rounded p-2 bg-gray-50">
-                    <div className="grid grid-cols-5 gap-2 font-semibold text-xs text-gray-600 mb-1">
+                    <div className="grid grid-cols-7 gap-2 font-semibold text-xs text-gray-600 mb-1">
                       <span>Color</span>
                       <span>Talla</span>
                       <span>Stock</span>
+                      <span>SKU</span>
+                      <span>Ajuste $</span>
                       <span>Imagen</span>
                       <span>Acciones</span>
                     </div>
                     {variants.map((v, idx) => (
                       <div
                         key={v.id ?? `${v.color}-${v.size}`}
-                        className="grid grid-cols-5 gap-2 items-center border-b last:border-b-0 py-1"
+                        className="grid grid-cols-7 gap-2 items-center border-b last:border-b-0 py-1"
                       >
-                        <span>{v.color}</span>
-                        <span>{v.size}</span>
-                        <span>{v.stock}</span>
+                        <span className="text-sm">{v.color}</span>
+                        <span className="text-sm">{v.size}</span>
+                        <span className="text-sm">{v.stock}</span>
+                        <span className="text-xs text-gray-600">{v.sku || '-'}</span>
+                        <span className="text-sm">{v.price_adjustment ? `$${v.price_adjustment}` : '$0'}</span>
                         <span>{v.imagePreview || v.image ? <img src={v.imagePreview || v.image} alt="Variante" className="w-8 h-8 object-cover rounded" /> : '-'}</span>
                         <span className="flex gap-1">
                           <Button type="button" size="sm" variant="outline" onClick={() => handleEditVariant(idx)} aria-label={`Editar variante ${v.color} ${v.size}`}>Editar</Button>
-                          <Button type="button" size="sm" variant="destructive" onClick={() => handleDeleteVariant(idx)} aria-label={`Eliminar variante ${v.color} ${v.size}`}>Eliminar</Button>
+                          <Button type="button" size="sm" variant="destructive" onClick={() => handleDeleteVariant(idx)} aria-label={`Eliminar variante ${v.color} ${v.size}`}>×</Button>
                         </span>
                       </div>
                     ))}

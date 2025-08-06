@@ -465,10 +465,13 @@ export default function PaymentMethodsPage() {
             <h2 className="text-3xl font-bold text-gray-900 mb-2">Gestiona tus métodos de pago</h2>
             <p className="text-gray-600 mb-8 text-lg">Inicia sesión para administrar tus tarjetas y métodos de pago de forma segura</p>
             <Button 
-              onClick={() => window.location.href = '/login'}
+            onClick={() => {
+              // Disparar evento para abrir el modal de login
+              window.dispatchEvent(new CustomEvent('openAuthModal'))
+            }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg"
             >
-              Iniciar sesión
+              Iniciar Sesión
             </Button>
           </div>
         </div>

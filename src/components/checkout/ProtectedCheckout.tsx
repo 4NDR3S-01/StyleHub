@@ -11,7 +11,7 @@ interface ProtectedCheckoutProps {
   children: React.ReactNode;
 }
 
-export function ProtectedCheckout({ children }: ProtectedCheckoutProps) {
+export function ProtectedCheckout({ children }: Readonly<ProtectedCheckoutProps>) {
   const { user, isLoading } = useAuth();
   const router = useRouter();
 
@@ -61,14 +61,20 @@ export function ProtectedCheckout({ children }: ProtectedCheckoutProps) {
           
           <div className="space-y-2">
             <Button 
-              onClick={() => router.push('/login')} 
+            onClick={() => {
+              // Disparar evento para abrir el modal de login
+              window.dispatchEvent(new CustomEvent('openAuthModal'))
+            }}
               className="w-full"
             >
               <LogIn className="h-4 w-4 mr-2" />
               Iniciar Sesión
             </Button>
             <Button 
-              onClick={() => router.push('/register')} 
+              onClick={() => {
+                // Disparar evento para abrir el modal de login
+                window.dispatchEvent(new CustomEvent('openAuthModal'))
+              }} 
               variant="outline" 
               className="w-full"
             >
@@ -77,7 +83,7 @@ export function ProtectedCheckout({ children }: ProtectedCheckoutProps) {
             </Button>
             
             <Button 
-              onClick={() => router.push('/')} 
+              onClick={() => router.push('/category/all')} 
               variant="ghost" 
               className="w-full mt-4"
             >

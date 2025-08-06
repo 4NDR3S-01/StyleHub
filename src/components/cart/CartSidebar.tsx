@@ -1,21 +1,41 @@
 'use client';
 
-import { Fragment } from 'react';
-import { X, Plus, Minus, ShoppingBag } from 'lucide-react';
+import { X, Plus, Minus, ShoppingBag, User } from 'lucide-react';
 import { useCart } from '../../context/CartContext';
+import { useAuth } from '../../context/AuthContext';
+import { formatPrice } from '@/utils/currency';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 export default function CartSidebar() {
-  const { state, toggleCart, updateQuantity, removeItem, total } = useCart();
+  const { state, toggleCart, updateQuantity, removeItem, subtotal } = useCart();
+  const { user } = useAuth();
+  const router = useRouter();
+
+  const handleCheckoutClick = () => {
+    if (!user) {
+      // Guardar la URL de checkout para redirigir después del login
+      sessionStorage.setItem('redirectAfterLogin', '/checkout');
+      toggleCart(); // Cerrar el carrito
+      // Disparar evento para abrir el modal de autenticación
+      window.dispatchEvent(new CustomEvent('openAuthModal'));
+    } else {
+      // Usuario autenticado, ir directo al checkout
+      toggleCart(); // Cerrar el carrito
+      router.push('/checkout');
+    }
+  };
 
   if (!state.isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50">
       {/* Backdrop */}
-      <div
+      <button
         className="absolute inset-0 bg-black bg-opacity-50 transition-opacity"
         onClick={toggleCart}
+        aria-label="Cerrar carrito"
+        type="button"
       />
 
       {/* Sidebar */}
@@ -39,7 +59,7 @@ export default function CartSidebar() {
                 <ShoppingBag size={64} className="mx-auto text-gray-300 mb-4" />
                 <p className="text-gray-500 text-lg">Tu carrito está vacío</p>
                 <Link
-                  href="/category/women"
+                  href="/category/all"
                   onClick={toggleCart}
                   className="inline-block mt-4 bg-slate-900 text-white px-6 py-3 rounded-xl hover:bg-slate-800 transition-colors"
                 >
@@ -61,7 +81,7 @@ export default function CartSidebar() {
                         {item.variant?.size && `Size: ${item.variant.size}`}
                         {item.variant?.color && ` | Color: ${item.variant.color}`}
                       </p>
-                      <p className="font-semibold text-lg">${item.producto.price.toFixed(2)}</p>
+                      <p className="font-semibold text-lg">{formatPrice(item.producto.price)}</p>
                     </div>
                     <div className="flex items-center space-x-2">
                       <button
@@ -95,16 +115,31 @@ export default function CartSidebar() {
           {state.items.length > 0 && (
             <div className="border-t p-6 space-y-4">
               <div className="flex items-center justify-between text-xl font-semibold">
-                <span>Total:</span>
-                <span>${total.toFixed(2)}</span>
+                <span>Total de Productos:</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
-              <Link
-                href="/checkout"
-                onClick={toggleCart}
-                className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold text-center block hover:bg-slate-800 transition-colors"
-              >
-                Finalizar Compra
-              </Link>
+              
+              {!user ? (
+                <div className="space-y-3">
+                  <button
+                    onClick={handleCheckoutClick}
+                    className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold text-center hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <User size={20} />
+                    Iniciar Sesión para Comprar
+                  </button>
+                  <p className="text-xs text-gray-500 text-center">
+                    Necesitas una cuenta para proceder con tu compra
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={handleCheckoutClick}
+                  className="w-full bg-slate-900 text-white py-3 rounded-xl font-semibold text-center hover:bg-slate-800 transition-colors"
+                >
+                  Finalizar Compra
+                </button>
+              )}
             </div>
           )}
         </div>

@@ -286,6 +286,16 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       } catch (updateError) {
         console.error('[AuthContext] Error updating login stats:', updateError);
       }
+
+      // Manejar redirección después del login exitoso
+      const redirectUrl = sessionStorage.getItem('redirectAfterLogin');
+      if (redirectUrl) {
+        sessionStorage.removeItem('redirectAfterLogin');
+        // Usar setTimeout para asegurar que el contexto de autenticación se actualice primero
+        setTimeout(() => {
+          window.location.href = redirectUrl;
+        }, 100);
+      }
       
     } catch (error: any) {
       setIsLoading(false);

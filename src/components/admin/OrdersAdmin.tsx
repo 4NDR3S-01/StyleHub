@@ -44,8 +44,8 @@ export default function OrdersAdmin() {
           .from('users')
           .select('id,name')
           .in('id', userIds)
-        if (!userError) {
-          userMap = Object.fromEntries(users!.map((u: any) => [u.id, u.name]))
+        if (!userError && users) {
+          userMap = Object.fromEntries(users.map((u: any) => [u.id, u.name]))
         }
       }
       const processed = (ordersData || []).map((o) => ({
@@ -75,11 +75,13 @@ export default function OrdersAdmin() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold text-slate-800">Órdenes</h1>
-      {loading ? (
+      {loading && (
         <p className="text-gray-600">Cargando órdenes...</p>
-      ) : orders.length === 0 ? (
+      )}
+      {!loading && orders.length === 0 && (
         <p className="text-gray-600">No hay órdenes registradas.</p>
-      ) : (
+      )}
+      {!loading && orders.length > 0 && (
         <table className="w-full border-collapse">
           <thead>
             <tr className="bg-slate-200 text-slate-700">

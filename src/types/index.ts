@@ -172,3 +172,20 @@ export interface OrderItem {
   product?: Product;
   variant?: ProductVariant;
 }
+
+// ShippingMethod (match tabla 'shipping_methods')
+export interface ShippingMethod {
+  id: string;
+  name: string;
+  description?: string;
+  cost: number; // Alias para price
+  price: number;
+  free_shipping_threshold?: number; // Alias para free_over_amount
+  free_over_amount?: number;
+  delivery_time?: string; // Alias para estimated_days
+  estimated_days?: string;
+  active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}

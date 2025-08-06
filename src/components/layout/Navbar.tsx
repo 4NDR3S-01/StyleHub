@@ -10,6 +10,7 @@ import CartSidebar from '../cart/CartSidebar';
 import WishlistSidebar from '../wishlist/WishlistSidebar';
 import AuthModal from '../auth/AuthModal';
 import UserAvatar from '../ui/UserAvatar';
+import CategoriesMenu from './CategoriesMenu';
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,14 +26,6 @@ export default function Navbar() {
   const searchButtonRef = useRef<HTMLButtonElement>(null);
   const wishlistButtonRef = useRef<HTMLButtonElement>(null);
   const cartButtonRef = useRef<HTMLButtonElement>(null);
-
-  const navigation = [
-    { name: 'Mujeres', href: '/category/women' },
-    { name: 'Hombres', href: '/category/men' },
-    { name: 'Accesorios', href: '/category/accessories' },
-    { name: 'Zapatos', href: '/category/shoes' },
-    { name: 'Ofertas', href: '/sale' },
-  ];
 
   // Handle escape key to close menus
   useEffect(() => {
@@ -62,6 +55,16 @@ export default function Navbar() {
 
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isUserMenuOpen]);
+
+  // Handle custom event to open auth modal
+  useEffect(() => {
+    const handleOpenAuthModal = () => {
+      setIsAuthModalOpen(true);
+    };
+
+    window.addEventListener('openAuthModal', handleOpenAuthModal);
+    return () => window.removeEventListener('openAuthModal', handleOpenAuthModal);
+  }, []);
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -129,20 +132,8 @@ export default function Navbar() {
               </div>
             </Link>
 
-            {/* Desktop Navigation mejorado */}
-            <nav className="hidden md:flex items-center space-x-2" role="navigation" aria-label="Navegación de categorías">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="relative text-white/90 hover:text-white px-4 py-2 rounded-lg backdrop-blur-md border border-white/10 hover:border-white/30 transition-all duration-300 font-medium shadow-lg hover:shadow-xl hover:scale-105 hover:bg-white/10 group overflow-hidden focus:outline-none focus:ring-2 focus:ring-white/50"
-                  aria-label={`Ir a ${item.name}`}
-                >
-                  <span className="relative z-10">{item.name}</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent translate-x-full group-hover:translate-x-0 transition-transform duration-500"></div>
-                </Link>
-              ))}
-            </nav>
+            {/* Desktop Navigation dinámico */}
+            <CategoriesMenu />
 
             {/* Right side icons mejorados */}
             <div className="flex items-center space-x-3">
@@ -374,18 +365,8 @@ export default function Navbar() {
             role="menu"
             aria-labelledby="mobile-menu-button"
           >
-            <div className="px-4 py-4 space-y-2">
-              {navigation.map((item) => (
-                <Link
-                  key={item.name}
-                  href={item.href}
-                  className="block py-3 px-4 text-white hover:text-gray-100 hover:bg-white/20 rounded-lg transition-all duration-300 font-medium backdrop-blur-md border border-white/10 hover:border-white/30 shadow-lg focus:outline-none focus:ring-2 focus:ring-white/50"
-                  onClick={() => setIsMenuOpen(false)}
-                  role="menuitem"
-                >
-                  {item.name}
-                </Link>
-              ))}
+            <div className="px-4 py-4">
+              <CategoriesMenu isMobile onItemClick={() => setIsMenuOpen(false)} />
             </div>
           </div>
         )}

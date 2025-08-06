@@ -59,3 +59,35 @@ export async function getCategoriesByType(type?: string) {
   if (error) throw error;
   return data || [];
 }
+
+/**
+ * Obtiene todas las categorías principales activas para el navbar
+ */
+export async function getMainCategoriesForNavbar() {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug, image, description')
+    .eq('active', true)
+    .is('parent_id', null) // Solo categorías principales
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true });
+  
+  if (error) throw error;
+  return data || [];
+}
+
+/**
+ * Obtiene subcategorías de una categoría principal
+ */
+export async function getSubcategoriesByParent(parentId: string) {
+  const { data, error } = await supabase
+    .from('categories')
+    .select('id, name, slug, description')
+    .eq('active', true)
+    .eq('parent_id', parentId)
+    .order('sort_order', { ascending: true })
+    .order('name', { ascending: true });
+  
+  if (error) throw error;
+  return data || [];
+}

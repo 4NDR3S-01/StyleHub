@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown, PaletteIcon } from 'lucide-react';
+import { HomeIcon, ShoppingBagIcon, TagIcon, CogIcon, ClipboardListIcon, MessageSquareIcon, PencilIcon, ChevronDown, PaletteIcon, DatabaseIcon } from 'lucide-react';
 import { useState } from 'react';
 
 
@@ -12,6 +12,7 @@ const menuItems = [
   { name: 'Categorias', icon: TagIcon }, // Agregado para el submenú
   { name: 'Cupones', icon: PencilIcon, href: '/admin/cupones' },
   { name: 'Reseñas', icon: MessageSquareIcon, href: '/admin/resenas' },
+  { name: 'Diagnóstico', icon: DatabaseIcon, href: '/admin/diagnostico' },
 ];
 
 export default function AdminSidebar() {
@@ -144,6 +145,11 @@ export default function AdminSidebar() {
                   <li>
                     <Link href="/admin/personalizacion/banners" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
                       Banners y promociones
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/admin/personalizacion/metodos-envio" className="flex items-center px-2 py-2 rounded hover:bg-red-100 text-gray-700" onClick={() => setOpen(false)}>
+                      Métodos de envío
                     </Link>
                   </li>
                   <li>

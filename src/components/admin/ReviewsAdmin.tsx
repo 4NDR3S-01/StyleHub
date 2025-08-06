@@ -2,7 +2,7 @@
 
 import { useEffect, useState, Fragment } from "react";
 import { createClient } from "@supabase/supabase-js";
-import { Star, Trash2, Loader2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, X, CheckCircle, AlertCircle, Eye } from "lucide-react";
+import { Star, Trash2, Loader2, ChevronsLeft, ChevronsRight, ChevronLeft, ChevronRight, X, CheckCircle, AlertCircle, Eye, Check } from "lucide-react";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -15,7 +15,7 @@ export default function ReviewsAdmin() {
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState(10);
   const [totalPaginas, setTotalPaginas] = useState(1);
-  const [filtro, setFiltro] = useState({ producto: "", usuario: "", calificacion: "", comentario: "" });
+  const [filtro, setFiltro] = useState({ producto: "", usuario: "", calificacion: "", comentario: "", estado: "" });
   const [modal, setModal] = useState<any>(null);
   const [toast, setToast] = useState<{ tipo: "exito" | "error"; mensaje: string } | null>(null);
   const [accionCargando, setAccionCargando] = useState(false);
@@ -29,12 +29,13 @@ export default function ReviewsAdmin() {
     setLoading(true);
     let query = supabase
       .from("reviews")
-      .select("id, rating, comment, created_at, user_id, product_id, users(name, email), products(name)", { count: "exact" })
+      .select("id, rating, comment, created_at, user_id, product_id, approved, users(name, email), products(name)", { count: "exact" })
       .order("created_at", { ascending: false })
       .range((pagina - 1) * porPagina, pagina * porPagina - 1);
     if (filtro.producto) query = query.eq("product_id", filtro.producto);
     if (filtro.usuario) query = query.eq("user_id", filtro.usuario);
     if (filtro.calificacion) query = query.eq("rating", filtro.calificacion);
+    if (filtro.estado !== "") query = query.eq("approved", filtro.estado === "true");
     const { data, count } = await query;
     // Filtro por comentario (en memoria)
     let filtradas = (data || []);
@@ -61,6 +62,32 @@ export default function ReviewsAdmin() {
       mostrarToast("error", "Error al eliminar la reseña.");
     } else {
       mostrarToast("exito", "Reseña eliminada correctamente.");
+      fetchReviews();
+    }
+  }
+
+  async function aprobarReview(id: string) {
+    setAccionCargando(true);
+    const { error } = await supabase.from("reviews").update({ approved: true }).eq("id", id);
+    setAccionCargando(false);
+    setModal(null);
+    if (error) {
+      mostrarToast("error", "Error al aprobar la reseña.");
+    } else {
+      mostrarToast("exito", "Reseña aprobada correctamente.");
+      fetchReviews();
+    }
+  }
+
+  async function rechazarReview(id: string) {
+    setAccionCargando(true);
+    const { error } = await supabase.from("reviews").update({ approved: false }).eq("id", id);
+    setAccionCargando(false);
+    setModal(null);
+    if (error) {
+      mostrarToast("error", "Error al rechazar la reseña.");
+    } else {
+      mostrarToast("exito", "Reseña rechazada correctamente.");
       fetchReviews();
     }
   }
@@ -111,6 +138,15 @@ export default function ReviewsAdmin() {
           <option value="">Todas las calificaciones</option>
           {[5, 4, 3, 2, 1].map(n => <option key={n} value={n}>{n} estrellas</option>)}
         </select>
+        <select
+          className="border border-slate-300 rounded px-3 py-2"
+          value={filtro.estado}
+          onChange={e => setFiltro(f => ({ ...f, estado: e.target.value, pagina: 1 }))}
+        >
+          <option value="">Todos los estados</option>
+          <option value="true">Aprobadas</option>
+          <option value="false">Pendientes</option>
+        </select>
       </div>
       {/* Tabla de reseñas */}
       {(() => {
@@ -137,6 +173,7 @@ export default function ReviewsAdmin() {
                   <th className="p-2">Usuario</th>
                   <th className="p-2">Calificación</th>
                   <th className="p-2">Comentario</th>
+                  <th className="p-2">Estado</th>
                   <th className="p-2">Fecha</th>
                   <th className="p-2">Acciones</th>
                 </tr>
@@ -162,6 +199,15 @@ export default function ReviewsAdmin() {
                         : <span className="italic text-slate-400">Sin comentario</span>
                       }
                     </td>
+                    <td className="p-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        r.approved 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {r.approved ? 'Aprobada' : 'Pendiente'}
+                      </span>
+                    </td>
                     <td className="p-2 text-xs text-slate-500">{r.created_at.slice(0, 10)}</td>
                     <td className="p-2 flex gap-2">
                       <button
@@ -171,6 +217,24 @@ export default function ReviewsAdmin() {
                       >
                         <Eye size={18} />
                       </button>
+                      {!r.approved && (
+                        <button
+                          title="Aprobar"
+                          className="p-1 rounded hover:bg-slate-100 text-green-700"
+                          onClick={() => setModal({ tipo: "aprobar", review: r })}
+                        >
+                          <Check size={18} />
+                        </button>
+                      )}
+                      {r.approved && (
+                        <button
+                          title="Rechazar"
+                          className="p-1 rounded hover:bg-slate-100 text-orange-700"
+                          onClick={() => setModal({ tipo: "rechazar", review: r })}
+                        >
+                          <X size={18} />
+                        </button>
+                      )}
                       <button
                         title="Eliminar"
                         className="p-1 rounded hover:bg-slate-100 text-red-700"
@@ -223,8 +287,67 @@ export default function ReviewsAdmin() {
                   <div><span className="font-semibold">Usuario:</span> {modal.review.users?.name} ({modal.review.users?.email})</div>
                   <div><span className="font-semibold">Calificación:</span> {modal.review.rating} estrellas</div>
                   <div><span className="font-semibold">Comentario:</span> {modal.review.comment || <span className="italic text-slate-400">Sin comentario</span>}</div>
+                  <div><span className="font-semibold">Estado:</span> 
+                    <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                      modal.review.approved 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-yellow-100 text-yellow-800'
+                    }`}>
+                      {modal.review.approved ? 'Aprobada' : 'Pendiente'}
+                    </span>
+                  </div>
                   <div><span className="font-semibold">Fecha:</span> {modal.review.created_at.slice(0, 10)}</div>
                 </div>
+              </Fragment>
+            )}
+            {modal.tipo === "aprobar" && (
+              <Fragment>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <Check size={20} /> Aprobar reseña
+                </h2>
+                <p className="mb-4">¿Estás seguro de que deseas aprobar esta reseña? Una vez aprobada, será visible para todos los usuarios.</p>
+                <div className="bg-gray-50 p-3 rounded mb-4">
+                  <p><strong>Comentario:</strong> {modal.review.comment || 'Sin comentario'}</p>
+                  <p><strong>Calificación:</strong> {modal.review.rating} estrellas</p>
+                </div>
+                <button
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded font-semibold w-full flex items-center justify-center gap-2 disabled:opacity-60 mb-2"
+                  disabled={accionCargando}
+                  onClick={() => aprobarReview(modal.review.id)}
+                >
+                  {accionCargando && <Loader2 className="animate-spin" size={18} />} Sí, aprobar reseña
+                </button>
+                <button
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded font-semibold w-full"
+                  onClick={() => setModal(null)}
+                >
+                  No, volver
+                </button>
+              </Fragment>
+            )}
+            {modal.tipo === "rechazar" && (
+              <Fragment>
+                <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                  <X size={20} /> Rechazar reseña
+                </h2>
+                <p className="mb-4">¿Estás seguro de que deseas rechazar esta reseña? Ya no será visible para los usuarios.</p>
+                <div className="bg-gray-50 p-3 rounded mb-4">
+                  <p><strong>Comentario:</strong> {modal.review.comment || 'Sin comentario'}</p>
+                  <p><strong>Calificación:</strong> {modal.review.rating} estrellas</p>
+                </div>
+                <button
+                  className="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded font-semibold w-full flex items-center justify-center gap-2 disabled:opacity-60 mb-2"
+                  disabled={accionCargando}
+                  onClick={() => rechazarReview(modal.review.id)}
+                >
+                  {accionCargando && <Loader2 className="animate-spin" size={18} />} Sí, rechazar reseña
+                </button>
+                <button
+                  className="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded font-semibold w-full"
+                  onClick={() => setModal(null)}
+                >
+                  No, volver
+                </button>
               </Fragment>
             )}
             {modal.tipo === "eliminar" && (

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { Star } from 'lucide-react';
 import { getApprovedTestimonials } from '@/services/testimonial.service';
+import { getApprovedReviewsForTestimonials } from '@/services/review.service';
 
 interface Testimonial {
   id: string;
@@ -11,6 +12,7 @@ interface Testimonial {
   rating: number;
   text: string;
   created_at: string;
+  product_name?: string; // Para reseñas de productos
 }
 
 export default function Testimonials() {
@@ -20,8 +22,18 @@ export default function Testimonials() {
   useEffect(() => {
     async function loadTestimonials() {
       try {
-        const data = await getApprovedTestimonials();
-        setTestimonials(data);
+        // Combinar testimonios tradicionales y reseñas aprobadas
+        const [testimonialsData, reviewsData] = await Promise.all([
+          getApprovedTestimonials(3),
+          getApprovedReviewsForTestimonials(3)
+        ]);
+        
+        // Combinar y ordenar por fecha
+        const allTestimonials = [...testimonialsData, ...reviewsData]
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+          .slice(0, 6); // Mostrar máximo 6
+          
+        setTestimonials(allTestimonials);
       } catch (error) {
         console.error('Error loading testimonials:', error);
       } finally {
@@ -103,6 +115,9 @@ export default function Testimonials() {
                 />
                 <div>
                   <h4 className="font-semibold text-slate-900">{testimonial.name}</h4>
+                  {testimonial.product_name && (
+                    <p className="text-xs text-slate-500">Compró: {testimonial.product_name}</p>
+                  )}
                   <div className="flex">
                     {[...Array(testimonial.rating)].map((_, i) => (
                       <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />

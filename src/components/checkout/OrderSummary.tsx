@@ -66,7 +66,7 @@ export function OrderSummary({ items, isProcessing = false }: OrderSummaryProps)
         {/* Cálculos del pedido */}
         <div className="space-y-2 text-sm">
           <div className="flex justify-between">
-            <span>Subtotal ({items.length} producto{items.length !== 1 ? 's' : ''})</span>
+            <span>Total de Productos ({items.length} producto{items.length !== 1 ? 's' : ''})</span>
             <span>${subtotal.toLocaleString('es-CO')}</span>
           </div>
           
