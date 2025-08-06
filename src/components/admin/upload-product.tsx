@@ -319,7 +319,7 @@ export default function UploadProduct() {
                     checked={productData.sale}
                     onChange={(e) => setProductData({...productData, sale: e.target.checked})}
                     className="mr-2"
-                  />
+                  />{' '}
                   En Oferta
                 </label>
                 <label className="flex items-center">
@@ -328,7 +328,7 @@ export default function UploadProduct() {
                     checked={productData.featured}
                     onChange={(e) => setProductData({...productData, featured: e.target.checked})}
                     className="mr-2"
-                  />
+                  />{' '}
                   Destacado
                 </label>
               </div>

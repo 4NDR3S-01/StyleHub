@@ -40,6 +40,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const [selectedQuantity, setSelectedQuantity] = useState(1)
   const [mainImage, setMainImage] = useState(product.images?.[0] || "")
   const [refreshReviews, setRefreshReviews] = useState(0)
+  const [isHydrated, setIsHydrated] = useState(false)
   
   // Estados para variantes
   const [colors, setColors] = useState<ColorOption[]>([])
@@ -54,6 +55,11 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const [isViewingGeneral, setIsViewingGeneral] = useState(true)
   const [variantImages, setVariantImages] = useState<string[]>([])
   const [displayImages, setDisplayImages] = useState<string[]>(product.images || [])
+
+  // Detectar hidratación del componente
+  useEffect(() => {
+    setIsHydrated(true)
+  }, [])
 
   // Cargar colores disponibles al montar el componente
   useEffect(() => {
@@ -314,8 +320,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="text-2xl font-semibold text-green-600">
-            {formatPrice(finalPrice)}
-            {selectedVariant?.price_adjustment && selectedVariant.price_adjustment !== 0 && (
+            {isHydrated ? formatPrice(finalPrice) : `$${product.price.toFixed(2)}`}
+            {isHydrated && selectedVariant?.price_adjustment && selectedVariant.price_adjustment !== 0 && (
               <span className="text-sm text-gray-500 ml-2">
                 ({formatPrice(product.price)} + {formatPrice(selectedVariant.price_adjustment)})
               </span>
