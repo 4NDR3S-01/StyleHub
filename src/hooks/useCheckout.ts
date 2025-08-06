@@ -4,8 +4,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { CartItem, User } from '@/types';
-import { useCart } from '@/context/CartContext';
+import { User } from '@/types';
+import { useCart, CartItem } from '@/context/CartContext';
 import { PaymentService, CheckoutSessionData } from '@/services/payment.service';
 
 // Esquema de validación

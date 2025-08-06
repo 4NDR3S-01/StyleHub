@@ -12,8 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import { CreditCard, MapPin, User, Lock } from 'lucide-react';
-import { CartItem, User as UserType } from '@/types';
-import { useCart } from '@/context/CartContext';
+import { User as UserType } from '@/types';
+import { useCart, CartItem } from '@/context/CartContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { stripePromise } from '@/lib/stripe';
