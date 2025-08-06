@@ -1,4 +1,11 @@
 import supabase from '@/lib/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
+
+// Cliente administrativo para operaciones que requieren permisos elevados
+const adminSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export interface Coupon {
   id: string;
@@ -232,31 +239,38 @@ export async function recordCouponUsage(
   discountAmount: number
 ): Promise<void> {
   try {
-    const response = await fetch('/api/coupons/record-usage', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        couponId,
-        userId,
-        orderId,
-        discountAmount
-      }),
-    });
+    // Registrar uso del cupón usando cliente administrativo
+    const { error: usageError } = await adminSupabase
+      .from('coupon_usage')
+      .insert([{
+        coupon_id: couponId,
+        user_id: userId,
+        order_id: orderId,
+        discount_amount: discountAmount
+      }]);
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.error || 'Error al registrar uso del cupón');
-    }
+    if (usageError) throw usageError;
 
-    const result = await response.json();
-    if (!result.success) {
-      throw new Error('Error al registrar uso del cupón');
+    // Incrementar contador de usos - obtener el valor actual primero
+    const { data: coupon, error: fetchError } = await adminSupabase
+      .from('coupons')
+      .select('used_count')
+      .eq('id', couponId)
+      .single();
+
+    if (fetchError) throw fetchError;
+
+    if (coupon) {
+      const { error: updateError } = await adminSupabase
+        .from('coupons')
+        .update({ used_count: coupon.used_count + 1 })
+        .eq('id', couponId);
+
+      if (updateError) throw updateError;
     }
 
   } catch (error: any) {
     console.error('Error recording coupon usage:', error);
-    throw new Error(error.message || 'Error al registrar uso del cupón');
+    throw new Error('Error al registrar uso del cupón');
   }
 }

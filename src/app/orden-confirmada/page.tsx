@@ -1,25 +1,16 @@
 'use client';
 
-import React, { Suspense, useEffect } from 'react';
+import React, { Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, Package, Home } from 'lucide-react';
-import { useCart } from '@/context/CartContext';
 
 function OrderConfirmationContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { clearCart } = useCart();
   const sessionId = searchParams.get('session_id');
   const orderId = searchParams.get('orderId');
-  
-  // Limpiar carrito cuando se confirma la orden exitosamente
-  useEffect(() => {
-    if (orderId) {
-      clearCart();
-    }
-  }, [orderId, clearCart]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
