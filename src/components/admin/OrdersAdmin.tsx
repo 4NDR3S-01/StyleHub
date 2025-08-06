@@ -84,27 +84,32 @@ export default function OrdersAdmin() {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(50)
-      
+        .limit(100) // Aumentar a 100 órdenes
+
       if (error) {
-        toast({ title: 'Error', description: error.message, variant: 'destructive' })
+        console.error('Error fetching orders:', error)
+        toast({ title: 'Error', description: 'No se pudieron cargar las órdenes: ' + error.message, variant: 'destructive' })
         return
       }
+
+      console.log('Órdenes cargadas:', ordersData?.length || 0)
 
       // Mapeo de usuarios
       const userIds = Array.from(new Set(ordersData?.map((o) => o.user_id)))
       let userMap: Record<string, { name: string; email: string }> = {}
-      
+
       if (userIds.length > 0) {
         const { data: users, error: userError } = await supabase
           .from('users')
           .select('id, name, email')
           .in('id', userIds)
-        
+
         if (!userError && users) {
           userMap = Object.fromEntries(
             users.map((u: any) => [u.id, { name: u.name || 'Sin nombre', email: u.email }])
           )
+        } else if (userError) {
+          console.warn('Error fetching users:', userError)
         }
       }
 
@@ -114,10 +119,12 @@ export default function OrdersAdmin() {
         user_email: userMap[o.user_id]?.email || '',
         address: typeof o.address === 'string' ? JSON.parse(o.address) : o.address,
       })) as OrderRow[]
-      
+
       setOrders(processed)
+      console.log('Órdenes procesadas correctamente')
     } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' })
+      console.error('Error general:', error)
+      toast({ title: 'Error', description: 'Error inesperado: ' + error.message, variant: 'destructive' })
     } finally {
       setLoading(false)
     }
