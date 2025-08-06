@@ -538,7 +538,7 @@ export default function ProductsAdmin() {
     setLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('id, name, description, price, original_price, images, brand, material, season, tags, featured, sale, sku, categories(name, parent_id, categories!parent_id(name))')
+      .select('id, name, description, price, original_price, images, brand, material, season, tags, featured, sale, sku, category_id, categories(name, parent_id, categories!parent_id(name))')
       .order('created_at', { ascending: false });
     if (!error && data) setProducts(data);
     setLoading(false);
