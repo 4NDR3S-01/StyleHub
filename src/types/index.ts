@@ -1,51 +1,76 @@
-// Product (match con tabla 'products')
+/**
+ * DEFINICIONES DE TIPOS GLOBALES PARA STYLEHUB
+ * 
+ * Este archivo centraliza todas las interfaces TypeScript utilizadas
+ * en la aplicación para mantener consistencia y facilitar el mantenimiento.
+ * Las interfaces están organizadas por dominio funcional.
+ */
+
+// ============================================================================
+// TIPOS DE PRODUCTOS Y CATÁLOGO
+// ============================================================================
+
+/**
+ * Producto principal del catálogo
+ * Corresponde con la tabla 'products' en la base de datos
+ */
 export interface Product {
   id: string;
   name: string;
   description?: string;
-  price: number;
-  original_price?: number;
-  images?: string[];
-  category_id: string;
-  brand?: string;
-  gender?: 'masculino' | 'femenino' | 'unisex';
-  material?: string;
+  price: number;                          // Precio actual
+  original_price?: number;                // Precio original (para calcular descuentos)
+  images?: string[];                      // Array de URLs de imágenes
+  category_id: string;                    // ID de la categoría padre
+  brand?: string;                         // Marca del producto
+  gender?: 'masculino' | 'femenino' | 'unisex';  // Género objetivo
+  material?: string;                      // Material principal
   season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año';
-  tags?: string[];
-  featured?: boolean;          // deprecated, usar is_featured
-  sale?: boolean;
-  active?: boolean;
-  is_active?: boolean;         // preferible usar este
-  is_featured?: boolean;
-  sku?: string;
-  weight?: number;
-  dimensions?: any;            // mejor si tienes una interfaz Dimensions
-  stock_alert_threshold?: number;
-  meta_title?: string;
-  meta_description?: string;
+  tags?: string[];                        // Etiquetas para búsqueda
+  featured?: boolean;                     // DEPRECATED: usar is_featured
+  sale?: boolean;                         // Producto en oferta
+  active?: boolean;                       // DEPRECATED: usar is_active
+  is_active?: boolean;                    // Estado activo del producto
+  is_featured?: boolean;                  // Producto destacado
+  sku?: string;                          // Código de producto único
+  weight?: number;                       // Peso en gramos
+  dimensions?: any;                      // TODO: Crear interface Dimensions
+  stock_alert_threshold?: number;         // Umbral de alerta de stock bajo
+  meta_title?: string;                   // SEO: Título meta
+  meta_description?: string;             // SEO: Descripción meta
   created_at?: string;
   updated_at?: string;
 
-  // Relación
-  product_variants?: ProductVariant[];
+  // Relaciones con otras tablas
+  product_variants?: ProductVariant[];    // Variantes del producto
 }
 
-// ProductVariant (match tabla 'product_variants')
+/**
+ * Variantes de producto (tallas, colores, etc.)
+ * Corresponde con la tabla 'product_variants'
+ */
 export interface ProductVariant {
   id: string;
-  product_id: string;
-  color: string;
-  size: string;
-  stock: number;
-  price_adjustment?: number;
-  image?: string;
-  sku?: string;
-  weight_adjustment?: number;
+  product_id: string;                     // Referencia al producto padre
+  color: string;                          // Color de la variante
+  size: string;                           // Talla de la variante
+  stock: number;                          // Cantidad disponible
+  price_adjustment?: number;              // Ajuste de precio (+/-)
+  image?: string;                         // Imagen específica de la variante
+  sku?: string;                          // SKU específico de la variante
+  weight_adjustment?: number;             // Ajuste de peso (+/-)
   created_at?: string;
   updated_at?: string;
 }
 
-// CartItem
+// ============================================================================
+// TIPOS DE CARRITO DE COMPRAS
+// ============================================================================
+
+/**
+ * Item del carrito de compras
+ * Representa un producto específico en el carrito con su variante
+ */
 export interface CartItem {
   id: string;
   product_id: string;

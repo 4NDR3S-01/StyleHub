@@ -1,13 +1,29 @@
+/* ============================================================================
+   ESTILOS GLOBALES DE STYLEHUB
+   - Importación de Tailwind CSS
+   - Variables CSS para el sistema de temas
+   - Configuración de fuentes con fallbacks
+   - Soporte para modo oscuro
+   ============================================================================ */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* Fallback para fuentes del sistema si Google Fonts falla */
+/* ============================================================================
+   CONFIGURACIÓN DE FUENTES
+   ============================================================================ */
+
+/* Fallback para fuentes del sistema si Google Fonts falla por conectividad */
 @layer base {
   html {
     font-family: var(--font-inter), system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   }
 }
+
+/* ============================================================================
+   VARIABLES CSS LEGACY (Compatibilidad con código anterior)
+   ============================================================================ */
 
 :root {
   --foreground-rgb: 0, 0, 0;
@@ -15,6 +31,7 @@
   --background-end-rgb: 255, 255, 255;
 }
 
+/* Configuración automática para modo oscuro del sistema */
 @media (prefers-color-scheme: dark) {
   :root {
     --foreground-rgb: 255, 255, 255;
@@ -23,7 +40,12 @@
   }
 }
 
+/* ============================================================================
+   SISTEMA DE VARIABLES CSS PARA TEMAS
+   ============================================================================ */
+
 @layer base {
+  /* Tema claro por defecto */
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;

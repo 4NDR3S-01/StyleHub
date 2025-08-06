@@ -1,15 +1,32 @@
 import supabase from '@/lib/supabaseClient';
 
-// Types para personalización
+/**
+ * SERVICIOS DE PERSONALIZACIÓN
+ * Maneja todas las operaciones CRUD para la personalización de la tienda
+ * Incluye temas, branding, banners, footer y redes sociales
+ */
+
+// ============================================================================
+// INTERFACES Y TIPOS
+// ============================================================================
+
+/**
+ * Definición de colores del tema
+ * Estructura base para todos los temas de la aplicación
+ */
 export interface ThemeColors {
-  primary: string;
-  secondary: string;
-  accent: string;
-  neutral: string;
-  background: string;
-  text: string;
+  primary: string;    // Color principal de la marca
+  secondary: string;  // Color secundario
+  accent: string;     // Color de acento para elementos destacados
+  neutral: string;    // Color neutral para elementos secundarios
+  background: string; // Color de fondo principal
+  text: string;       // Color de texto principal
 }
 
+/**
+ * Configuración completa de tema
+ * Incluye metadatos y configuración de colores
+ */
 export interface ThemeSettings {
   id?: string;
   name: string;
@@ -20,19 +37,27 @@ export interface ThemeSettings {
   updated_at?: string;
 }
 
+/**
+ * Configuración de branding de la tienda
+ * Maneja logos, textos corporativos y elementos de marca
+ */
 export interface BrandingSettings {
   id?: string;
-  main_logo?: string;
-  favicon?: string;
-  footer_logo?: string;
-  email_logo?: string;
-  brand_name: string;
-  tagline: string;
-  description: string;
+  main_logo?: string;     // Logo principal del header
+  favicon?: string;       // Icono del navegador
+  footer_logo?: string;   // Logo del footer
+  email_logo?: string;    // Logo para plantillas de email
+  brand_name: string;     // Nombre de la marca
+  tagline: string;        // Eslogan de la marca
+  description: string;    // Descripción corporativa
   created_at?: string;
   updated_at?: string;
 }
 
+/**
+ * Configuración de banners promocionales
+ * Sistema flexible para promociones y anuncios
+ */
 export interface Banner {
   id?: string;
   title: string;
@@ -41,49 +66,65 @@ export interface Banner {
   image: string;
   link?: string;
   button_text?: string;
-  position: 'hero' | 'top' | 'middle' | 'bottom';
-  active: boolean;
-  start_date?: string;
-  end_date?: string;
+  position: 'hero' | 'top' | 'middle' | 'bottom';  // Posición en la página
+  active: boolean;        // Estado activo/inactivo
+  start_date?: string;    // Fecha de inicio (opcional)
+  end_date?: string;      // Fecha de fin (opcional)
   created_at?: string;
   updated_at?: string;
 }
 
+/**
+ * Configuración del footer
+ * Información corporativa y elementos del pie de página
+ */
 export interface FooterSettings {
   id?: string;
-  company_name: string;
-  description: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  copyright: string;
-  show_newsletter: boolean;
-  newsletter_title: string;
-  newsletter_description: string;
+  company_name: string;           // Nombre de la empresa
+  description: string;            // Descripción corporativa
+  address?: string;               // Dirección física
+  phone?: string;                 // Teléfono de contacto
+  email?: string;                 // Email de contacto
+  copyright: string;              // Texto de copyright
+  show_newsletter: boolean;       // Mostrar sección de newsletter
+  newsletter_title: string;       // Título del newsletter
+  newsletter_description: string; // Descripción del newsletter
   created_at?: string;
   updated_at?: string;
 }
 
+/**
+ * Enlaces del footer organizados por categorías
+ * Sistema flexible para diferentes secciones de enlaces
+ */
 export interface FooterLink {
   id?: string;
-  title: string;
-  url: string;
-  category: string;
-  external: boolean;
-  active: boolean;
-  sort_order: number;
+  title: string;        // Texto del enlace
+  url: string;          // URL de destino
+  category: string;     // Categoría (ej: "legal", "ayuda", "empresa")
+  external: boolean;    // Enlace externo (abre en nueva pestaña)
+  active: boolean;      // Estado activo/inactivo
+  sort_order: number;   // Orden de visualización
   created_at?: string;
 }
 
+/**
+ * Configuración de redes sociales
+ * Enlaces a perfiles sociales de la empresa
+ */
 export interface SocialMedia {
   id?: string;
-  platform: string;
-  url: string;
-  active: boolean;
+  platform: string;    // Nombre de la plataforma (ej: "facebook", "instagram")
+  url: string;          // URL del perfil
+  active: boolean;      // Estado activo/inactivo
   created_at?: string;
 }
 
-// Type aliases para eliminar duplicación
+// ============================================================================
+// TYPE ALIASES PARA CREACIÓN DE REGISTROS
+// ============================================================================
+
+// Type aliases para eliminar campos auto-generados en operaciones de creación
 export type CreateThemeData = Omit<ThemeSettings, 'id' | 'created_at' | 'updated_at'>;
 export type CreateBrandingData = Omit<BrandingSettings, 'id' | 'created_at' | 'updated_at'>;
 export type CreateBannerData = Omit<Banner, 'id' | 'created_at' | 'updated_at'>;
@@ -91,7 +132,14 @@ export type CreateFooterData = Omit<FooterSettings, 'id' | 'created_at' | 'updat
 export type CreateFooterLinkData = Omit<FooterLink, 'id' | 'created_at'>;
 export type CreateSocialMediaData = Omit<SocialMedia, 'id' | 'created_at'>;
 
-// Theme Services
+// ============================================================================
+// SERVICIOS DE TEMAS
+// ============================================================================
+
+/**
+ * Obtiene todos los temas disponibles
+ * Ordenados por fecha de creación (más recientes primero)
+ */
 export async function getThemes(): Promise<ThemeSettings[]> {
   const { data, error } = await supabase
     .from('theme_settings')
@@ -102,6 +150,10 @@ export async function getThemes(): Promise<ThemeSettings[]> {
   return data || [];
 }
 
+/**
+ * Obtiene el tema actualmente activo
+ * Solo debe haber un tema activo a la vez
+ */
 export async function getActiveTheme(): Promise<ThemeSettings | null> {
   const { data, error } = await supabase
     .from('theme_settings')
