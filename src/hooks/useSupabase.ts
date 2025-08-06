@@ -198,36 +198,42 @@ export function useSupabaseSubscription<T>(
 ) {
   const [data, setData] = useState<T[]>([]);
 
+  // Extraer el manejador de eventos para reducir la anidación
+  function handleSubscriptionEvent(payload: any) {
+    // Manejo por defecto
+    switch (payload.eventType) {
+      case 'INSERT':
+        setData(prev => [...prev, payload.new as T]);
+        break;
+      case 'UPDATE':
+        setData(prev => prev.map(item =>
+          (item as any).id === payload.new.id ? payload.new as T : item
+        ));
+        break;
+      case 'DELETE':
+        setData(prev => prev.filter(item =>
+          (item as any).id !== payload.old.id
+        ));
+        break;
+    }
+  }
+
   useEffect(() => {
     let subscription = supabase
       .channel(`${tableName}-changes`)
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
           table: tableName,
           ...(filter && { filter: Object.entries(filter).map(([key, value]) => `${key}=eq.${value}`).join(',') })
-        }, 
+        },
         (payload) => {
           if (callback) {
             callback(payload);
           } else {
-            // Manejo por defecto
-            switch (payload.eventType) {
-              case 'INSERT':
-                setData(prev => [...prev, payload.new as T]);
-                break;
-              case 'UPDATE':
-                setData(prev => prev.map(item => 
-                  (item as any).id === payload.new.id ? payload.new as T : item
-                ));
-                break;
-              case 'DELETE':
-                setData(prev => prev.filter(item => 
-                  (item as any).id !== payload.old.id
-                ));
-                break;
-            }
+            handleSubscriptionEvent(payload);
           }
         }
       )

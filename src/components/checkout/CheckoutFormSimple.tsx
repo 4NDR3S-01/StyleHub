@@ -19,6 +19,51 @@ interface CheckoutFormSimpleProps {
   cartItems: CartItem[];
 }
 
+// Componente separado para el indicador de progreso
+interface ProgressIndicatorProps {
+  step: number;
+}
+
+const ProgressIndicator: React.FC<ProgressIndicatorProps> = ({ step }) => (
+  <div className="mb-6">
+    <div className="flex items-center justify-between">
+      {[1, 2, 3].map((stepNumber) => (
+        <React.Fragment key={stepNumber}>
+          <div className="flex items-center">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                step >= stepNumber
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-600'
+              }`}
+            >
+              {step > stepNumber ? (
+                <CheckCircle className="h-4 w-4" />
+              ) : (
+                stepNumber
+              )}
+            </div>
+            <span className={`ml-2 text-sm ${
+              step >= stepNumber ? 'text-blue-600 font-medium' : 'text-gray-500'
+            }`}>
+              {stepNumber === 1 && 'Envío'}
+              {stepNumber === 2 && 'Pago'}
+              {stepNumber === 3 && 'Confirmar'}
+            </span>
+          </div>
+          {stepNumber < 3 && (
+            <div
+              className={`flex-1 mx-4 h-0.5 ${
+                step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
+              }`}
+            />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  </div>
+);
+
 export function CheckoutFormSimple({ user, cartItems }: Readonly<CheckoutFormSimpleProps>) {
   const {
     form,
@@ -34,51 +79,10 @@ export function CheckoutFormSimple({ user, cartItems }: Readonly<CheckoutFormSim
 
   // Validación mejorada para nextStep
 
-  // Indicador de progreso
-  const ProgressIndicator = () => (
-    <div className="mb-6">
-      <div className="flex items-center justify-between">
-        {[1, 2, 3].map((stepNumber) => (
-          <React.Fragment key={stepNumber}>
-            <div className="flex items-center">
-              <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step >= stepNumber
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-200 text-gray-600'
-                }`}
-              >
-                {step > stepNumber ? (
-                  <CheckCircle className="h-4 w-4" />
-                ) : (
-                  stepNumber
-                )}
-              </div>
-              <span className={`ml-2 text-sm ${
-                step >= stepNumber ? 'text-blue-600 font-medium' : 'text-gray-500'
-              }`}>
-                {stepNumber === 1 && 'Envío'}
-                {stepNumber === 2 && 'Pago'}
-                {stepNumber === 3 && 'Confirmar'}
-              </span>
-            </div>
-            {stepNumber < 3 && (
-              <div
-                className={`flex-1 mx-4 h-0.5 ${
-                  step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-                }`}
-              />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <ProgressIndicator />
+        <ProgressIndicator step={step} />
 
         {/* Paso 1: Información de Envío */}
         {step === 1 && (

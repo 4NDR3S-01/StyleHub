@@ -1,8 +1,20 @@
+// Alias para creación de producto y variante sin los campos generados automáticamente
+export type CreateProductInput = Omit<Product, 'id' | 'created_at' | 'updated_at'>;
+export type CreateProductVariantInput = Omit<ProductVariant, 'id' | 'created_at' | 'updated_at'>;
+// Tipos para género y temporada
+export type Gender = 'masculino' | 'femenino' | 'unisex';
+export type Season = 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año';
+/**
+ * Opciones de ordenamiento para productos
+ */
+export interface ProductSort {
+  field: ProductSortField;
+  direction: SortDirection;
+}
 import supabase from '@/lib/supabaseClient';
-
-// ============================================================================
-// REPOSITORY PATTERN - PRODUCT DATA ACCESS
-// ============================================================================
+// Alias para uniones repetidas (S4323 SonarQube)
+export type ProductSortField = 'created_at' | 'name' | 'price';
+export type SortDirection = 'asc' | 'desc';
 
 export interface Product {
   id: string;
@@ -13,9 +25,9 @@ export interface Product {
   images: string[];
   category_id: string;
   brand?: string;
-  gender?: 'masculino' | 'femenino' | 'unisex';
+  gender?: Gender;
   material?: string;
-  season?: 'primavera' | 'verano' | 'otoño' | 'invierno' | 'todo_año';
+  season?: Season;
   tags?: string[];
   featured?: boolean;
   sale?: boolean;
@@ -71,11 +83,12 @@ export interface ProductFilters {
 /**
  * Opciones de paginación
  */
+export type PaginationSortField = 'name' | 'price' | 'created_at' | 'popularity';
 export interface PaginationOptions {
   page: number;
   limit: number;
-  sortBy?: 'name' | 'price' | 'created_at' | 'popularity';
-  sortOrder?: 'asc' | 'desc';
+  sortBy?: PaginationSortField;
+  sortOrder?: SortDirection;
 }
 
 /**
@@ -101,7 +114,7 @@ export interface IProductRepository {
   // Operaciones básicas CRUD
   findById(id: string): Promise<Product | null>;
   findAll(filters?: ProductFilters, pagination?: PaginationOptions): Promise<PaginatedResult<Product>>;
-  create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product>;
+  create(product: CreateProductInput): Promise<Product>;
   update(id: string, updates: Partial<Product>): Promise<Product | null>;
   delete(id: string): Promise<boolean>;
   
@@ -113,7 +126,7 @@ export interface IProductRepository {
   
   // Operaciones de variantes
   findVariants(productId: string): Promise<ProductVariant[]>;
-  createVariant(variant: Omit<ProductVariant, 'id' | 'created_at' | 'updated_at'>): Promise<ProductVariant>;
+  createVariant(variant: CreateProductVariantInput): Promise<ProductVariant>;
   updateVariant(id: string, updates: Partial<ProductVariant>): Promise<ProductVariant | null>;
   deleteVariant(id: string): Promise<boolean>;
 }
@@ -226,7 +239,7 @@ class ProductRepository implements IProductRepository {
       .range(offset, offset + limit - 1);
   }
 
-  async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {
+  async create(product: CreateProductInput): Promise<Product> {
     try {
       const { data, error } = await supabase
         .from('products')
@@ -345,7 +358,7 @@ class ProductRepository implements IProductRepository {
     }
   }
 
-  async createVariant(variant: Omit<ProductVariant, 'id' | 'created_at' | 'updated_at'>): Promise<ProductVariant> {
+  async createVariant(variant: CreateProductVariantInput): Promise<ProductVariant> {
     try {
       const { data, error } = await supabase
         .from('product_variants')
@@ -515,7 +528,7 @@ export class ProductService {
   /**
    * Crear nuevo producto
    */
-  async createProduct(productData: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {
+  async createProduct(productData: CreateProductInput): Promise<Product> {
     // Validaciones de negocio
     if (!productData.name || productData.name.trim().length === 0) {
       throw new Error('El nombre del producto es obligatorio');
@@ -630,32 +643,6 @@ export interface ServiceProductFilters {
   search?: string;
 }
 
-export interface ProductSort {
-  field: 'created_at' | 'name' | 'price';
-  direction: 'asc' | 'desc';
-}
-
-/**
- * Helper para aplicar filtros a la consulta de productos
- */
-function applyProductFilters(query: any, filters: ServiceProductFilters) {
-  if (filters.category) query = query.eq('category_id', filters.category);
-  if (filters.minPrice !== undefined) query = query.gte('price', filters.minPrice);
-  if (filters.maxPrice !== undefined) query = query.lte('price', filters.maxPrice);
-  if (filters.brands && filters.brands.length > 0) query = query.in('brand', filters.brands);
-  if (filters.seasons && filters.seasons.length > 0) query = query.in('season', filters.seasons);
-  if (filters.featured !== undefined) query = query.eq('featured', filters.featured);
-  if (filters.sale !== undefined) query = query.eq('sale', filters.sale);
-  if (filters.active !== undefined) {
-    query = query.eq('active', filters.active).eq('is_active', filters.active);
-  } else {
-    query = query.eq('active', true).eq('is_active', true);
-  }
-  if (filters.search) {
-    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
-  }
-  return query;
-}
 
 /**
  * Obtiene productos con filtros
@@ -674,7 +661,27 @@ export async function getProducts(
         product_variants:product_variants(*)
       `);
 
-    query = applyProductFilters(query, filters);
+// Filtro para la capa de compatibilidad (ServiceProductFilters)
+const applyProductFiltersService = (query: any, filters: ServiceProductFilters) => {
+  if (filters.category) query = query.eq('category_id', filters.category);
+  if (filters.minPrice !== undefined) query = query.gte('price', filters.minPrice);
+  if (filters.maxPrice !== undefined) query = query.lte('price', filters.maxPrice);
+  if (filters.brands && filters.brands.length > 0) query = query.in('brand', filters.brands);
+  if (filters.seasons && filters.seasons.length > 0) query = query.in('season', filters.seasons);
+  if (filters.featured !== undefined) query = query.eq('featured', filters.featured);
+  if (filters.sale !== undefined) query = query.eq('sale', filters.sale);
+  if (filters.active !== undefined) {
+    query = query.eq('active', filters.active).eq('is_active', filters.active);
+  } else {
+    query = query.eq('active', true).eq('is_active', true);
+  }
+  if (filters.search) {
+    query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
+  }
+  return query;
+};
+
+    query = applyProductFiltersService(query, filters);
 
     query = sort
       ? query.order(sort.field, { ascending: sort.direction === 'asc' })

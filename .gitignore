@@ -44,3 +44,6 @@ next-env.d.ts
 
 #vscode
 .vscode
+
+#carpeta de scripts de la base de datos
+scripts
