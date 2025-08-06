@@ -163,43 +163,8 @@ class ProductRepository implements IProductRepository {
         `, { count: 'exact' })
         .eq('is_active', true);
 
-      // Aplicar filtros
-      if (filters) {
-        if (filters.category) {
-          query = query.eq('category_id', filters.category);
-        }
-        if (filters.brand) {
-          query = query.eq('brand', filters.brand);
-        }
-        if (filters.gender) {
-          query = query.eq('gender', filters.gender);
-        }
-        if (filters.minPrice) {
-          query = query.gte('price', filters.minPrice);
-        }
-        if (filters.maxPrice) {
-          query = query.lte('price', filters.maxPrice);
-        }
-        if (filters.featured !== undefined) {
-          query = query.eq('is_featured', filters.featured);
-        }
-        if (filters.sale !== undefined) {
-          query = query.eq('sale', filters.sale);
-        }
-        if (filters.search) {
-          query = query.or(`name.ilike.%${filters.search}%, description.ilike.%${filters.search}%`);
-        }
-      }
-
-      // Aplicar paginación y ordenamiento
-      if (pagination) {
-        const { page, limit, sortBy = 'created_at', sortOrder = 'desc' } = pagination;
-        const offset = (page - 1) * limit;
-        
-        query = query
-          .order(sortBy, { ascending: sortOrder === 'asc' })
-          .range(offset, offset + limit - 1);
-      }
+      query = this.applyProductFilters(query, filters);
+      query = this.applyPaginationAndSorting(query, pagination);
 
       const { data, error, count } = await query;
 
@@ -221,6 +186,44 @@ class ProductRepository implements IProductRepository {
       console.error('Repository error in findAll:', error);
       throw error;
     }
+  }
+
+  private applyProductFilters(query: any, filters?: ProductFilters) {
+    if (!filters) return query;
+    if (filters.category) {
+      query = query.eq('category_id', filters.category);
+    }
+    if (filters.brand) {
+      query = query.eq('brand', filters.brand);
+    }
+    if (filters.gender) {
+      query = query.eq('gender', filters.gender);
+    }
+    if (filters.minPrice) {
+      query = query.gte('price', filters.minPrice);
+    }
+    if (filters.maxPrice) {
+      query = query.lte('price', filters.maxPrice);
+    }
+    if (filters.featured !== undefined) {
+      query = query.eq('is_featured', filters.featured);
+    }
+    if (filters.sale !== undefined) {
+      query = query.eq('sale', filters.sale);
+    }
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%, description.ilike.%${filters.search}%`);
+    }
+    return query;
+  }
+
+  private applyPaginationAndSorting(query: any, pagination?: PaginationOptions) {
+    if (!pagination) return query;
+    const { page, limit, sortBy = 'created_at', sortOrder = 'desc' } = pagination;
+    const offset = (page - 1) * limit;
+    return query
+      .order(sortBy, { ascending: sortOrder === 'asc' })
+      .range(offset, offset + limit - 1);
   }
 
   async create(product: Omit<Product, 'id' | 'created_at' | 'updated_at'>): Promise<Product> {

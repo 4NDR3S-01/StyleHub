@@ -9,12 +9,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Separator } from '@/components/ui/separator';
-import { CreditCard, MapPin, User, Lock } from 'lucide-react';
+import { CreditCard, MapPin, Lock } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { useCart, CartItem } from '@/context/CartContext';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { stripePromise } from '@/lib/stripe';
 
@@ -49,9 +46,8 @@ interface CheckoutFormProps {
   setIsProcessing: (processing: boolean) => void;
 }
 
-export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }: CheckoutFormProps) {
-  const { clearCart } = useCart();
-  const router = useRouter();
+export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }: Readonly<CheckoutFormProps>) {
+  useCart();
   const [step, setStep] = useState(1);
 
   const form = useForm<CheckoutFormData>({
@@ -65,7 +61,7 @@ export function CheckoutForm({ user, cartItems, isProcessing, setIsProcessing }:
       city: '',
       state: '',
       zipCode: '',
-      country: 'Colombia',
+      country: 'Ecuador',
       // Campos de tarjeta eliminados
       saveInfo: false,
       sameAsShipping: true,

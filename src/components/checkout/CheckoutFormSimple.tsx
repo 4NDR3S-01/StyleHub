@@ -13,16 +13,13 @@ import { CreditCard, MapPin, Lock, CheckCircle } from 'lucide-react';
 import { User as UserType } from '@/types';
 import { CartItem } from '@/context/CartContext';
 import { useCheckout } from '@/hooks/useCheckout';
-import { checkCartStock } from '@/services/inventory.service';
-import { validateCardNumber } from '@/utils/validation';
-import { toast } from 'sonner';
 
 interface CheckoutFormSimpleProps {
   user: UserType | null;
   cartItems: CartItem[];
 }
 
-export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps) {
+export function CheckoutFormSimple({ user, cartItems }: Readonly<CheckoutFormSimpleProps>) {
   const {
     form,
     step,
@@ -36,46 +33,6 @@ export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps)
   } = useCheckout({ user, cartItems });
 
   // Validación mejorada para nextStep
-  const handleNextStep = async () => {
-    if (step === 1) {
-      // Validar información de envío
-      const shippingFields = ['firstName', 'lastName', 'email', 'phone', 'address', 'city', 'state', 'zipCode', 'country'];
-      const values = form.getValues();
-      const errors = shippingFields.filter(field => !values[field as keyof typeof values]);
-      
-      if (errors.length > 0) {
-        toast.error(`Por favor completa todos los campos requeridos: ${errors.join(', ')}`);
-        return;
-      }
-      
-      // Validar formato de email
-      const email = values.email;
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        toast.error('Por favor ingresa un email válido');
-        return;
-      }
-      
-      // Verificar stock antes de continuar
-      const stockChecks = await checkCartStock(cartItems);
-      const stockIssues = stockChecks.filter(check => !check.isAvailable);
-      
-      if (stockIssues.length > 0) {
-        toast.error('Algunos productos no tienen stock suficiente. Por favor revisa tu carrito.');
-        return;
-      }
-      
-      nextStep();
-    } else if (step === 2) {
-      // Validar datos de pago si es necesario
-      const cardNumber = form.getValues('cardNumber');
-      if (cardNumber && !validateCardNumber(cardNumber)) {
-        toast.error('Número de tarjeta inválido');
-        return;
-      }
-      
-      nextStep();
-    }
-  };
 
   // Indicador de progreso
   const ProgressIndicator = () => (
@@ -106,9 +63,11 @@ export function CheckoutFormSimple({ user, cartItems }: CheckoutFormSimpleProps)
               </span>
             </div>
             {stepNumber < 3 && (
-              <div className={`flex-1 mx-4 h-0.5 ${
-                step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-              }`} />
+              <div
+                className={`flex-1 mx-4 h-0.5 ${
+                  step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              />
             )}
           </React.Fragment>
         ))}
