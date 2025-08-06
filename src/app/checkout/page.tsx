@@ -1,11 +1,9 @@
 "use client"
 
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { createOrder } from '@/services/order.service';
-import { recordCouponUsage } from '@/services/coupon.service';
-import { loadStripe } from '@stripe/stripe-js';
 import dynamic from 'next/dynamic';
 import AddressSelector from '@/components/checkout/AddressSelector';
 import CouponInput from '@/components/checkout/CouponInput';
@@ -37,6 +35,7 @@ interface CouponCode {
 export default function CheckoutPage() {
   const { state, clearCart } = useCart();
   const { user } = useAuth();
+  const router = useRouter();
   
   // Estados para los diferentes componentes
   const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
@@ -45,7 +44,7 @@ export default function CheckoutPage() {
   const [shippingCost, setShippingCost] = useState(0);
   
   // Estados para el proceso de checkout
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<any>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
@@ -53,6 +52,9 @@ export default function CheckoutPage() {
   
   // Calcular subtotal de productos
   const subtotal = state.items.reduce((sum, item) => sum + (item.producto.price * item.quantity), 0);
+  
+  // Calcular tax (ejemplo: 8.5%)
+  const taxAmount = subtotal * 0.085;
   
   // Calcular descuento del cupón
   const calculateCouponDiscount = (): number => {
@@ -85,189 +87,99 @@ export default function CheckoutPage() {
     setAppliedCoupon(null);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     if (!user) {
-      alert('Debes iniciar sesión para continuar');
+      alert('Debes estar autenticado para realizar una compra');
+      return;
+    }
+
+    if (!selectedPaymentMethod) {
+      alert('Selecciona un método de pago');
       return;
     }
 
     if (!selectedAddress) {
-      alert('Por favor selecciona una dirección de envío');
-      return;
-    }
-
-    if (!selectedShipping) {
-      alert('Por favor selecciona un método de envío');
-      return;
-    }
-
-    if (!selectedPaymentMethod || !paymentData) {
-      alert('Por favor selecciona un método de pago');
-      return;
-    }
-
-    if (!selectedAddress) {
-      alert('Por favor selecciona una dirección de envío');
-      return;
-    }
-
-    if (state.items.length === 0) {
-      alert('El carrito está vacío');
+      alert('Selecciona una dirección de envío');
       return;
     }
 
     setLoading(true);
 
     try {
-      // Mapear el tipo de pago correctamente
-      const paymentMethod = paymentData.type === 'card' ? 'stripe' : paymentData.type === 'paypal' ? 'paypal' : 'stripe';
+      console.log('Items del carrito antes de checkout:', state.items);
+      console.log('PaymentData actual:', paymentData);
+      console.log('SelectedPaymentMethod actual:', selectedPaymentMethod);
       
-      console.log('Creating order with:', {
+      // Usar el servicio ético de checkout
+      const checkoutData = {
         userId: user.id,
-        itemsCount: state.items.length,
-        addressInfo: {
+        items: state.items.map((item: any) => {
+          const mappedItem = {
+            id: item.producto.id,
+            quantity: item.quantity,
+            price: item.producto.price,
+            variant_id: item.variant?.id,
+            color: item.variant?.color,
+            size: item.variant?.size
+          };
+          console.log('Item mapeado:', mappedItem);
+          return mappedItem;
+        }),
+        shippingAddress: {
           street: selectedAddress.address,
           city: selectedAddress.city,
           state: selectedAddress.state || '',
-          zip: selectedAddress.zip_code || '',
+          postal_code: selectedAddress.zip_code || '',
           country: selectedAddress.country
         },
-        paymentMethod
-      });
-      
-      const order = await createOrder(
-        user.id,
-        state.items,
-        {
-          street: selectedAddress.address,
-          city: selectedAddress.city,
-          state: selectedAddress.state || '',
-          zip: selectedAddress.zip_code || '',
-          country: selectedAddress.country
+        paymentMethod: {
+          type: paymentData?.type || 'card',
+          savedMethodId: paymentData?.savedMethodId || selectedPaymentMethod
         },
-        paymentMethod,
-        shippingCost,
-        0.19 // 19% IVA (impuesto)
-      );
-      setOrderId(order.id);
+        total,
+        subtotal,
+        shipping: shippingCost,
+        tax: taxAmount,
+        couponCode: appliedCoupon?.code,
+        couponDiscount: couponDiscount
+      };
 
-      // Registrar uso del cupón si se aplicó uno
-      if (appliedCoupon) {
-        await recordCouponUsage(
-          appliedCoupon.id,
-          user.id,
-          order.id,
-          couponDiscount
-        );
+      console.log('CheckoutData final a enviar:', checkoutData);
+
+      // Procesar checkout ético: pago primero, orden después usando la API
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(checkoutData),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Error al procesar el checkout');
       }
 
-      // Limpiar carrito al completar la orden
-      clearCart();
+      // Si es PayPal y necesita aprobación
+      if (result.approvalUrl) {
+        window.location.href = result.approvalUrl;
+        return;
+      }
 
-      // Si es un método guardado, procesarlo directamente
-      if (paymentData.savedMethodId) {
-        if (paymentData.type === 'card') {
-          await handleSavedCardPayment(order, paymentData.externalId);
-        } else if (paymentData.type === 'paypal') {
-          await handleSavedPayPalPayment(order, paymentData.externalId);
-        }
-      } else {
-        // Para nuevos métodos, mostrar formulario de pago
-        setPendingPayment(true);
+      // Si el pago fue exitoso, limpiar carrito y redirigir
+      if (result.orderId) {
+        clearCart();
+        router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
       }
       
     } catch (error) {
-      console.error('Error creating order:', error);
-      console.error('Error details:', error instanceof Error ? error.message : error);
-      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('Error in checkout:', error);
       alert(`Error al procesar la orden: ${error instanceof Error ? error.message : 'Error desconocido'}. Inténtalo nuevamente.`);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleSavedCardPayment = async (order: any, paymentMethodId: string) => {
-    try {
-      // Procesar pago con método guardado usando nuestro endpoint
-      const response = await fetch('/api/payments/stripe', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: total,
-          currency: 'usd',
-          payment_method_id: paymentMethodId,
-          customer_id: user?.email, // O usar customer ID si existe
-          save_payment_method: false // Ya está guardado
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al procesar el pago');
-      }
-
-      const { client_secret, payment_intent_id } = data;
-
-      // Confirmar el pago inmediatamente
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      if (!stripe) throw new Error('Stripe no disponible');
-
-      const { error: confirmError } = await stripe.confirmCardPayment(client_secret);
-      
-      if (confirmError) {
-        throw new Error(confirmError.message);
-      }
-
-      // Redirigir a página de éxito
-      window.location.href = `/orden-confirmada?orderId=${order.id}&paymentIntent=${payment_intent_id}`;
-      
-    } catch (error: any) {
-      console.error('Error processing saved card payment:', error);
-      alert('Error al procesar el pago: ' + error.message);
-      setPendingPayment(false);
-      setOrderId(null);
-    }
-  };
-
-  const handleSavedPayPalPayment = async (order: any, paypalMethodId: string) => {
-    try {
-      // Para métodos de PayPal guardados, redirigir al proceso de PayPal
-      // Nota: PayPal no permite pagos automáticos con métodos guardados como Stripe
-      // Necesitamos iniciar un nuevo flujo de PayPal
-      
-      const response = await fetch('/api/payments/paypal', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          amount: total,
-          currency: 'USD',
-          order_id: order.id,
-        }),
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || 'Error al crear orden de PayPal');
-      }
-
-      // Redirigir al usuario a PayPal para completar el pago
-      if (data.approval_url) {
-        window.location.href = data.approval_url;
-      } else {
-        throw new Error('No se recibió URL de aprobación de PayPal');
-      }
-      
-    } catch (error: any) {
-      console.error('Error processing saved PayPal payment:', error);
-      alert('Error al procesar el pago con PayPal: ' + error.message);
-      setPendingPayment(false);
-      setOrderId(null);
     }
   };
 

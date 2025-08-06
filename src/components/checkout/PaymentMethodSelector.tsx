@@ -3,6 +3,9 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { CreditCard, Plus, Check, Lock } from 'lucide-react';
 
 interface SavedPaymentMethod {
   id: string;
@@ -16,13 +19,6 @@ interface SavedPaymentMethod {
   paypal_email?: string;
   is_default: boolean;
   nickname?: string;
-}
-
-interface PaymentData {
-  type: string;
-  savedMethodId?: string | null;
-  externalId?: string;
-  isNew?: boolean;
 }
 
 interface PaymentMethodSelectorProps {
@@ -39,42 +35,31 @@ export default function PaymentMethodSelector({
   const { user } = useAuth();
   const [savedMethods, setSavedMethods] = useState<SavedPaymentMethod[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newMethodType, setNewMethodType] = useState<'card' | 'paypal'>('card');
 
-  // Cargar métodos de pago guardados
   useEffect(() => {
     if (user?.id) {
       loadSavedMethods();
+    } else {
+      setLoading(false);
     }
   }, [user?.id]);
 
-    const loadSavedMethods = async () => {
-    if (!user) return;
-    
-    setLoading(true);
+  const loadSavedMethods = async () => {
     try {
-      const response = await fetch(`/api/payments/methods?user_id=${user.id}`);
+      const response = await fetch('/api/payments/methods');
       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Error loading payment methods');
-      }
-      
-      const methods = data.payment_methods || [];
-      setSavedMethods(methods);
-      
-      // Seleccionar el método por defecto si existe
-      const defaultMethod = methods.find((m: SavedPaymentMethod) => m.is_default);
-      if (defaultMethod && !selectedMethod) {
-        onMethodSelect(defaultMethod.id, 'saved');
-        onPaymentDataChange({
-          type: defaultMethod.type,
-          savedMethodId: defaultMethod.id,
-          externalId: defaultMethod.external_id
-        });
+      if (data.success) {
+        setSavedMethods(data.methods || []);
+        
+        // Auto-seleccionar método por defecto si existe
+        const defaultMethod = data.methods?.find((m: SavedPaymentMethod) => m.is_default);
+        if (defaultMethod && !selectedMethod) {
+          handleMethodSelection(defaultMethod.id, 'saved');
+        }
       }
     } catch (error) {
-      console.error('Error loading saved payment methods:', error);
+      console.error('Error loading payment methods:', error);
       toast({
         title: 'Error',
         description: 'No se pudieron cargar los métodos de pago guardados',
@@ -91,16 +76,19 @@ export default function PaymentMethodSelector({
     if (type === 'saved') {
       const method = savedMethods.find((m: SavedPaymentMethod) => m.id === methodId);
       if (method) {
+        const normalizedType = method.type === 'stripe' ? 'card' : method.type;
+        
         onPaymentDataChange({
-          type: method.type,
+          type: normalizedType,
           savedMethodId: method.id,
-          externalId: method.external_id
+          externalId: method.external_id,
+          isNew: false
         });
       }
     } else {
       onPaymentDataChange({
-        type: newMethodType,
-        savedMethodId: null,
+        type: 'card',
+        savedMethodId: 'new-card',
         isNew: true
       });
     }
@@ -113,160 +101,175 @@ export default function PaymentMethodSelector({
       'amex': '💳',
       'discover': '💳',
       'diners': '💳',
-      'jcb': '💳'
+      'jcb': '💳',
+      'unionpay': '💳'
     };
-    return `${brandIcons[brand.toLowerCase()] || '💳'} •••• •••• •••• ${lastFour}`;
-  };
-
-  const formatExpiry = (month: number, year: number) => {
-    return `${month.toString().padStart(2, '0')}/${year.toString().slice(-2)}`;
+    
+    return {
+      icon: brandIcons[brand.toLowerCase()] || '💳',
+      display: `•••• •••• •••• ${lastFour}`,
+      brand: brand.toUpperCase()
+    };
   };
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h3 className="text-lg font-semibold mb-4">Método de pago</h3>
-        <div className="animate-pulse space-y-3">
-          <div className="h-12 bg-gray-200 rounded"></div>
-          <div className="h-12 bg-gray-200 rounded"></div>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Método de pago
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6">
-      <h3 className="text-lg font-semibold mb-4">Método de pago</h3>
-      
-      <div className="space-y-3">
-        {/* Métodos guardados */}
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <CreditCard className="h-5 w-5" />
+          Método de pago
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
         {savedMethods.length > 0 && (
-          <>
-            <h4 className="text-sm font-medium text-gray-700 mb-2">Métodos guardados</h4>
-            {savedMethods.map((method) => (
-              <div
-                key={method.id}
-                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-                  selectedMethod === method.id
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:bg-gray-50'
-                }`}
-                onClick={() => handleMethodSelection(method.id, 'saved')}
-              >
-                <input
-                  type="radio"
-                  id={`saved-${method.id}`}
-                  checked={selectedMethod === method.id}
-                  onChange={() => handleMethodSelection(method.id, 'saved')}
-                  className="text-blue-600"
-                />
-                <div className="flex-1">
-                  {method.type === 'card' && method.card_last_four && (
-                    <div>
-                      <div className="font-medium">
-                        {formatCardNumber(method.card_last_four, method.card_brand || 'card')}
-                      </div>
-                      <div className="text-sm text-gray-500">
-                        Expira {formatExpiry(method.card_exp_month || 0, method.card_exp_year || 0)}
-                        {method.is_default && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Por defecto
-                          </span>
+          <div className="space-y-3">
+            <h4 className="font-medium text-sm text-gray-700">Tarjetas guardadas</h4>
+            {savedMethods.map((method) => {
+              const isSelected = selectedMethod === method.id;
+              const cardInfo = method.card_last_four ? 
+                formatCardNumber(method.card_last_four, method.card_brand || 'card') : 
+                null;
+
+              return (
+                <button
+                  key={method.id}
+                  type="button"
+                  className={`relative border rounded-lg p-4 cursor-pointer transition-all hover:border-gray-300 w-full text-left ${
+                    isSelected ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+                  }`}
+                  onClick={() => handleMethodSelection(method.id, 'saved')}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      handleMethodSelection(method.id, 'saved');
+                    }
+                  }}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      {cardInfo && (
+                        <span className="text-2xl">{cardInfo.icon}</span>
+                      )}
+                      <div>
+                        {(() => {
+                          if (cardInfo) {
+                            return (
+                              <>
+                                <div className="font-medium">{cardInfo.brand}</div>
+                                <div className="text-sm text-gray-600">{cardInfo.display}</div>
+                                {method.card_exp_month && method.card_exp_year && (
+                                  <div className="text-xs text-gray-500">
+                                    Exp: {method.card_exp_month.toString().padStart(2, '0')}/{method.card_exp_year}
+                                  </div>
+                                )}
+                              </>
+                            );
+                          } else if (method.paypal_email) {
+                            return (
+                              <>
+                                <div className="font-medium">PayPal</div>
+                                <div className="text-sm text-gray-600">{method.paypal_email}</div>
+                              </>
+                            );
+                          } else {
+                            return <div className="font-medium">Método de pago guardado</div>;
+                          }
+                        })()}
+                        {method.nickname && (
+                          <div className="text-xs text-gray-500">{method.nickname}</div>
                         )}
                       </div>
                     </div>
-                  )}
-                  {method.type === 'paypal' && (
-                    <div>
-                      <div className="font-medium">🏛️ PayPal</div>
-                      <div className="text-sm text-gray-500">
-                        {method.paypal_email}
-                        {method.is_default && (
-                          <span className="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
-                            Por defecto
-                          </span>
-                        )}
-                      </div>
+                    <div className="flex items-center gap-2">
+                      {method.is_default && (
+                        <Badge variant="secondary" className="text-xs">
+                          Predeterminado
+                        </Badge>
+                      )}
+                      {isSelected && (
+                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                          <Check className="w-3 h-3 text-white" />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              </div>
-            ))}
-            <hr className="my-4" />
-          </>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
         )}
 
-        {/* Opción para agregar nuevo método */}
-        <h4 className="text-sm font-medium text-gray-700 mb-2">
-          {savedMethods.length > 0 ? 'Agregar nuevo método' : 'Seleccionar método de pago'}
-        </h4>
-        
-        {/* Nuevo método - Tarjeta */}
-        <div
-          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-            selectedMethod === 'new-card'
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:bg-gray-50'
-          }`}
-          onClick={() => {
-            setNewMethodType('card');
-            handleMethodSelection('new-card', 'new');
-          }}
-        >
-          <input
-            type="radio"
-            id="new-card"
-            checked={selectedMethod === 'new-card'}
-            onChange={() => {
-              setNewMethodType('card');
-              handleMethodSelection('new-card', 'new');
+        {/* Opción para agregar nueva tarjeta */}
+        <div className="space-y-3">
+          {savedMethods.length > 0 && (
+            <div className="border-t pt-4">
+              <h4 className="font-medium text-sm text-gray-700 mb-3">O agregar nueva tarjeta</h4>
+            </div>
+          )}
+          
+          <button
+            type="button"
+            className={`relative border rounded-lg p-4 cursor-pointer transition-all hover:border-gray-300 w-full text-left ${
+              selectedMethod === 'new-card' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+            }`}
+            onClick={() => handleMethodSelection('new-card', 'new')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleMethodSelection('new-card', 'new');
+              }
             }}
-            className="text-blue-600"
-          />
-          <label htmlFor="new-card" className="flex items-center gap-2 cursor-pointer flex-1">
-            <span>💳</span>
-            <span>Nueva tarjeta de crédito/débito</span>
-          </label>
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-8 border border-dashed border-gray-300 rounded flex items-center justify-center">
+                  <Plus className="w-4 h-4 text-gray-400" />
+                </div>
+                <div>
+                  <div className="font-medium">Agregar nueva tarjeta</div>
+                  <div className="text-sm text-gray-600">
+                    {savedMethods.length === 0 
+                      ? "Continúa con Stripe para procesar tu pago"
+                      : "Paga con una tarjeta diferente"
+                    }
+                  </div>
+                </div>
+              </div>
+              {selectedMethod === 'new-card' && (
+                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </div>
+          </button>
         </div>
 
-        {/* Nuevo método - PayPal */}
-        <div
-          className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
-            selectedMethod === 'new-paypal'
-              ? 'border-blue-500 bg-blue-50'
-              : 'border-gray-200 hover:bg-gray-50'
-          }`}
-          onClick={() => {
-            setNewMethodType('paypal');
-            handleMethodSelection('new-paypal', 'new');
-          }}
-        >
-          <input
-            type="radio"
-            id="new-paypal"
-            checked={selectedMethod === 'new-paypal'}
-            onChange={() => {
-              setNewMethodType('paypal');
-              handleMethodSelection('new-paypal', 'new');
-            }}
-            className="text-blue-600"
-          />
-          <label htmlFor="new-paypal" className="flex items-center gap-2 cursor-pointer flex-1">
-            <span>🏛️</span>
-            <span>PayPal</span>
-          </label>
+        {/* Información de seguridad */}
+        <div className="flex items-center gap-2 text-xs text-gray-500 pt-4 border-t">
+          <Lock className="w-4 h-4" />
+          <span>
+            <strong>Pago seguro:</strong> Todos los pagos están protegidos con encriptación SSL y procesados por Stripe.
+          </span>
         </div>
-      </div>
-
-      {/* Información de seguridad */}
-      <div className="mt-4 p-3 bg-green-50 rounded-lg">
-        <div className="flex items-center gap-2">
-          <span>🔒</span>
-          <p className="text-sm text-green-700">
-            <strong>Pago seguro:</strong> Todos los pagos están protegidos con encriptación SSL y procesados por Stripe y PayPal.
-          </p>
-        </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -33,7 +33,7 @@ export const inter = Inter({
     'Ubuntu',                            // Linux (Ubuntu)
     'Cantarell',                         // Linux (GNOME)
     'Fira Sans',                         // Mozilla
-    'Droid Sans',                        // Android (legacy)
+      'Droid Sans',                        // Android (legacy)
     'Helvetica Neue',                    // macOS (legacy)
     'sans-serif'                         // Fallback genérico
   ],

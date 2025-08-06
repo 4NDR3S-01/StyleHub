@@ -1,5 +1,5 @@
 import { loadStripe, Stripe } from '@stripe/stripe-js';
-import type { CartItem } from '@/types';
+import type { CartItem } from '@/context/CartContext';
 
 // ============================================================================
 // FACTORY METHOD PATTERN - PAYMENT PROCESSORS
@@ -54,7 +54,13 @@ class StripePaymentProcessor implements PaymentProcessor {
       const response = await fetch('/api/create-stripe-session', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          cartItems: data.cartItems,
+          email: data.email,
+          customerData: data.customerData,
+          userId: data.userId,
+          metadata: data.metadata
+        }),
       });
 
       const session = await response.json();
@@ -103,15 +109,32 @@ class StripePaymentProcessor implements PaymentProcessor {
 class PayPalPaymentProcessor implements PaymentProcessor {
   async processCheckout(data: CheckoutSessionData): Promise<PaymentResult> {
     try {
-      // Integración con PayPal API
-      console.log('Processing PayPal payment');
+      // Llamar a la API de PayPal para crear orden
+      const response = await fetch('/api/payments/paypal', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: data.cartItems.reduce((sum, item) => sum + (item.producto.price * item.quantity), 0),
+          currency: 'USD',
+          order_id: `order_${Date.now()}`,
+          email: data.email,
+          customer_data: data.customerData
+        }),
+      });
+
+      const result = await response.json();
       
-      // Aquí iría la lógica específica de PayPal
-      // Por ahora simulamos una respuesta exitosa
+      if (!response.ok) {
+        return {
+          success: false,
+          error: result.error || 'Error creating PayPal order'
+        };
+      }
+
       return {
         success: true,
-        sessionId: `paypal_${Date.now()}`,
-        sessionUrl: 'https://www.paypal.com/checkoutnow',
+        sessionId: result.order_id,
+        sessionUrl: result.approval_url,
         metadata: { processor: 'paypal' }
       };
     } catch (error) {
@@ -206,7 +229,7 @@ export class PaymentService {
   ): Promise<PaymentResult> {
     try {
       // Validar datos primero
-      const validation = this.validateCheckoutData(data);
+      const validation = PaymentService.validateCheckoutData(data);
       if (!validation.isValid) {
         return {
           success: false,
@@ -273,7 +296,7 @@ export class PaymentService {
 
     // Validar que todos los items tengan precio válido
     data.cartItems?.forEach((item, index) => {
-      if (!item.product?.price || item.product.price <= 0) {
+      if (!item.producto?.price || item.producto.price <= 0) {
         errors.push(`Producto ${index + 1} tiene precio inválido`);
       }
       if (!item.quantity || item.quantity <= 0) {
@@ -320,15 +343,20 @@ export class PaymentService {
   static async processPayment(data: CheckoutSessionData, processorType: 'stripe' | 'paypal' = 'stripe') {
     try {
       // Usar el nuevo método que implementa Factory Pattern
-      const result = await this.createCheckoutSession(data, processorType);
+      const result = await PaymentService.createCheckoutSession(data, processorType);
       
       if (!result.success) {
         throw new Error(result.error || 'Error al crear sesión de checkout');
       }
       
-      // Redirigir a checkout solo si es Stripe y tenemos sessionId
+      // Para Stripe, redirigir a Checkout
       if (processorType === 'stripe' && result.sessionId) {
-        await this.redirectToCheckout(result.sessionId);
+        await PaymentService.redirectToCheckout(result.sessionId);
+      }
+      
+      // Para PayPal, redirigir a la URL de aprobación
+      if (processorType === 'paypal' && result.sessionUrl) {
+        window.location.href = result.sessionUrl;
       }
       
       return result;
@@ -457,7 +485,7 @@ export class PaymentService {
 
     const subtotal = cartItems.reduce(
       (sum, item) => {
-        const itemPrice = item.product?.price || 0;
+        const itemPrice = item.producto?.price || 0;
         const itemQuantity = item.quantity || 0;
         return sum + (itemPrice * itemQuantity);
       },

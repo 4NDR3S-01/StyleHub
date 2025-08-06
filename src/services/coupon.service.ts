@@ -1,11 +1,7 @@
 import supabase from '@/lib/supabaseClient'
-import { createClient } from '@supabase/supabase-js'
 
-// Cliente administrativo para operaciones que requieren permisos elevados
-const adminSupabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+// Nota: Para operaciones que requieren permisos elevados, usar API routes
+// El adminSupabase debe usarse solo en el servidor (API routes)
 
 // ============================================================================
 // STRATEGY PATTERN - DISCOUNT CALCULATION
@@ -462,39 +458,28 @@ export async function recordCouponUsage(
   discountAmount: number
 ): Promise<void> {
   try {
-    // Registrar uso del cupón usando cliente administrativo
-    const { error: usageError } = await adminSupabase
-      .from('coupon_usage')
-      .insert([{
-        coupon_id: couponId,
-        user_id: userId,
-        order_id: orderId,
-        discount_amount: discountAmount
-      }]);
+    // Usar API route para registrar el uso del cupón
+    const response = await fetch('/api/coupons/usage', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        couponId,
+        userId,
+        orderId,
+        discountAmount
+      }),
+    })
 
-    if (usageError) throw usageError;
-
-    // Incrementar contador de usos - obtener el valor actual primero
-    const { data: coupon, error: fetchError } = await adminSupabase
-      .from('coupons')
-      .select('used_count')
-      .eq('id', couponId)
-      .single();
-
-    if (fetchError) throw fetchError;
-
-    if (coupon) {
-      const { error: updateError } = await adminSupabase
-        .from('coupons')
-        .update({ used_count: coupon.used_count + 1 })
-        .eq('id', couponId);
-
-      if (updateError) throw updateError;
+    if (!response.ok) {
+      const error = await response.json()
+      throw new Error(error.error || 'Error registrando uso del cupón')
     }
 
   } catch (error: any) {
-    console.error('Error recording coupon usage:', error);
-    throw new Error('Error al registrar uso del cupón');
+    console.error('Error recording coupon usage:', error)
+    throw new Error('Error al registrar uso del cupón')
   }
 }
 
