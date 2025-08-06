@@ -64,8 +64,8 @@ export default function Testimonials() {
                   <div>
                     <div className="h-4 bg-gray-200 rounded w-24 mb-2"></div>
                     <div className="flex">
-                      {[...Array(5)].map((_, i) => (
-                        <div key={i} className="w-4 h-4 bg-gray-200 rounded mr-1"></div>
+                      {[...Array(5)].map((_, starIdx) => (
+                        <div key={`placeholder-star-${i}-${starIdx}`} className="w-4 h-4 bg-gray-200 rounded mr-1"></div>
                       ))}
                     </div>
                   </div>
@@ -120,7 +120,7 @@ export default function Testimonials() {
                   )}
                   <div className="flex">
                     {[...Array(testimonial.rating)].map((_, i) => (
-                      <Star key={i} size={16} className="text-yellow-400 fill-yellow-400" />
+                      <Star key={`${testimonial.id}-star-${i}`} size={16} className="text-yellow-400 fill-yellow-400" />
                     ))}
                   </div>
                 </div>
