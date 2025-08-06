@@ -85,7 +85,8 @@ export async function POST(request: NextRequest) {
         card_exp_year,
         paypal_email,
         nickname,
-        is_default
+        is_default,
+        active: true
       })
       .select()
       .single();
@@ -118,7 +119,7 @@ export async function DELETE(request: NextRequest) {
   try {
     const { error } = await supabase
       .from('user_payment_methods')
-      .delete()
+      .update({ active: false })
       .eq('id', payment_method_id)
       .eq('user_id', user_id);
 
