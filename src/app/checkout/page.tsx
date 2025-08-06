@@ -106,9 +106,35 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!selectedAddress) {
+      alert('Por favor selecciona una dirección de envío');
+      return;
+    }
+
+    if (state.items.length === 0) {
+      alert('El carrito está vacío');
+      return;
+    }
+
     setLoading(true);
 
     try {
+      // Mapear el tipo de pago correctamente
+      const paymentMethod = paymentData.type === 'card' ? 'stripe' : paymentData.type === 'paypal' ? 'paypal' : 'stripe';
+      
+      console.log('Creating order with:', {
+        userId: user.id,
+        itemsCount: state.items.length,
+        addressInfo: {
+          street: selectedAddress.address,
+          city: selectedAddress.city,
+          state: selectedAddress.state || '',
+          zip: selectedAddress.zip_code || '',
+          country: selectedAddress.country
+        },
+        paymentMethod
+      });
+      
       const order = await createOrder(
         user.id,
         state.items,
@@ -119,7 +145,9 @@ export default function CheckoutPage() {
           zip: selectedAddress.zip_code || '',
           country: selectedAddress.country
         },
-        paymentData.type || 'card'
+        paymentMethod,
+        shippingCost,
+        0.19 // 19% IVA (impuesto)
       );
       setOrderId(order.id);
 
@@ -150,7 +178,9 @@ export default function CheckoutPage() {
       
     } catch (error) {
       console.error('Error creating order:', error);
-      alert('Error al procesar la orden. Inténtalo nuevamente.');
+      console.error('Error details:', error instanceof Error ? error.message : error);
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      alert(`Error al procesar la orden: ${error instanceof Error ? error.message : 'Error desconocido'}. Inténtalo nuevamente.`);
     } finally {
       setLoading(false);
     }
