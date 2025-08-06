@@ -1,4 +1,11 @@
 import supabase from '@/lib/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
+
+// Cliente administrativo para operaciones que requieren permisos elevados
+const adminSupabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+)
 
 export interface Coupon {
   id: string;
@@ -232,8 +239,8 @@ export async function recordCouponUsage(
   discountAmount: number
 ): Promise<void> {
   try {
-    // Registrar uso del cupón
-    const { error: usageError } = await supabase
+    // Registrar uso del cupón usando cliente administrativo
+    const { error: usageError } = await adminSupabase
       .from('coupon_usage')
       .insert([{
         coupon_id: couponId,
@@ -244,26 +251,22 @@ export async function recordCouponUsage(
 
     if (usageError) throw usageError;
 
-    // Incrementar contador de usos
-    const { error: updateError } = await supabase
+    // Incrementar contador de usos - obtener el valor actual primero
+    const { data: coupon, error: fetchError } = await adminSupabase
       .from('coupons')
-      .update({ used_count: supabase.rpc('increment_used_count', { coupon_id: couponId }) })
-      .eq('id', couponId);
+      .select('used_count')
+      .eq('id', couponId)
+      .single();
 
-    if (updateError) {
-      // Si falla el RPC, hacer update manual
-      const { data: coupon } = await supabase
+    if (fetchError) throw fetchError;
+
+    if (coupon) {
+      const { error: updateError } = await adminSupabase
         .from('coupons')
-        .select('used_count')
-        .eq('id', couponId)
-        .single();
+        .update({ used_count: coupon.used_count + 1 })
+        .eq('id', couponId);
 
-      if (coupon) {
-        await supabase
-          .from('coupons')
-          .update({ used_count: coupon.used_count + 1 })
-          .eq('id', couponId);
-      }
+      if (updateError) throw updateError;
     }
 
   } catch (error: any) {

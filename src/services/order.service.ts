@@ -8,9 +8,6 @@ const supabaseAdmin = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 )
 
-// Debug: verificar si tenemos service role key
-console.log('Service role key available:', !!process.env.SUPABASE_SERVICE_ROLE_KEY)
-
 /**
  * Obtener orden por ID
  */
@@ -247,22 +244,21 @@ export async function createOrder(
     color: item.variant?.color || null,
     variant_id: item.variant?.id || null,
     price: item.producto.price,
+    product_name: item.producto.name, // Campo requerido
+    variant_name: item.variant ? `${item.variant.size || ''} ${item.variant.color || ''}`.trim() || null : null,
+    total: item.producto.price * item.quantity, // Campo requerido
   }))
   
   // Usar cliente administrativo para insertar order_items (bypass RLS)
-  console.log('Attempting to insert order items with admin client...', orderItems);
   const { error: errItems } = await supabaseAdmin
     .from('order_items')
     .insert(orderItems)
-  
-  console.log('Order items insert result:', { error: errItems });
   
   if (errItems) {
     console.error('Order items insert error:', errItems);
     throw errItems;
   }
   
-  console.log('Order created successfully:', order);
   return order;
   
   } catch (error) {
