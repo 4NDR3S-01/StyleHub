@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getProducts, ProductFilters, ProductSort, Product } from '@/services/product.service';
+import { getProducts, ServiceProductFilters, ProductSort, Product } from '@/services/product.service';
 import { getCategoriesByType } from '@/services/category.service';
 import ProductCard from './ProductCard';
 import { Button } from '@/components/ui/button';
@@ -35,7 +35,7 @@ export default function ProductGrid({
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(initialSearchTerm || '');
-  const [filters, setFilters] = useState<ProductFilters>({
+  const [filters, setFilters] = useState<ServiceProductFilters>({
     featured,
     sale,
     search: initialSearchTerm
@@ -81,7 +81,7 @@ export default function ProductGrid({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    setFilters(prev => ({ ...prev, search: searchTerm }));
+    setFilters((prev: ServiceProductFilters) => ({ ...prev, search: searchTerm }));
   };
 
   const clearFilters = () => {
@@ -93,8 +93,8 @@ export default function ProductGrid({
     setSearchTerm(initialSearchTerm || '');
   };
 
-  const updateFilter = (key: keyof ProductFilters, value: any) => {
-    setFilters(prev => ({ ...prev, [key]: value }));
+  const updateFilter = (key: keyof ServiceProductFilters, value: any) => {
+    setFilters((prev: ServiceProductFilters) => ({ ...prev, [key]: value }));
   };
 
   const activeFiltersCount = Object.values(filters).filter(v => 
@@ -183,22 +183,6 @@ export default function ProductGrid({
                     {category.name}
                   </SelectItem>
                 ))}
-              </SelectContent>
-            </Select>
-
-            {/* Gender Filter */}
-            <Select
-              value={filters.gender || ''}
-              onValueChange={(value) => updateFilter('gender', value || undefined)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Género" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">Todos</SelectItem>
-                <SelectItem value="masculino">Masculino</SelectItem>
-                <SelectItem value="femenino">Femenino</SelectItem>
-                <SelectItem value="unisex">Unisex</SelectItem>
               </SelectContent>
             </Select>
 

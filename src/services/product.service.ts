@@ -63,13 +63,14 @@ export interface Category {
   updated_at: string;
 }
 
-export interface ProductFilters {
+export interface ServiceProductFilters {
   category?: string;
   minPrice?: number;
   maxPrice?: number;
-  brand?: string;
-  gender?: string;
-  season?: string;
+  brands?: string[];
+  colors?: string[];
+  sizes?: string[];
+  seasons?: string[];
   featured?: boolean;
   sale?: boolean;
   active?: boolean;
@@ -85,13 +86,12 @@ export interface ProductSort {
 /**
  * Helper para aplicar filtros a la consulta de productos
  */
-function applyProductFilters(query: any, filters: ProductFilters) {
+function applyProductFilters(query: any, filters: ServiceProductFilters) {
   if (filters.category) query = query.eq('category_id', filters.category);
   if (filters.minPrice !== undefined) query = query.gte('price', filters.minPrice);
   if (filters.maxPrice !== undefined) query = query.lte('price', filters.maxPrice);
-  if (filters.brand) query = query.eq('brand', filters.brand);
-  if (filters.gender) query = query.eq('gender', filters.gender);
-  if (filters.season) query = query.eq('season', filters.season);
+  if (filters.brands && filters.brands.length > 0) query = query.in('brand', filters.brands);
+  if (filters.seasons && filters.seasons.length > 0) query = query.in('season', filters.seasons);
   if (filters.featured !== undefined) query = query.eq('featured', filters.featured);
   if (filters.sale !== undefined) query = query.eq('sale', filters.sale);
   if (filters.active !== undefined) {
@@ -109,7 +109,7 @@ function applyProductFilters(query: any, filters: ProductFilters) {
  * Obtiene productos con filtros
  */
 export async function getProducts(
-  filters: ProductFilters = {},
+  filters: ServiceProductFilters = {},
   sort?: ProductSort,
   limit?: number
 ): Promise<Product[]> {
@@ -492,4 +492,237 @@ export async function getBrands(): Promise<string[]> {
     console.error('Error in getBrands:', error);
     return [];
   }
+}
+
+/**
+ * Interfaz para filtros de productos avanzados
+ */
+export interface ProductFiltersAdvanced {
+  categories?: string[];
+  brands?: string[];
+  genders?: string[];
+  materials?: string[];
+  seasons?: string[];
+  priceMin?: number;
+  priceMax?: number;
+  onSale?: boolean;
+  featured?: boolean;
+  searchTerm?: string;
+}
+
+/**
+ * Obtiene productos con filtros avanzados
+ */
+export async function getProductsWithFilters(
+  filters: ServiceProductFilters,
+  sortBy: string = 'created_at',
+  sortOrder: 'asc' | 'desc' = 'desc',
+  limit?: number
+): Promise<Product[]> {
+  try {
+    let query = supabase
+      .from('products')
+      .select(`
+        *,
+        category:categories(id, name, slug),
+        product_variants:product_variants(*)
+      `)
+      .eq('active', true)
+      .eq('is_active', true);
+
+    // Aplicar filtros básicos
+    query = applyBasicFilters(query, filters);
+    
+    // Aplicar filtros de precio
+    query = applyPriceFilters(query, filters);
+
+    // Aplicar filtros especiales
+    query = applySpecialFilters(query, filters);
+
+    // Aplicar búsqueda por texto
+    if (filters.search) {
+      query = query.or(`name.ilike.%${filters.search}%,description.ilike.%${filters.search}%,brand.ilike.%${filters.search}%`);
+    }
+
+    // Aplicar ordenamiento
+    query = applySorting(query, sortBy, sortOrder);
+
+    if (limit) {
+      query = query.limit(limit);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Error fetching filtered products:', error);
+      throw error;
+    }
+
+    let products = data || [];
+
+    // Aplicar filtros de variantes (colores y tallas) en el lado del cliente
+    if (filters.colors && filters.colors.length > 0) {
+      products = products.filter(product => 
+        product.product_variants?.some((variant: any) => 
+          filters.colors!.includes(variant.color)
+        )
+      );
+    }
+
+    if (filters.sizes && filters.sizes.length > 0) {
+      products = products.filter(product => 
+        product.product_variants?.some((variant: any) => 
+          filters.sizes!.includes(variant.size)
+        )
+      );
+    }
+
+    return products;
+  } catch (error) {
+    console.error('Error in getProductsWithFilters:', error);
+    return [];
+  }
+}
+
+// Funciones auxiliares para reducir complejidad
+function applyBasicFilters(query: any, filters: ServiceProductFilters) {
+  if (filters.category) {
+    query = query.eq('category_id', filters.category);
+  }
+
+  if (filters.brands && filters.brands.length > 0) {
+    query = query.in('brand', filters.brands);
+  }
+
+  if (filters.seasons && filters.seasons.length > 0) {
+    query = query.in('season', filters.seasons);
+  }
+
+  return query;
+}
+
+function applyPriceFilters(query: any, filters: ServiceProductFilters) {
+  if (filters.minPrice !== undefined) {
+    query = query.gte('price', filters.minPrice);
+  }
+
+  if (filters.maxPrice !== undefined) {
+    query = query.lte('price', filters.maxPrice);
+  }
+
+  return query;
+}
+
+function applySpecialFilters(query: any, filters: ServiceProductFilters) {
+  if (filters.sale) {
+    query = query.eq('sale', true);
+  }
+
+  if (filters.featured) {
+    query = query.eq('is_featured', true).eq('featured', true);
+  }
+
+  return query;
+}
+
+function applySorting(query: any, sortBy: string, sortOrder: 'asc' | 'desc') {
+  const sortConfig = getSortConfig(sortBy, sortOrder);
+  return query.order(sortConfig.column, { ascending: sortConfig.ascending });
+}
+
+function getSortConfig(sortBy: string, sortOrder: 'asc' | 'desc') {
+  switch (sortBy) {
+    case 'price':
+    case 'price-low':
+      return { column: 'price', ascending: true };
+    case 'price-high':
+      return { column: 'price', ascending: false };
+    case 'name':
+      return { column: 'name', ascending: sortOrder === 'asc' };
+    case 'featured':
+      return { column: 'is_featured', ascending: false };
+    default:
+      return { column: 'created_at', ascending: sortOrder === 'asc' };
+  }
+}
+
+/**
+ * Obtiene estadísticas de productos para filtros
+ */
+export async function getProductFilterStats(): Promise<{
+  categories: Array<{ name: string; count: number }>;
+  brands: Array<{ name: string; count: number }>;
+  genders: Array<{ name: string; count: number }>;
+  materials: Array<{ name: string; count: number }>;
+  seasons: Array<{ name: string; count: number }>;
+  priceRange: { min: number; max: number };
+}> {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .select(`
+        price,
+        brand,
+        gender,
+        material,
+        season,
+        category:categories!inner(name)
+      `)
+      .eq('active', true)
+      .eq('is_active', true);
+
+    if (error) {
+      console.error('Error fetching product stats:', error);
+      throw error;
+    }
+
+    const products = data || [];
+    
+    return {
+      categories: countItems(products, (p: any) => p.category?.name),
+      brands: countItems(products, (p: any) => p.brand),
+      genders: countItems(products, (p: any) => p.gender),
+      materials: countItems(products, (p: any) => p.material),
+      seasons: countItems(products, (p: any) => p.season),
+      priceRange: calculatePriceRange(products)
+    };
+  } catch (error) {
+    console.error('Error in getProductFilterStats:', error);
+    return {
+      categories: [],
+      brands: [],
+      genders: [],
+      materials: [],
+      seasons: [],
+      priceRange: { min: 0, max: 1000000 }
+    };
+  }
+}
+
+function countItems(products: any[], accessor: (item: any) => string | undefined): Array<{ name: string; count: number }> {
+  const counts: Record<string, number> = {};
+  
+  products.forEach(product => {
+    const value = accessor(product);
+    if (value) {
+      counts[value] = (counts[value] || 0) + 1;
+    }
+  });
+
+  return Object.entries(counts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function calculatePriceRange(products: any[]): { min: number; max: number } {
+  if (products.length === 0) {
+    return { min: 0, max: 1000000 };
+  }
+
+  const prices = products.map(p => p.price).filter(price => typeof price === 'number');
+  
+  return {
+    min: Math.min(...prices),
+    max: Math.max(...prices)
+  };
 }
