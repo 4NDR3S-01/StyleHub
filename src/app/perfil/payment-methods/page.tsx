@@ -393,8 +393,12 @@ export default function PaymentMethodsPage() {
               </Button>
               <Button
                 onClick={() => {
-                  // Redirigir a una página de checkout especial para agregar métodos
-                  window.location.href = `/checkout/add-payment-method?type=${newMethodType}`;
+                  // Cerrar el diálogo y redirigir a la página de agregar método
+                  setShowAddDialog(false);
+                  const params = new URLSearchParams();
+                  params.set('payment_type', newMethodType);
+                  params.set('return_to', '/perfil/payment-methods');
+                  window.location.href = `/perfil/payment-methods/add?${params.toString()}`;
                 }}
                 className="flex-1"
               >

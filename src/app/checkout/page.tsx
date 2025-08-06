@@ -136,9 +136,13 @@ export default function CheckoutPage() {
       // Limpiar carrito al completar la orden
       clearCart();
 
-      // Si es un método guardado con Stripe, procesarlo directamente
-      if (paymentData.savedMethodId && paymentData.type === 'card') {
-        await handleSavedCardPayment(order, paymentData.externalId);
+      // Si es un método guardado, procesarlo directamente
+      if (paymentData.savedMethodId) {
+        if (paymentData.type === 'card') {
+          await handleSavedCardPayment(order, paymentData.externalId);
+        } else if (paymentData.type === 'paypal') {
+          await handleSavedPayPalPayment(order, paymentData.externalId);
+        }
       } else {
         // Para nuevos métodos, mostrar formulario de pago
         setPendingPayment(true);
@@ -154,45 +158,84 @@ export default function CheckoutPage() {
 
   const handleSavedCardPayment = async (order: any, paymentMethodId: string) => {
     try {
-      // Procesar pago con método guardado
-      const response = await fetch('/api/create-stripe-session', {
+      // Procesar pago con método guardado usando nuestro endpoint
+      const response = await fetch('/api/payments/stripe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          mode: 'payment_intent',
-          amount: Math.round(total * 100),
+          amount: total,
           currency: 'usd',
-          orderId: order.id,
-          customerEmail: user?.email,
-          paymentMethodId: paymentMethodId,
-          confirmImmediately: true
+          payment_method_id: paymentMethodId,
+          customer_id: user?.email, // O usar customer ID si existe
+          save_payment_method: false // Ya está guardado
         }),
       });
 
-      const { clientSecret, error } = await response.json();
+      const data = await response.json();
       
-      if (error) {
-        throw new Error(error);
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al procesar el pago');
       }
+
+      const { client_secret, payment_intent_id } = data;
 
       // Confirmar el pago inmediatamente
       const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
       if (!stripe) throw new Error('Stripe no disponible');
 
-      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
+      const { error: confirmError } = await stripe.confirmCardPayment(client_secret);
       
       if (confirmError) {
         throw new Error(confirmError.message);
       }
 
       // Redirigir a página de éxito
-      window.location.href = `/orden-confirmada?orderId=${order.id}`;
+      window.location.href = `/orden-confirmada?orderId=${order.id}&paymentIntent=${payment_intent_id}`;
       
     } catch (error: any) {
       console.error('Error processing saved card payment:', error);
       alert('Error al procesar el pago: ' + error.message);
+      setPendingPayment(false);
+      setOrderId(null);
+    }
+  };
+
+  const handleSavedPayPalPayment = async (order: any, paypalMethodId: string) => {
+    try {
+      // Para métodos de PayPal guardados, redirigir al proceso de PayPal
+      // Nota: PayPal no permite pagos automáticos con métodos guardados como Stripe
+      // Necesitamos iniciar un nuevo flujo de PayPal
+      
+      const response = await fetch('/api/payments/paypal', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: total,
+          currency: 'USD',
+          order_id: order.id,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al crear orden de PayPal');
+      }
+
+      // Redirigir al usuario a PayPal para completar el pago
+      if (data.approval_url) {
+        window.location.href = data.approval_url;
+      } else {
+        throw new Error('No se recibió URL de aprobación de PayPal');
+      }
+      
+    } catch (error: any) {
+      console.error('Error processing saved PayPal payment:', error);
+      alert('Error al procesar el pago con PayPal: ' + error.message);
       setPendingPayment(false);
       setOrderId(null);
     }
