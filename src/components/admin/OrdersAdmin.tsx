@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast'
 interface OrderRow {
   id: string
   user_id: string
-  total_amount: number
+  total: number
   status: string
   payment_status: string
   payment_intent_id?: string
@@ -28,12 +28,12 @@ export default function OrdersAdmin() {
 
   const showOrderDetails = (order: OrderRow) => {
     // Verificación ética
-    const isEthicalOrder = order.payment_status === 'completed' && order.payment_intent_id
+    const isEthicalOrder = order.payment_status === 'paid' && order.payment_intent_id
     const ethicalStatus = isEthicalOrder ? '✅ Ética' : '⚠️ Problemática'
     
     toast({ 
       title: `Orden ${order.id.slice(0, 8)}... - ${ethicalStatus}`, 
-      description: `Cliente: ${order.user_name} | Total: $${order.total_amount} | Estado Pago: ${order.payment_status} | ${isEthicalOrder ? 'Esta orden siguió el flujo ético: pago confirmado antes de crear la orden.' : 'Esta orden puede tener problemas: no tiene pago confirmado o payment_intent_id.'}`,
+      description: `Cliente: ${order.user_name} | Total: $${order.total} | Estado Pago: ${order.payment_status} | ${isEthicalOrder ? 'Esta orden siguió el flujo ético: pago confirmado antes de crear la orden.' : 'Esta orden puede tener problemas: no tiene pago confirmado o payment_intent_id.'}`,
       variant: isEthicalOrder ? 'default' : 'destructive'
     })
   }
@@ -48,14 +48,14 @@ export default function OrdersAdmin() {
           .select(`
             id,
             user_id,
-            total_amount,
+            total,
             status,
             payment_status,
             payment_intent_id,
             created_at
           `)
           .order('created_at', { ascending: false })
-          .limit(50)
+          .limit(100)
 
         if (error) {
           throw error
@@ -120,12 +120,16 @@ export default function OrdersAdmin() {
 
   const getPaymentStatusColor = (status: string) => {
     switch (status) {
-      case 'completed':
+      case 'paid':
         return 'bg-green-100 text-green-800'
       case 'pending':
         return 'bg-yellow-100 text-yellow-800'
       case 'failed':
         return 'bg-red-100 text-red-800'
+      case 'refunded':
+        return 'bg-orange-100 text-orange-800'
+      case 'partially_refunded':
+        return 'bg-orange-100 text-orange-700'
       default:
         return 'bg-gray-100 text-gray-800'
     }
@@ -145,127 +149,210 @@ export default function OrdersAdmin() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <h1 className="text-3xl font-bold text-slate-800">Órdenes</h1>
-      
-      {/* Estadísticas éticas */}
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Gestión de Órdenes</h1>
+          <p className="mt-2 text-sm text-gray-600">
+            Administra y monitorea todas las órdenes del sistema
+          </p>
+        </div>
+        
+        {/* Estadísticas éticas */}
+        {!loading && orders.length > 0 && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div className="bg-white overflow-hidden shadow-lg rounded-lg">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                      <span className="text-white font-bold text-sm">#</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-gray-900">Total de Órdenes</h3>
+                    <p className="text-3xl font-bold text-blue-600">{orders.length}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white overflow-hidden shadow-lg rounded-lg">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                      <span className="text-white text-sm">✓</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-gray-900">Órdenes Éticas</h3>
+                    <p className="text-3xl font-bold text-green-600">
+                      {orders.filter(order => order.payment_status === 'paid' && order.payment_intent_id).length}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {((orders.filter(order => order.payment_status === 'paid' && order.payment_intent_id).length / orders.length) * 100).toFixed(1)}% del total
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white overflow-hidden shadow-lg rounded-lg">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-8 h-8 bg-red-500 rounded-md flex items-center justify-center">
+                      <span className="text-white text-sm">!</span>
+                    </div>
+                  </div>
+                  <div className="ml-4">
+                    <h3 className="text-lg font-medium text-gray-900">Órdenes Problemáticas</h3>
+                    <p className="text-3xl font-bold text-red-600">
+                      {orders.filter(order => !order.payment_status || order.payment_status !== 'paid' || !order.payment_intent_id).length}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {((orders.filter(order => !order.payment_status || order.payment_status !== 'paid' || !order.payment_intent_id).length / orders.length) * 100).toFixed(1)}% del total
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {loading && (
+          <div className="bg-white shadow-lg rounded-lg p-6">
+            <div className="animate-pulse flex space-x-4">
+              <div className="rounded-full bg-gray-300 h-10 w-10"></div>
+              <div className="flex-1 space-y-2 py-1">
+                <div className="h-4 bg-gray-300 rounded w-3/4"></div>
+                <div className="h-4 bg-gray-300 rounded w-1/2"></div>
+              </div>
+            </div>
+            <p className="text-gray-600 text-center mt-4">Cargando órdenes...</p>
+          </div>
+        )}
+        
+        {!loading && orders.length === 0 && (
+          <div className="bg-white shadow-lg rounded-lg p-8 text-center">
+            <div className="w-16 h-16 mx-auto bg-gray-100 rounded-full flex items-center justify-center mb-4">
+              <span className="text-gray-400 text-2xl">📦</span>
+            </div>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No hay órdenes registradas</h3>
+            <p className="text-gray-500">Las órdenes aparecerán aquí cuando los clientes realicen compras.</p>
+          </div>
+        )}
       {!loading && orders.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-800">Total de Órdenes</h3>
-            <p className="text-3xl font-bold text-blue-600">{orders.length}</p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-800">Órdenes Éticas</h3>
-            <p className="text-3xl font-bold text-green-600">
-              {orders.filter(order => order.payment_status === 'completed' && order.payment_intent_id).length}
-            </p>
-            <p className="text-sm text-gray-500">
-              {((orders.filter(order => order.payment_status === 'completed' && order.payment_intent_id).length / orders.length) * 100).toFixed(1)}%
-            </p>
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-800">Órdenes Problemáticas</h3>
-            <p className="text-3xl font-bold text-red-600">
-              {orders.filter(order => !order.payment_status || order.payment_status !== 'completed' || !order.payment_intent_id).length}
-            </p>
-            <p className="text-sm text-gray-500">
-              {((orders.filter(order => !order.payment_status || order.payment_status !== 'completed' || !order.payment_intent_id).length / orders.length) * 100).toFixed(1)}%
-            </p>
+        <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gradient-to-r from-slate-700 to-slate-600 text-white">
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">ID</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Ética</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Cliente</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Items</th>
+                  <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider">Total</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Estado Orden</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Estado Pago</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Payment ID</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Fecha</th>
+                  <th className="px-4 py-3 text-center text-xs font-medium uppercase tracking-wider">Acciones</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {orders.map((order) => {
+                  const isEthicalOrder = order.payment_status === 'paid' && order.payment_intent_id
+                  return (
+                  <tr key={order.id} className="hover:bg-gray-50 transition-colors duration-150">
+                    <td className="px-4 py-4">
+                      <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded">
+                        {order.id.slice(0, 8)}...
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      {isEthicalOrder ? (
+                        <span 
+                          className="inline-flex items-center justify-center w-8 h-8 bg-green-100 rounded-full text-green-600 text-lg" 
+                          title="Orden ética: pago confirmado antes de crear la orden"
+                        >
+                          ✅
+                        </span>
+                      ) : (
+                        <span 
+                          className="inline-flex items-center justify-center w-8 h-8 bg-red-100 rounded-full text-red-600 text-lg" 
+                          title="Orden problemática: creada sin confirmación de pago"
+                        >
+                          ⚠️
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="max-w-xs">
+                        <div className="font-medium text-gray-900 truncate">{order.user_name}</div>
+                        <div className="text-sm text-gray-500 truncate">{order.user_email}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {order.items_count} items
+                      </span>
+                    </td>
+                    <td className="px-4 py-4 text-right">
+                      <div className="text-lg font-bold text-green-600">
+                        ${order.total.toFixed(2)}
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <select
+                        value={order.status}
+                        onChange={(e) => updateStatus(order.id, e.target.value)}
+                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="pending">Pendiente</option>
+                        <option value="confirmed">Confirmada</option>
+                        <option value="processing">Procesando</option>
+                        <option value="shipped">Enviada</option>
+                        <option value="delivered">Entregada</option>
+                        <option value="cancelled">Cancelada</option>
+                        <option value="refunded">Reembolsada</option>
+                      </select>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentStatusColor(order.payment_status || '')}`}>
+                        {order.payment_status || 'No definido'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      {order.payment_intent_id ? (
+                        <div className="font-mono text-xs bg-gray-100 px-2 py-1 rounded max-w-24 truncate" title={order.payment_intent_id}>
+                          {order.payment_intent_id.slice(0, 10)}...
+                        </div>
+                      ) : (
+                        <span className="text-gray-400 text-xs">Sin PI</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-4">
+                      <div className="text-sm text-gray-900">{order.created_at}</div>
+                    </td>
+                    <td className="px-4 py-4 text-center">
+                      <button
+                        onClick={() => showOrderDetails(order)}
+                        className="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-150"
+                      >
+                        Ver detalles
+                      </button>
+                    </td>
+                  </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
-      
-      {loading && (
-        <p className="text-gray-600">Cargando órdenes...</p>
-      )}
-      {!loading && orders.length === 0 && (
-        <p className="text-gray-600">No hay órdenes registradas.</p>
-      )}
-      {!loading && orders.length > 0 && (
-        <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
-          <thead>
-            <tr className="bg-slate-200 text-slate-700">
-              <th className="p-3 text-left">ID</th>
-              <th className="p-3 text-left">Ética</th>
-              <th className="p-3 text-left">Cliente</th>
-              <th className="p-3 text-left">Items</th>
-              <th className="p-3 text-left">Total</th>
-              <th className="p-3 text-left">Estado Orden</th>
-              <th className="p-3 text-left">Estado Pago</th>
-              <th className="p-3 text-left">PaymentIntent</th>
-              <th className="p-3 text-left">Fecha</th>
-              <th className="p-3 text-left">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {orders.map((order) => {
-              const isEthicalOrder = order.payment_status === 'completed' && order.payment_intent_id
-              return (
-              <tr key={order.id} className="border-b last:border-b-0 hover:bg-gray-50">
-                <td className="p-3 font-mono text-xs">{order.id.slice(0, 8)}...</td>
-                <td className="p-3 text-center">
-                  {isEthicalOrder ? (
-                    <span className="text-green-600 text-lg" title="Orden ética: pago confirmado antes de crear la orden">✅</span>
-                  ) : (
-                    <span className="text-red-600 text-lg" title="Orden problemática: creada sin confirmación de pago">⚠️</span>
-                  )}
-                </td>
-                <td className="p-3">
-                  <div>
-                    <div className="font-medium">{order.user_name}</div>
-                    <div className="text-sm text-gray-500">{order.user_email}</div>
-                  </div>
-                </td>
-                <td className="p-3 text-center">
-                  <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">
-                    {order.items_count}
-                  </span>
-                </td>
-                <td className="p-3 font-semibold">${order.total_amount.toFixed(2)}</td>
-                <td className="p-3">
-                  <select
-                    value={order.status}
-                    onChange={(e) => updateStatus(order.id, e.target.value)}
-                    className="border rounded p-1 text-sm bg-white"
-                  >
-                    <option value="pending">Pendiente</option>
-                    <option value="paid">Pagada</option>
-                    <option value="processing">Procesando</option>
-                    <option value="shipped">Enviada</option>
-                    <option value="delivered">Entregada</option>
-                    <option value="cancelled">Cancelada</option>
-                  </select>
-                </td>
-                <td className="p-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPaymentStatusColor(order.payment_status || '')}`}>
-                    {order.payment_status || 'No definido'}
-                  </span>
-                </td>
-                <td className="p-3 font-mono text-xs">
-                  {order.payment_intent_id ? (
-                    <span title={order.payment_intent_id}>
-                      {order.payment_intent_id.slice(0, 10)}...
-                    </span>
-                  ) : (
-                    <span className="text-gray-400">Sin PI</span>
-                  )}
-                </td>
-                <td className="p-3 text-sm text-gray-500">{order.created_at}</td>
-                <td className="p-3">
-                  <button
-                    onClick={() => showOrderDetails(order)}
-                    className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                  >
-                    Ver detalles
-                  </button>
-                </td>
-              </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      )}
+      </div>
     </div>
   )
 }
