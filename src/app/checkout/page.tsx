@@ -114,7 +114,10 @@ export default function CheckoutPage() {
         items: state.items.map((item: any) => ({
           id: item.producto.id,
           quantity: item.quantity,
-          price: item.producto.price
+          price: item.producto.price,
+          variant_id: item.variant?.id,
+          color: item.variant?.color,
+          size: item.variant?.size
         })),
         shippingAddress: {
           street: selectedAddress.address,

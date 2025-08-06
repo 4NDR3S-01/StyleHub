@@ -259,6 +259,25 @@ export async function createOrder(
     throw errItems;
   }
   
+  // Reducir stock de las variantes
+  for (const item of items) {
+    if (item.variant?.id) {
+      const { error: stockError } = await supabaseAdmin
+        .from('product_variants')
+        .update({ 
+          stock: item.variant.stock - item.quantity,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', item.variant.id)
+      
+      if (stockError) {
+        console.error('Stock reduction error:', stockError);
+        // No lanzar error aquí para evitar rollback de la orden
+        // En producción, esto debería ser una transacción atómica
+      }
+    }
+  }
+  
   return order;
   
   } catch (error) {

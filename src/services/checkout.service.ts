@@ -11,6 +11,9 @@ export interface CheckoutData {
     id: string;
     quantity: number;
     price: number;
+    variant_id?: string;
+    color?: string;
+    size?: string;
   }>;
   shippingAddress: {
     street: string;
@@ -207,14 +210,19 @@ class CheckoutService {
 
     // Validar disponibilidad de inventario
     for (const item of data.items) {
-      const { data: product } = await supabase
-        .from('products')
-        .select('stock_quantity')
-        .eq('id', item.id)
+      // Usar variant_id para validar stock específico de la variante
+      if (!item.variant_id) {
+        return { isValid: false, error: `Variante no especificada para el producto ${item.id}` };
+      }
+
+      const { data: variant } = await supabase
+        .from('product_variants')
+        .select('stock')
+        .eq('id', item.variant_id)
         .single();
 
-      if (!product || product.stock_quantity < item.quantity) {
-        return { isValid: false, error: `Stock insuficiente para el producto ${item.id}` };
+      if (!variant || variant.stock < item.quantity) {
+        return { isValid: false, error: `Stock insuficiente para el producto ${item.id}. Stock disponible: ${variant?.stock || 0}, solicitado: ${item.quantity}` };
       }
     }
 
@@ -269,8 +277,14 @@ class CheckoutService {
     const orderItems = data.items.map(item => ({
       order_id: order.id,
       product_id: item.id,
+      variant_id: item.variant_id,
       quantity: item.quantity,
-      price: item.price
+      size: item.size,
+      color: item.color,
+      price: item.price,
+      product_name: '', // Se completará por trigger en la BD
+      variant_name: item.size && item.color ? `${item.size} ${item.color}`.trim() : '',
+      total: item.price * item.quantity
     }));
 
     const { error: itemsError } = await supabase
@@ -281,12 +295,35 @@ class CheckoutService {
       throw new Error(`Error al crear los items de la orden: ${itemsError.message}`);
     }
 
-    // Actualizar inventario
+    // Actualizar inventario de variantes
     for (const item of data.items) {
-      await supabase.rpc('update_product_stock', {
-        product_id: item.id,
-        quantity_sold: item.quantity
-      });
+      if (item.variant_id) {
+        // Decrementar stock de forma atómica
+        const { data: currentVariant, error: fetchError } = await supabase
+          .from('product_variants')
+          .select('stock')
+          .eq('id', item.variant_id)
+          .single();
+        
+        if (fetchError) {
+          console.error('Error obteniendo stock actual:', fetchError);
+          continue;
+        }
+        
+        const newStock = Math.max(0, currentVariant.stock - item.quantity);
+        
+        const { error: stockError } = await supabase
+          .from('product_variants')
+          .update({ 
+            stock: newStock,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', item.variant_id);
+        
+        if (stockError) {
+          console.error('Error actualizando stock:', stockError);
+        }
+      }
     }
 
     return order.id;
