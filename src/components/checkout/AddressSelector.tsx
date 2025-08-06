@@ -395,16 +395,23 @@ export default function AddressSelector({ user, selectedAddress, onAddressSelect
       {/* Lista de direcciones */}
       <div className="space-y-3">
         {addresses.map((address) => (
-          <button
+          <label
             key={address.id}
-            type="button"
-            className={`w-full p-4 border rounded-lg cursor-pointer transition-colors text-left ${
+            className={`w-full p-4 border rounded-lg transition-colors cursor-pointer block ${
               selectedAddress?.id === address.id
                 ? 'border-blue-500 bg-blue-50'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
-            onClick={() => handleAddressClick(address)}
+            aria-label={`Seleccionar dirección de ${address.name} en ${address.city}`}
           >
+            <input
+              type="radio"
+              name="selectedAddress"
+              value={address.id}
+              checked={selectedAddress?.id === address.id}
+              onChange={() => handleAddressClick(address)}
+              className="sr-only"
+            />
             <div className="flex justify-between items-start">
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-1">
@@ -436,7 +443,9 @@ export default function AddressSelector({ user, selectedAddress, onAddressSelect
               <div className="flex items-center gap-2 ml-4">
                 {!address.is_default && (
                   <button
+                    type="button"
                     onClick={(e) => {
+                      e.preventDefault();
                       e.stopPropagation();
                       handleSetDefault(address.id);
                     }}
@@ -446,7 +455,9 @@ export default function AddressSelector({ user, selectedAddress, onAddressSelect
                   </button>
                 )}
                 <button
+                  type="button"
                   onClick={(e) => {
+                    e.preventDefault();
                     e.stopPropagation();
                     handleDelete(address.id);
                   }}
@@ -456,7 +467,7 @@ export default function AddressSelector({ user, selectedAddress, onAddressSelect
                 </button>
               </div>
             </div>
-          </button>
+          </label>
         ))}
       </div>
 

@@ -144,9 +144,10 @@ export default function PaymentMethodSelector({
           <>
             <h4 className="text-sm font-medium text-gray-700 mb-2">Métodos guardados</h4>
             {savedMethods.map((method) => (
-              <div
+              <button
                 key={method.id}
-                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                type="button"
+                className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors w-full text-left ${
                   selectedMethod === method.id
                     ? 'border-blue-500 bg-blue-50'
                     : 'border-gray-200 hover:bg-gray-50'
@@ -190,7 +191,7 @@ export default function PaymentMethodSelector({
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
             <hr className="my-4" />
           </>
