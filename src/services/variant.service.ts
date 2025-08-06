@@ -90,6 +90,12 @@ export async function getProductVariant(productId: string, color: string, size: 
     .single();
   
   if (error) throw error;
+  
+  // Asegurar que price_adjustment sea número
+  if (data) {
+    data.price_adjustment = Number(data.price_adjustment) || 0;
+  }
+  
   return data;
 }
 

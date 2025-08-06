@@ -31,7 +31,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | null>(null);
 
 /**
- * Provider de autenticación que maneja todo el estado de usuario
+ * Provider de autenticación que maneja el estado de usuario
  * Integra con Supabase Auth y la tabla users personalizada
  */
 export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
