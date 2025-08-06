@@ -5,7 +5,6 @@ import { Product } from "@/services/product.service"
 import { useCart } from "@/context/CartContext"
 import { useWishlist } from "@/context/WishlistContext"
 import { getProductColors, getProductSizes, getProductVariant } from "@/services/variant.service"
-import { formatPrice } from "@/utils/currency"
 import ProductReviews from "./ProductReviews"
 import ReviewForm from "./ReviewForm"
 
@@ -40,7 +39,6 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const [selectedQuantity, setSelectedQuantity] = useState(1)
   const [mainImage, setMainImage] = useState(product.images?.[0] || "")
   const [refreshReviews, setRefreshReviews] = useState(0)
-  const [isHydrated, setIsHydrated] = useState(false)
   
   // Estados para variantes
   const [colors, setColors] = useState<ColorOption[]>([])
@@ -57,10 +55,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
   const [displayImages, setDisplayImages] = useState<string[]>(product.images || [])
 
   // Detectar hidratación del componente
-  useEffect(() => {
-    setIsHydrated(true)
-  }, [])
-
+  // Detectar hidratación del componente
+  // (Eliminado: isHydrated no se utiliza)
   // Cargar colores disponibles al montar el componente
   useEffect(() => {
     const loadColors = async () => {
@@ -232,8 +228,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
 
   // Calcular precio final con ajuste de variante (redondeado a 2 decimales)
   const finalPrice = selectedVariant 
-    ? Math.round((product.price + (selectedVariant.price_adjustment || 0)) * 100) / 100
-    : Math.round(product.price * 100) / 100
+    ? Math.round((Number(product.price) + Number(selectedVariant.price_adjustment || 0)) * 100) / 100
+    : Math.round(Number(product.price) * 100) / 100
 
   return (
     <>
@@ -320,10 +316,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="text-2xl font-semibold text-green-600">
-            {isHydrated ? formatPrice(finalPrice) : `$${product.price.toFixed(2)}`}
-            {isHydrated && selectedVariant?.price_adjustment && selectedVariant.price_adjustment !== 0 && (
+            ${finalPrice.toFixed(2)}
+            {selectedVariant?.price_adjustment && Number(selectedVariant.price_adjustment) !== 0 && (
               <span className="text-sm text-gray-500 ml-2">
-                ({formatPrice(product.price)} + {formatPrice(selectedVariant.price_adjustment)})
+                (${product.price.toFixed(2)} + ${Number(selectedVariant.price_adjustment).toFixed(2)})
               </span>
             )}
           </div>
