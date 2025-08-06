@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { checkoutService } from '@/services/checkout.service';
 import dynamic from 'next/dynamic';
 import AddressSelector from '@/components/checkout/AddressSelector';
 import CouponInput from '@/components/checkout/CouponInput';
@@ -136,11 +135,19 @@ export default function CheckoutPage() {
         couponDiscount: couponDiscount
       };
 
-      // Procesar checkout ético: pago primero, orden después
-      const result = await checkoutService.processCheckout(checkoutData);
+      // Procesar checkout ético: pago primero, orden después usando la API
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(checkoutData),
+      });
 
-      if (!result.success) {
-        throw new Error(result.error);
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || 'Error al procesar el checkout');
       }
 
       // Si es PayPal y necesita aprobación
