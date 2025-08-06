@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useWishlist } from '@/context/WishlistContext'
+import { useCart } from '@/context/CartContext'
 import { useMemo } from 'react'
 import { Heart, ShoppingCart, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -20,6 +21,7 @@ interface ProductCardProps {
  */
 export default function ProductCard({ product, viewMode = 'grid' }: Readonly<ProductCardProps>) {
   const { isInWishlist, toggleWishlist } = useWishlist()
+  const { addItem } = useCart()
   const inWishlist = useMemo(() => isInWishlist(product.id), [product.id, isInWishlist])
   const primaryImage = product.images?.[0] || product.product_variants?.[0]?.image || '/placeholder_light_gray_block.png'
 
@@ -27,6 +29,27 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
     e.preventDefault()
     e.stopPropagation()
     toggleWishlist(product.id)
+  }
+
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    const cartItem = {
+      id: `${product.id}-${Date.now()}`,
+      producto: {
+        id: product.id,
+        name: product.name,
+        price: product.price,
+        original_price: product.original_price,
+        images: product.images || [],
+        category_id: product.category_id,
+        brand: product.brand,
+        gender: product.gender
+      },
+      quantity: 1
+    }
+    addItem(cartItem)
   }
 
   const discountPercentage = product.original_price && product.price
@@ -131,7 +154,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
                 )}
               </div>
 
-              <Button className="flex items-center gap-2">
+              <Button onClick={handleAddToCart} className="flex items-center gap-2">
                 <ShoppingCart size={16} />
                 Agregar
               </Button>
@@ -187,7 +210,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
 
         {/* Quick add to cart overlay */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <Button className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+          <Button onClick={handleAddToCart} className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
             <ShoppingCart size={16} className="mr-2" />
             Agregar al carrito
           </Button>

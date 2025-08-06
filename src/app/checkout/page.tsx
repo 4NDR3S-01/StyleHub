@@ -298,6 +298,18 @@ export default function CheckoutPage() {
                   </label>
                 </div>
               </div>
+              
+              {/* Formulario de tarjeta cuando se selecciona card */}
+              {paymentMethod === 'card' && (
+                <div className="mt-6 p-4 border rounded-lg bg-gray-50">
+                  <p className="text-sm text-gray-600 mb-2">
+                    💳 Para procesar pagos con tarjeta, serás redirigido a Stripe Checkout seguro.
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    Tus datos de tarjeta no se almacenan en este sitio.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
