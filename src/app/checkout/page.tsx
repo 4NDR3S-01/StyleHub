@@ -10,13 +10,15 @@ import dynamic from 'next/dynamic';
 import AddressSelector from '@/components/checkout/AddressSelector';
 import CouponInput from '@/components/checkout/CouponInput';
 import ShippingMethodSelector from '@/components/checkout/ShippingMethodSelector';
+import PaymentMethodSelector from '@/components/checkout/PaymentMethodSelector';
 import CheckoutProtectedRoute from '@/components/checkout/CheckoutProtectedRoute';
-import { formatPriceSimple, getCurrencyCode } from '@/utils/currency';
+import { formatPriceSimple } from '@/utils/currency';
 import type { Address } from '@/services/address.service';
 import type { ShippingMethod } from '@/services/shipping.service';
 
 // Carga dinámica del componente de PayPal solo en cliente
 const PayPalPayment = dynamic(() => import('@/components/payments/PayPalPayment'), { ssr: false });
+const StripePayment = dynamic(() => import('@/components/payments/StripePayment'), { ssr: false });
 
 interface CouponCode {
   id: string;
@@ -43,11 +45,12 @@ export default function CheckoutPage() {
   const [shippingCost, setShippingCost] = useState(0);
   
   // Estados para el proceso de checkout
-  const [paymentMethod, setPaymentMethod] = useState<'card' | 'paypal'>('card');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [paymentData, setPaymentData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
-  const [pendingPaypal, setPendingPaypal] = useState(false);
-
+  const [pendingPayment, setPendingPayment] = useState(false);
+  
   // Calcular subtotal de productos
   const subtotal = state.items.reduce((sum, item) => sum + (item.producto.price * item.quantity), 0);
   
@@ -98,6 +101,11 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (!selectedPaymentMethod || !paymentData) {
+      alert('Por favor selecciona un método de pago');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -111,7 +119,7 @@ export default function CheckoutPage() {
           zip: selectedAddress.zip_code || '',
           country: selectedAddress.country
         },
-        paymentMethod
+        paymentData.type || 'card'
       );
       setOrderId(order.id);
 
@@ -125,16 +133,16 @@ export default function CheckoutPage() {
         );
       }
 
-      if (paymentMethod === 'card') {
-        // Procesar pago con Stripe
-        await handleStripePayment(order);
-      } else {
-        // PayPal se manejará con el componente
-        setPendingPaypal(true);
-      }
-
       // Limpiar carrito al completar la orden
       clearCart();
+
+      // Si es un método guardado con Stripe, procesarlo directamente
+      if (paymentData.savedMethodId && paymentData.type === 'card') {
+        await handleSavedCardPayment(order, paymentData.externalId);
+      } else {
+        // Para nuevos métodos, mostrar formulario de pago
+        setPendingPayment(true);
+      }
       
     } catch (error) {
       console.error('Error creating order:', error);
@@ -144,28 +152,49 @@ export default function CheckoutPage() {
     }
   };
 
-  const handleStripePayment = async (order: any) => {
+  const handleSavedCardPayment = async (order: any, paymentMethodId: string) => {
     try {
-      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
-      
+      // Procesar pago con método guardado
       const response = await fetch('/api/create-stripe-session', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
+          mode: 'payment_intent',
+          amount: Math.round(total * 100),
+          currency: 'usd',
           orderId: order.id,
-          amount: total,
-          currency: getCurrencyCode()
-        })
+          customerEmail: user?.email,
+          paymentMethodId: paymentMethodId,
+          confirmImmediately: true
+        }),
       });
 
-      const session = await response.json();
+      const { clientSecret, error } = await response.json();
       
-      if (stripe && session.id) {
-        await stripe.redirectToCheckout({ sessionId: session.id });
+      if (error) {
+        throw new Error(error);
       }
-    } catch (error) {
-      console.error('Error with Stripe payment:', error);
-      throw error;
+
+      // Confirmar el pago inmediatamente
+      const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+      if (!stripe) throw new Error('Stripe no disponible');
+
+      const { error: confirmError } = await stripe.confirmCardPayment(clientSecret);
+      
+      if (confirmError) {
+        throw new Error(confirmError.message);
+      }
+
+      // Redirigir a página de éxito
+      window.location.href = `/orden-confirmada?orderId=${order.id}`;
+      
+    } catch (error: any) {
+      console.error('Error processing saved card payment:', error);
+      alert('Error al procesar el pago: ' + error.message);
+      setPendingPayment(false);
+      setOrderId(null);
     }
   };
 
@@ -188,7 +217,7 @@ export default function CheckoutPage() {
     );
   }
 
-  if (orderId && !pendingPaypal) {
+  if (orderId && pendingPayment && paymentData?.type !== 'paypal') {
     return (
       <CheckoutProtectedRoute>
         <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -264,41 +293,15 @@ export default function CheckoutPage() {
             </div>
 
             {/* Método de pago */}
-            <div className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-lg font-semibold mb-4">Método de pago</h3>
-              
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    id="payment-card"
-                    value="card"
-                    checked={paymentMethod === 'card'}
-                    onChange={(e) => setPaymentMethod(e.target.value as 'card' | 'paypal')}
-                    className="text-blue-600"
-                  />
-                  <label htmlFor="payment-card" className="flex items-center gap-2 cursor-pointer">
-                    <span>💳</span>
-                    <span>Tarjeta de crédito/débito</span>
-                  </label>
-                </div>
-                
-                <div className="flex items-center gap-3 p-3 border rounded-lg hover:bg-gray-50">
-                  <input
-                    type="radio"
-                    id="payment-paypal"
-                    value="paypal"
-                    checked={paymentMethod === 'paypal'}
-                    onChange={(e) => setPaymentMethod(e.target.value as 'card' | 'paypal')}
-                    className="text-blue-600"
-                  />
-                  <label htmlFor="payment-paypal" className="flex items-center gap-2 cursor-pointer">
-                    <span>🏛️</span>
-                    <span>PayPal</span>
-                  </label>
-                </div>
-              </div>
-            </div>
+            <PaymentMethodSelector
+              selectedMethod={selectedPaymentMethod}
+              onMethodSelect={(methodId, type) => {
+                setSelectedPaymentMethod(methodId);
+              }}
+              onPaymentDataChange={(data) => {
+                setPaymentData(data);
+              }}
+            />
           </div>
 
           {/* Columna derecha: Resumen */}
@@ -353,22 +356,68 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Botón de pago */}
+              {/* Botón de pago y formularios */}
               <div className="mt-6">
-                {pendingPaypal ? (
-                  <PayPalPayment
-                    orderId={orderId || ''}
-                    total={total}
-                  />
-                ) : (
-                  <button
-                    onClick={handleSubmit}
-                    disabled={loading || !user || !selectedAddress || !selectedShipping}
-                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
-                  >
-                    {loading ? 'Procesando...' : `Pagar ${formatPriceSimple(total)}`}
-                  </button>
-                )}
+                {/* Extraer la lógica de renderizado de pago en una variable */}
+                {(() => {
+                  if (orderId && pendingPayment) {
+                    let paymentComponent;
+                    if (paymentData?.type === 'paypal') {
+                      paymentComponent = (
+                        <PayPalPayment
+                          orderId={orderId}
+                          amount={total}
+                          onSuccess={(paymentData) => {
+                            console.log('Pago PayPal exitoso:', paymentData);
+                            window.location.href = `/orden-confirmada?orderId=${orderId}`;
+                          }}
+                          onError={(error) => {
+                            console.error('Error en pago PayPal:', error);
+                            setPendingPayment(false);
+                            setOrderId(null);
+                          }}
+                          savePaymentMethod={true}
+                        />
+                      );
+                    } else if (paymentData?.type === 'card' && !paymentData?.savedMethodId) {
+                      paymentComponent = (
+                        <StripePayment
+                          orderId={orderId}
+                          total={total}
+                          customerEmail={user?.email || ''}
+                          userId={user?.id}
+                          savePaymentMethod={true}
+                          onSuccess={(paymentIntent) => {
+                            console.log('Pago exitoso:', paymentIntent);
+                            window.location.href = `/orden-confirmada?orderId=${orderId}`;
+                          }}
+                          onError={(error) => {
+                            console.error('Error en el pago:', error);
+                            setPendingPayment(false);
+                            setOrderId(null);
+                          }}
+                        />
+                      );
+                    } else {
+                      paymentComponent = (
+                        <div className="text-center">
+                          <p className="text-gray-600">Procesando pago con método guardado...</p>
+                        </div>
+                      );
+                    }
+                    return <div className="space-y-4">{paymentComponent}</div>;
+                  } else {
+                    return (
+                      <button
+                        onClick={handleSubmit}
+                        disabled={loading || !user || !selectedAddress || !selectedShipping || !selectedPaymentMethod}
+                        className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                      >
+                        {loading ? 'Procesando...' : `Crear orden - ${formatPriceSimple(total)}`}
+                      </button>
+                    );
+                  }
+                })()}
               </div>
 
               {/* Información adicional */}

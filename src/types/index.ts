@@ -34,7 +34,7 @@ export interface Product {
   is_featured?: boolean;                  // Producto destacado
   sku?: string;                          // Código de producto único
   weight?: number;                       // Peso en gramos
-  dimensions?: any;                      // TODO: Crear interface Dimensions
+  dimensions?: any;                      // Crear interface Dimensions
   stock_alert_threshold?: number;         // Umbral de alerta de stock bajo
   meta_title?: string;                   // SEO: Título meta
   meta_description?: string;             // SEO: Descripción meta
