@@ -5,6 +5,7 @@ import { Product } from "@/services/product.service"
 import { useCart } from "@/context/CartContext"
 import { useWishlist } from "@/context/WishlistContext"
 import { getProductColors, getProductSizes, getProductVariant } from "@/services/variant.service"
+import { formatPriceSimple } from "@/utils/currency"
 import ProductReviews from "./ProductReviews"
 import ReviewForm from "./ReviewForm"
 
@@ -316,10 +317,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           </div>
 
           <div className="text-2xl font-semibold text-green-600">
-            ${finalPrice.toFixed(2)}
-            {selectedVariant?.price_adjustment && Number(selectedVariant.price_adjustment) !== 0 && (
+            {formatPriceSimple(finalPrice)}
+            {selectedVariant?.price_adjustment != null && Number(selectedVariant.price_adjustment) !== 0 && (
               <span className="text-sm text-gray-500 ml-2">
-                (${product.price.toFixed(2)} + ${Number(selectedVariant.price_adjustment).toFixed(2)})
+                ({formatPriceSimple(product.price)} + {formatPriceSimple(Number(selectedVariant.price_adjustment))})
               </span>
             )}
           </div>

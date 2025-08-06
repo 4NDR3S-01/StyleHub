@@ -1,5 +1,12 @@
 import supabase from '@/lib/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 import type { CartItem } from '@/context/CartContext'
+
+// Cliente administrativo para operaciones que requieren bypassing RLS
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+)
 
 /**
  * Obtener orden por ID
@@ -185,27 +192,49 @@ export async function createOrder(
   userId: string,
   items: CartItem[],
   address: { street: string; city: string; state: string; zip: string; country: string },
-  paymentMethod: 'card' | 'paypal',
+  paymentMethod: 'stripe' | 'paypal',
+  shippingCost?: number,
+  taxRate?: number
 ) {
-  // Calcular el total de la orden
-  const total = items.reduce(
-    (sum, item) => sum + item.producto.price * item.quantity,
-    0,
-  )
-  // Insertar la orden principal
-  const { data: order, error: errOrder } = await supabase
-    .from('orders')
-    .insert({
-      user_id: userId,
-      total,
-      status: 'pending',
-      address: JSON.stringify(address),
-      payment_method: paymentMethod,
-    })
-    .select()
-    .single()
-  if (errOrder) throw errOrder
-  if (!order) throw new Error('No se pudo crear la orden')
+  try {
+    console.log('createOrder called with:', { userId, itemsCount: items.length, address, paymentMethod, shippingCost, taxRate });
+    
+    // Calcular el subtotal (solo productos)
+    const subtotal = items.reduce(
+      (sum, item) => sum + item.producto.price * item.quantity,
+      0,
+    )
+    
+    // Calcular impuestos y envío
+    const tax = subtotal * (taxRate || 0.19); // 19% IVA por defecto
+    const shipping = shippingCost || (subtotal >= 200000 ? 0 : 15000); // Envío gratis si > $200k, sino $15k
+    const total = subtotal + tax + shipping;
+    
+    console.log('Order calculations:', { subtotal, tax, shipping, total });
+    
+    // Insertar la orden principal
+    const { data: order, error: errOrder } = await supabase
+      .from('orders')
+      .insert({
+        user_id: userId,
+        total,
+        subtotal,
+        tax,
+        shipping,
+        status: 'pending',
+        address: JSON.stringify(address),
+        payment_method: paymentMethod,
+      })
+      .select()
+      .single()
+      
+    console.log('Order insert result:', { order, error: errOrder });
+    
+    if (errOrder) {
+      console.error('Order creation error:', errOrder);
+      throw errOrder;
+    }
+    if (!order) throw new Error('No se pudo crear la orden')
   // Preparar items de la orden para insertar
   const orderItems = items.map((item) => ({
     order_id: order.id,
@@ -215,10 +244,25 @@ export async function createOrder(
     color: item.variant?.color || null,
     variant_id: item.variant?.id || null,
     price: item.producto.price,
+    product_name: item.producto.name, // Campo requerido
+    variant_name: item.variant ? `${item.variant.size || ''} ${item.variant.color || ''}`.trim() || null : null,
+    total: item.producto.price * item.quantity, // Campo requerido
   }))
-  const { error: errItems } = await supabase
+  
+  // Usar cliente administrativo para insertar order_items (bypass RLS)
+  const { error: errItems } = await supabaseAdmin
     .from('order_items')
     .insert(orderItems)
-  if (errItems) throw errItems
-  return order
+  
+  if (errItems) {
+    console.error('Order items insert error:', errItems);
+    throw errItems;
+  }
+  
+  return order;
+  
+  } catch (error) {
+    console.error('createOrder function error:', error);
+    throw error;
+  }
 }

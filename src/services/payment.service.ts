@@ -478,20 +478,21 @@ export class PaymentService {
   /**
    * Formatear precio para mostrar
    */
-  static formatPrice(amount: number, currency: string = 'COP'): string {
+  static formatPrice(amount: number, currency: string = 'USD'): string {
     if (!amount || isNaN(amount)) {
-      return '0';
+      return '$0.00';
     }
 
     try {
-      return new Intl.NumberFormat('es-CO', {
+      return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
-        minimumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
       }).format(amount);
     } catch (error) {
       console.error('Price formatting error:', error);
-      return `$${amount.toFixed(0)}`;
+      return `$${amount.toFixed(2)}`;
     }
   }
 
@@ -569,6 +570,35 @@ export class PaymentService {
   }
 
   /**
+   * Obtener métodos de pago disponibles
+   */
+  static getAvailablePaymentMethods() {
+    return [
+      {
+        id: 'card',
+        name: 'Tarjeta de Crédito/Débito',
+        description: 'Visa, Mastercard, American Express',
+        icon: '💳',
+        enabled: true,
+      },
+      {
+        id: 'pse',
+        name: 'PSE',
+        description: 'Débito a cuentas de ahorros y corriente',
+        icon: '🏦',
+        enabled: false, // Habilitado en versiones futuras
+      },
+      {
+        id: 'nequi',
+        name: 'Nequi',
+        description: 'Pago con billetera digital Nequi',
+        icon: '📱',
+        enabled: false, // Habilitado en versiones futuras
+      },
+    ];
+  }
+
+  /**
    * Obtener información de la moneda
    */
   static getCurrencyInfo(currency: string = 'COP') {
@@ -607,11 +637,10 @@ export class PaymentService {
       const supabase = (await import('@/lib/supabaseClient')).default;
       
       const { data, error } = await supabase
-        .from('user_payment_methods')
+        .from('payment_methods')
         .select('*')
         .eq('user_id', userId)
         .eq('active', true)
-        .order('is_default', { ascending: false })
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -631,7 +660,7 @@ export class PaymentService {
       const supabase = (await import('@/lib/supabaseClient')).default;
       
       const { data, error } = await supabase
-        .from('user_payment_methods')
+        .from('payment_methods')
         .insert([paymentMethodData])
         .select()
         .single();
@@ -653,7 +682,7 @@ export class PaymentService {
       const supabase = (await import('@/lib/supabaseClient')).default;
       
       const { data, error } = await supabase
-        .from('user_payment_methods')
+        .from('payment_methods')
         .update(updateData)
         .eq('id', id)
         .select()
@@ -676,7 +705,7 @@ export class PaymentService {
       const supabase = (await import('@/lib/supabaseClient')).default;
       
       const { error } = await supabase
-        .from('user_payment_methods')
+        .from('payment_methods')
         .delete()
         .eq('id', id);
 
@@ -686,59 +715,6 @@ export class PaymentService {
     } catch (error: any) {
       console.error('Error deleting payment method:', error);
       throw new Error(error.message || 'Error al eliminar método de pago');
-    }
-  }
-
-  /**
-   * Obtener métodos de pago disponibles (configuración)
-   */
-  static async getAvailablePaymentMethods() {
-    try {
-      const supabase = (await import('@/lib/supabaseClient')).default;
-      
-      const { data, error } = await supabase
-        .from('payment_methods')
-        .select('*')
-        .eq('active', true)
-        .order('sort_order', { ascending: true });
-
-      if (error) throw error;
-      
-      return data || [];
-    } catch (error: any) {
-      console.error('Error fetching available payment methods:', error);
-      throw new Error(error.message || 'Error al obtener métodos de pago disponibles');
-    }
-  }
-
-  /**
-   * Establecer método de pago como predeterminado
-   */
-  static async setDefaultPaymentMethod(userId: string, paymentMethodId: string) {
-    try {
-      const supabase = (await import('@/lib/supabaseClient')).default;
-      
-      // Primero, quitar el default de todos los métodos del usuario
-      await supabase
-        .from('user_payment_methods')
-        .update({ is_default: false })
-        .eq('user_id', userId);
-
-      // Luego establecer el nuevo default
-      const { data, error } = await supabase
-        .from('user_payment_methods')
-        .update({ is_default: true })
-        .eq('id', paymentMethodId)
-        .eq('user_id', userId)
-        .select()
-        .single();
-
-      if (error) throw error;
-      
-      return data;
-    } catch (error: any) {
-      console.error('Error setting default payment method:', error);
-      throw new Error(error.message || 'Error al establecer método de pago predeterminado');
     }
   }
 }
