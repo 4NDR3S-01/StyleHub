@@ -39,14 +39,18 @@ interface PaymentMethodInfo {
 /**
  * Procesador de pagos con Stripe
  */
+const stripePromiseInstance: Promise<Stripe | null> = (() => {
+  if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
+    throw new Error('Stripe publishable key is not configured');
+  }
+  return loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+})();
+
 class StripePaymentProcessor implements PaymentProcessor {
   private readonly stripePromise: Promise<Stripe | null>;
 
   constructor() {
-    if (!process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY) {
-      throw new Error('Stripe publishable key is not configured');
-    }
-    this.stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+    this.stripePromise = stripePromiseInstance;
   }
 
   async processCheckout(data: CheckoutSessionData): Promise<PaymentResult> {

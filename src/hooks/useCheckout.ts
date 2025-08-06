@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { User } from '@/types';
 import { useCart, CartItem } from '@/context/CartContext';
@@ -36,8 +35,7 @@ interface UseCheckoutProps {
 export function useCheckout({ cartItems, user }: UseCheckoutProps) {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
-  const router = useRouter();
-  const { clearCart } = useCart();
+  useCart();
 
   const form = useForm<CheckoutFormData>({
     resolver: zodResolver(checkoutSchema),
@@ -107,10 +105,13 @@ export function useCheckout({ cartItems, user }: UseCheckoutProps) {
   const detectCardType = (cardNumber: string) => {
     const num = cardNumber.replace(/\s/g, '');
     
-    if (/^4/.test(num)) return 'visa';
-    if (/^5[1-5]/.test(num) || /^2[2-7]/.test(num)) return 'mastercard';
-    if (/^3[47]/.test(num)) return 'amex';
-    if (/^6/.test(num)) return 'discover';
+    if (num.startsWith('4')) return 'visa';
+    if (
+      (num.startsWith('5') && ['1', '2', '3', '4', '5'].includes(num[1])) ||
+      (num.startsWith('2') && ['2', '3', '4', '5', '6', '7'].includes(num[1]))
+    ) return 'mastercard';
+    if (num.startsWith('34') || num.startsWith('37')) return 'amex';
+    if (num.startsWith('6')) return 'discover';
     
     return 'unknown';
   };
