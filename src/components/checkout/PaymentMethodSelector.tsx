@@ -82,14 +82,22 @@ export default function PaymentMethodSelector({
           type: normalizedType,
           savedMethodId: method.id,
           externalId: method.external_id,
-          isNew: false
+          isNew: false,
+          provider: method.provider,
+          cardBrand: method.card_brand,
+          cardLastFour: method.card_last_four,
+          paypalEmail: method.paypal_email
         });
       }
     } else {
+      // Para métodos nuevos, determinar el tipo por defecto
+      const paymentType = methodId === 'new-paypal' ? 'paypal' : 'card';
+      
       onPaymentDataChange({
-        type: 'card',
-        savedMethodId: 'new-card',
-        isNew: true
+        type: paymentType,
+        savedMethodId: methodId,
+        isNew: true,
+        requiresForm: paymentType === 'card' // Las tarjetas nuevas requieren formulario
       });
     }
   };
@@ -217,14 +225,15 @@ export default function PaymentMethodSelector({
           </div>
         )}
 
-        {/* Opción para agregar nueva tarjeta */}
+        {/* Opciones para agregar nuevos métodos */}
         <div className="space-y-3">
           {savedMethods.length > 0 && (
             <div className="border-t pt-4">
-              <h4 className="font-medium text-sm text-gray-700 mb-3">O agregar nueva tarjeta</h4>
+              <h4 className="font-medium text-sm text-gray-700 mb-3">O agregar nuevo método de pago</h4>
             </div>
           )}
           
+          {/* Nueva tarjeta */}
           <button
             type="button"
             className={`relative border rounded-lg p-4 cursor-pointer transition-all hover:border-gray-300 w-full text-left ${
@@ -254,6 +263,40 @@ export default function PaymentMethodSelector({
                 </div>
               </div>
               {selectedMethod === 'new-card' && (
+                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                  <Check className="w-3 h-3 text-white" />
+                </div>
+              )}
+            </div>
+          </button>
+
+          {/* Nuevo PayPal */}
+          <button
+            type="button"
+            className={`relative border rounded-lg p-4 cursor-pointer transition-all hover:border-gray-300 w-full text-left ${
+              selectedMethod === 'new-paypal' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'
+            }`}
+            onClick={() => handleMethodSelection('new-paypal', 'new')}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                handleMethodSelection('new-paypal', 'new');
+              }
+            }}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-8 bg-blue-600 rounded flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">PP</span>
+                </div>
+                <div>
+                  <div className="font-medium">PayPal</div>
+                  <div className="text-sm text-gray-600">
+                    Pagar con tu cuenta de PayPal
+                  </div>
+                </div>
+              </div>
+              {selectedMethod === 'new-paypal' && (
                 <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
                   <Check className="w-3 h-3 text-white" />
                 </div>

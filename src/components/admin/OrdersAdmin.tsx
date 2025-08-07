@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import supabase from '@/lib/supabaseClient'
 import { toast } from '@/hooks/use-toast'
+import OrderDetailsModal from './OrderDetailsModal'
 
 interface OrderRow {
   id: string
@@ -25,17 +26,17 @@ interface OrderRow {
 export default function OrdersAdmin() {
   const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
   const showOrderDetails = (order: OrderRow) => {
-    // Verificación ética
-    const isEthicalOrder = order.payment_status === 'paid' && order.payment_intent_id
-    const ethicalStatus = isEthicalOrder ? '✅ Ética' : '⚠️ Problemática'
-    
-    toast({ 
-      title: `Orden ${order.id.slice(0, 8)}... - ${ethicalStatus}`, 
-      description: `Cliente: ${order.user_name} | Total: $${order.total} | Estado Pago: ${order.payment_status} | ${isEthicalOrder ? 'Esta orden siguió el flujo ético: pago confirmado antes de crear la orden.' : 'Esta orden puede tener problemas: no tiene pago confirmado o payment_intent_id.'}`,
-      variant: isEthicalOrder ? 'default' : 'destructive'
-    })
+    setSelectedOrderId(order.id)
+    setIsModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setIsModalOpen(false)
+    setSelectedOrderId(null)
   }
 
   useEffect(() => {
@@ -353,6 +354,15 @@ export default function OrdersAdmin() {
         </div>
       )}
       </div>
+
+      {/* Modal de detalles */}
+      {selectedOrderId && (
+        <OrderDetailsModal
+          orderId={selectedOrderId}
+          isOpen={isModalOpen}
+          onClose={closeModal}
+        />
+      )}
     </div>
   )
 }

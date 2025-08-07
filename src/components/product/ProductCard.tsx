@@ -3,10 +3,13 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { useWishlist } from '@/context/WishlistContext'
-import { useMemo } from 'react'
+import { useCart } from '@/context/CartContext'
+import { useMemo, useState } from 'react'
 import { Heart, ShoppingCart, Star } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { formatPriceSimple } from '@/utils/currency'
+import { useRouter } from 'next/navigation'
+import { toast } from '@/hooks/use-toast'
 
 interface ProductCardProps {
   readonly product: any
@@ -20,6 +23,10 @@ interface ProductCardProps {
  */
 export default function ProductCard({ product, viewMode = 'grid' }: Readonly<ProductCardProps>) {
   const { isInWishlist, toggleWishlist } = useWishlist()
+  const { addItem } = useCart()
+  const router = useRouter()
+  const [isAddingToCart, setIsAddingToCart] = useState(false)
+  
   const inWishlist = useMemo(() => isInWishlist(product.id), [product.id, isInWishlist])
   const primaryImage = product.images?.[0] || product.product_variants?.[0]?.image || '/placeholder_light_gray_block.png'
 
@@ -27,6 +34,81 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
     e.preventDefault()
     e.stopPropagation()
     toggleWishlist(product.id)
+  }
+
+  const handleAddToCart = async (e: React.MouseEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    
+    if (isAddingToCart) return
+
+    // Verificar si el producto tiene variantes
+    const variants = product.product_variants || []
+    
+    if (variants.length === 0) {
+      toast({
+        title: 'Producto no disponible',
+        description: 'Este producto no tiene variantes disponibles',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    // Si tiene múltiples variantes, redirigir a la página del producto
+    if (variants.length > 1) {
+      router.push(`/product/${product.id}`)
+      return
+    }
+
+    // Si tiene solo una variante, agregar directamente al carrito
+    const variant = variants[0]
+    if (!variant || variant.stock <= 0) {
+      toast({
+        title: 'Sin stock',
+        description: 'Este producto no está disponible en este momento',
+        variant: 'destructive'
+      })
+      return
+    }
+
+    setIsAddingToCart(true)
+    
+    try {
+      const cartItem = {
+        id: `${product.id}-${variant.id}-${Date.now()}`,
+        producto: {
+          id: product.id,
+          name: product.name,
+          price: Number(product.price) + Number(variant.price_adjustment || 0),
+          images: product.images,
+          category_id: product.category_id
+        },
+        quantity: 1,
+        variant: {
+          id: variant.id,
+          color: variant.color,
+          size: variant.size,
+          stock: variant.stock
+        }
+      }
+
+      addItem(cartItem)
+      
+      toast({
+        title: 'Producto agregado',
+        description: `${product.name} se agregó al carrito`,
+        variant: 'default'
+      })
+    } catch (error) {
+      console.error('Error adding to cart:', error)
+      toast({
+        title: 'Error',
+        description: 'No se pudo agregar el producto al carrito',
+        variant: 'destructive'
+      })
+    } finally {
+      setIsAddingToCart(false)
+    }
   }
 
   const discountPercentage = product.original_price && product.price && product.original_price > product.price
@@ -131,9 +213,13 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
                 )}
               </div>
 
-              <Button className="flex items-center gap-2">
+              <Button 
+                className="flex items-center gap-2"
+                onClick={handleAddToCart}
+                disabled={isAddingToCart}
+              >
                 <ShoppingCart size={16} />
-                Agregar
+                {isAddingToCart ? 'Agregando...' : 'Agregar'}
               </Button>
             </div>
           </div>
@@ -187,9 +273,13 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
 
         {/* Quick add to cart overlay */}
         <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-          <Button className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
+          <Button 
+            className="transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300"
+            onClick={handleAddToCart}
+            disabled={isAddingToCart}
+          >
             <ShoppingCart size={16} className="mr-2" />
-            Agregar al carrito
+            {isAddingToCart ? 'Agregando...' : 'Agregar al carrito'}
           </Button>
         </div>
       </div>
