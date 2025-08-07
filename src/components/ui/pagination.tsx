@@ -43,8 +43,9 @@ const PaginationLink = ({
   className,
   isActive,
   size = 'icon',
+  children,
   ...props
-}: PaginationLinkProps) => (
+}: PaginationLinkProps & { children?: React.ReactNode }) => (
   <a
     aria-current={isActive ? 'page' : undefined}
     className={cn(
@@ -55,7 +56,9 @@ const PaginationLink = ({
       className
     )}
     {...props}
-  />
+  >
+    {children || <span className="sr-only">Pagination link</span>}
+  </a>
 );
 PaginationLink.displayName = 'PaginationLink';
 
