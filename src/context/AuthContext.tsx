@@ -344,8 +344,10 @@ export function AuthProvider({ children }: Readonly<{ children: ReactNode }>) {
       }
       
       // Validar formato de email
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      // Usar 'validator' para mayor seguridad
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const isEmail = require('validator/lib/isEmail');
+      if (!isEmail(email)) {
         throw new Error('Formato de email inválido.');
       }
       

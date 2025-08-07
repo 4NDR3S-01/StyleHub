@@ -244,12 +244,9 @@ export default function CategoryPage({ params }: CategoryPageProps) {
             if (loading) {
               return (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {[...Array(6)].map(() => {
-                    const uniqueKey = Math.random().toString(36).substr(2, 9);
-                    return (
-                      <div key={uniqueKey} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
-                    );
-                  })}
+                  {[...Array(6)].map(() => (
+                    <div key={crypto.randomUUID()} className="bg-gray-200 animate-pulse rounded-lg h-80"></div>
+                  ))}
                 </div>
               );
             } else if (products.length === 0) {

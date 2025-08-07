@@ -444,7 +444,13 @@ export async function deleteSocialMedia(id: string): Promise<void> {
 export async function uploadPersonalizationImage(file: File, folder: string): Promise<string | null> {
   try {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${folder}-${Date.now()}-${Math.random()}.${fileExt}`;
+    // Usar un contador simple para evitar Math.random()
+    if (typeof window !== 'undefined') {
+      if (!window.__uploadCounter) window.__uploadCounter = 0;
+      window.__uploadCounter++;
+    }
+    const counter = typeof window !== 'undefined' ? window.__uploadCounter : Date.now();
+    const fileName = `${folder}-${Date.now()}-${counter}.${fileExt}`;
     const filePath = `personalization/${folder}/${fileName}`;
     
     const { error: uploadError } = await supabase.storage

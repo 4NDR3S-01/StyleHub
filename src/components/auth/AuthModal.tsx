@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import isEmail from "validator/lib/isEmail";
 import { X, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -11,11 +12,9 @@ interface AuthModalProps {
 }
 
 // --- Helpers fuera del componente ---
-const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
 function validateEmail(email: string) {
   if (!email.trim()) return "El correo electrónico es requerido";
-  if (!emailRegex.test(email.trim())) return "Formato de correo electrónico inválido";
+  if (!isEmail(email.trim())) return "Formato de correo electrónico inválido";
   return "";
 }
 
@@ -42,7 +41,7 @@ function validateForm({
     validationErrors.push("La contraseña es requerida");
   } else if (password.length < 8) {
     validationErrors.push("La contraseña debe tener al menos 8 caracteres");
-  } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(password)) {
+  } else if (!/[a-z]/.test(password) || !/[A-Z]/.test(password) || !/\d/.test(password)) {
     validationErrors.push("La contraseña debe contener al menos una mayúscula, una minúscula y un número");
   }
 

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import isEmail from 'validator/lib/isEmail';
 
 /**
  * ESQUEMAS DE VALIDACIÓN PARA LA APLICACIÓN
@@ -16,7 +17,7 @@ import { z } from 'zod';
 export const emailSchema = z
   .string()
   .min(1, 'El email es requerido')
-  .email('Formato de email inválido');
+  .refine((val) => isEmail(val), { message: 'Formato de email inválido' });
 
 /**
  * Validación de contraseña con requisitos de seguridad
@@ -26,10 +27,10 @@ export const emailSchema = z
 export const passwordSchema = z
   .string()
   .min(8, 'La contraseña debe tener al menos 8 caracteres')
-  .regex(/(?=.*[a-z])/, 'Debe contener al menos una letra minúscula')
-  .regex(/(?=.*[A-Z])/, 'Debe contener al menos una letra mayúscula')
-  .regex(/(?=.*\d)/, 'Debe contener al menos un número')
-  .regex(/(?=.*[@$!%*?&])/, 'Debe contener al menos un carácter especial');
+  .refine((val) => /[a-z]/.test(val), { message: 'Debe contener al menos una letra minúscula' })
+  .refine((val) => /[A-Z]/.test(val), { message: 'Debe contener al menos una letra mayúscula' })
+  .refine((val) => /\d/.test(val), { message: 'Debe contener al menos un número' })
+  .refine((val) => /[@$!%*?&]/.test(val), { message: 'Debe contener al menos un carácter especial' });
 
 /**
  * Validación de teléfono internacional
@@ -37,7 +38,7 @@ export const passwordSchema = z
 export const phoneSchema = z
   .string()
   .min(10, 'El teléfono debe tener al menos 10 dígitos')
-  .regex(/^\+?[\d\s-()]+$/, 'Formato de teléfono inválido');
+  .refine((val) => /^\+?[\d\s\-()]+$/.test(val), { message: 'Formato de teléfono inválido' });
 
 /**
  * Validación de nombres (solo letras y espacios, incluye caracteres latinos)
@@ -45,7 +46,7 @@ export const phoneSchema = z
 export const nameSchema = z
   .string()
   .min(2, 'Debe tener al menos 2 caracteres')
-  .regex(/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/, 'Solo se permiten letras y espacios');
+  .refine((val) => /^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(val), { message: 'Solo se permiten letras y espacios' });
 
 // ============================================================================
 // ESQUEMAS COMPUESTOS PARA FORMULARIOS

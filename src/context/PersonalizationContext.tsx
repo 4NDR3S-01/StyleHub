@@ -27,7 +27,7 @@ const PersonalizationContext = createContext<PersonalizationContextType | undefi
   undefined
 );
 
-export function PersonalizationProvider({ children }: { children: ReactNode }) {
+export function PersonalizationProvider({ children }: { readonly children: ReactNode }) {
   const personalizationData = usePersonalization();
 
   return (

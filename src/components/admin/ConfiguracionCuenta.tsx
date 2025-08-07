@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import isEmail from "validator/lib/isEmail";
 import supabase from "@/lib/supabaseClient";
 import { Edit2, Eye, EyeOff } from "lucide-react";
 import UserAvatar from "@/components/ui/UserAvatar";
@@ -104,7 +105,7 @@ export default function ConfiguracionCuenta() {
       setError("El apellido es obligatorio.");
       return false;
     }
-    if (!form.email.trim() || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(form.email)) {
+    if (!form.email.trim() || !isEmail(form.email)) {
       setError("Correo electrónico inválido.");
       return false;
     }

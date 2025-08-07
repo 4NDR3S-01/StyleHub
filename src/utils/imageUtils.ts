@@ -78,7 +78,12 @@ export const validateImageFile = (file: File): { isValid: boolean; error?: strin
  */
 export const generateUniqueFileName = (originalName: string): string => {
   const timestamp = Date.now();
-  const randomString = Math.random().toString(36).substring(2, 9);
+  // Usar un contador incremental global para evitar Math.random()
+  if (typeof window !== 'undefined') {
+    if (!window.__uploadCounter) window.__uploadCounter = 0;
+    window.__uploadCounter++;
+  }
+  const counter = typeof window !== 'undefined' ? window.__uploadCounter : timestamp;
   const extension = originalName.split('.').pop();
-  return `category_${timestamp}_${randomString}.${extension}`;
+  return `category_${timestamp}_${counter}.${extension}`;
 };
