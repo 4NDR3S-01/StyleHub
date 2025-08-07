@@ -1,3 +1,9 @@
+// Extiende la interfaz Window para incluir __sessionCounter
+declare global {
+  interface Window {
+    __sessionCounter?: number;
+  }
+}
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 interface LogEntry {
@@ -14,7 +20,13 @@ class Logger {
   private readonly sessionId = this.generateSessionId();
 
   private generateSessionId(): string {
-    return Math.random().toString(36).substring(2, 15);
+    // Usar un contador incremental global para evitar Math.random()
+    if (typeof window !== 'undefined') {
+      if (!window.__sessionCounter) window.__sessionCounter = 0;
+      window.__sessionCounter++;
+    }
+    const counter = typeof window !== 'undefined' ? window.__sessionCounter : Date.now();
+    return `session-${Date.now()}-${counter}`;
   }
 
   private createLogEntry(level: LogLevel, message: string, context?: Record<string, any>): LogEntry {

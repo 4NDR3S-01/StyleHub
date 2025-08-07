@@ -290,7 +290,10 @@ export class PaymentService {
       errors.push('El carrito está vacío');
     }
 
-    if (!data.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) {
+    // Usar 'validator' para validar email de forma segura
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const isEmail = require('validator/lib/isEmail');
+    if (!data.email || !isEmail(data.email)) {
       errors.push('Email inválido');
     }
 

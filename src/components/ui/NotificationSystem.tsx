@@ -87,9 +87,12 @@ export function NotificationSystem({ notifications, onRemove }: Readonly<Notific
 // Hook para usar el sistema de notificaciones
 export function useNotifications() {
   const [notifications, setNotifications] = React.useState<NotificationProps[]>([]);
+  // Contador incremental para IDs únicos
+  const idCounter = React.useRef(0);
 
   const addNotification = React.useCallback((notification: Omit<NotificationProps, 'id'>) => {
-    const id = Math.random().toString(36).substring(2, 11);
+    idCounter.current += 1;
+    const id = `notif-${Date.now()}-${idCounter.current}`;
     setNotifications(prev => [...prev, { ...notification, id }]);
 
     // Auto-remove after duration

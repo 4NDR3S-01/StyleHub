@@ -3,7 +3,7 @@
 import { useEffect } from 'react';
 import { usePersonalizationContext } from '@/context/PersonalizationContext';
 
-export default function ThemeProvider({ children }: { children: React.ReactNode }) {
+export default function ThemeProvider({ children }: { readonly children: React.ReactNode }) {
   const { theme } = usePersonalizationContext();
 
   useEffect(() => {

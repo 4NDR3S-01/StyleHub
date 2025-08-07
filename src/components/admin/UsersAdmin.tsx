@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import isEmail from 'validator/lib/isEmail';
 import { Edit2 } from 'lucide-react';
 import { createClient } from '@supabase/supabase-js';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -112,7 +113,7 @@ export default function UsersAdmin() {
       toast({ title: 'Campos requeridos', description: 'Nombre, apellido y email son obligatorios.', variant: 'destructive' });
       return;
     }
-    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(formData.email)) {
+    if (!isEmail(formData.email)) {
       toast({ title: 'Email inválido', description: 'Introduce un email válido.', variant: 'destructive' });
       return;
     }

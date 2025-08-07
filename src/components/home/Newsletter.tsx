@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import isEmail from 'validator/lib/isEmail';
 import { Mail } from 'lucide-react';
 import { subscribeToNewsletter } from '@/services/newsletter.service';
 import { toast } from 'sonner';
@@ -18,7 +19,7 @@ export default function Newsletter() {
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+    if (!isEmail(email.trim())) {
       toast.error('Por favor ingresa un email válido');
       return;
     }

@@ -377,7 +377,7 @@ Este proyecto está bajo la licencia MIT. Ver el archivo `LICENSE` para más det
 
 Si tienes preguntas o necesitas ayuda:
 
-- 📧 Email: soporte@stylehub.com
+- 📧 Email: williamcabrera20@hotmail.com
 - 🐛 Issues: [GitHub Issues](https://github.com/4NDR3S-01/StyleHub/issues)
 - 📖 Documentación: [Wiki del proyecto](https://github.com/4NDR3S-01/StyleHub/wiki)
 

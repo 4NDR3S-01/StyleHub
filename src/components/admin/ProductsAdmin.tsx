@@ -1,6 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+// Extiende la interfaz Window para incluir __uploadCounter
+declare global {
+  interface Window {
+    __uploadCounter?: number;
+  }
+}
 import { toast } from '@/hooks/use-toast';
 import { createClient } from '@supabase/supabase-js';
 import { Plus, X, Upload, Edit, Trash2 } from 'lucide-react';
@@ -33,15 +40,6 @@ interface Product {
   featured: boolean;
   sale: boolean;
   sku?: string;
-}
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-  image?: string;
-  description?: string;
-  parent_id?: string;
 }
 
 export default function ProductsAdmin() {
@@ -198,7 +196,10 @@ export default function ProductsAdmin() {
   const uploadVariantImageToSupabase = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `variant-${Date.now()}-${Math.random()}.${fileExt}`;
+      // Usar un contador simple para evitar Math.random()
+      if (!window.__uploadCounter) window.__uploadCounter = 0;
+      window.__uploadCounter++;
+      const fileName = `variant-${Date.now()}-${window.__uploadCounter}.${fileExt}`;
       const filePath = `variants/${fileName}`;
       const { error: uploadError } = await supabase.storage
         .from('productos')
@@ -360,7 +361,10 @@ export default function ProductsAdmin() {
   const uploadImageToSupabase = async (file: File): Promise<string | null> => {
     try {
       const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random()}.${fileExt}`;
+      // Usar un contador simple para evitar Math.random()
+      if (!window.__uploadCounter) window.__uploadCounter = 0;
+      window.__uploadCounter++;
+      const fileName = `${Date.now()}-${window.__uploadCounter}.${fileExt}`;
       const filePath = `products/${fileName}`;
 
       const { error: uploadError } = await supabase.storage
