@@ -94,7 +94,7 @@ export class ConfigManager {
   private static instance: ConfigManager;
   private config: AppConfig;
   private cacheConfig: CacheConfig;
-  private isInitialized: boolean = false;
+  private readonly isInitialized: boolean = false;
 
   /**
    * Constructor privado para evitar instanciación directa
@@ -206,7 +206,7 @@ export class ConfigManager {
    * Obtiene un valor anidado del objeto de configuración
    */
   private getNestedValue(obj: any, path: string): any {
-    return path.split('.').reduce((current, key) => current && current[key], obj);
+    return path.split('.').reduce((current, key) => current?.[key], obj);
   }
 
   // ============================================================================

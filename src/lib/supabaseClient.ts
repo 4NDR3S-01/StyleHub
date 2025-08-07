@@ -122,7 +122,7 @@ class SupabaseClientManager {
    */
   public async testConnection(): Promise<boolean> {
     try {
-      const { data, error } = await this.client
+      const { error } = await this.client
         .from('_health_check')
         .select('*')
         .limit(1);

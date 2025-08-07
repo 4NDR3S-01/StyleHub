@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { MapPin, ShoppingBag, CreditCard, Check } from 'lucide-react';
+import { MapPin, ShoppingBag, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { CartItem } from '@/context/CartContext';
 import { User } from '@/types';
@@ -17,6 +17,39 @@ import { checkCartStock } from '@/services/inventory.service';
 import { PaymentService, CheckoutSessionData } from '@/services/payment.service';
 import PaymentMethodSelection from './PaymentMethodSelection';
 import { OrderSummary } from './OrderSummary';
+
+// Indicador de progreso fuera del componente principal (antes de la función principal)
+function ProgressIndicator({ step }: Readonly<{ step: number }>) {
+  return (
+    <div className="mb-8">
+      <div className="flex items-center justify-center">
+        {[1, 2, 3].map((stepNumber) => (
+          <React.Fragment key={stepNumber}>
+            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+              step >= stepNumber ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
+            }`}>
+              {step > stepNumber ? <Check size={20} /> : stepNumber}
+            </div>
+            <div className={`text-sm mt-2 ${
+              step >= stepNumber ? 'text-blue-600 font-medium' : 'text-gray-400'
+            }`}>
+              <span>
+                {stepNumber === 1 && 'Envío'}
+                {stepNumber === 2 && 'Pago'}
+                {stepNumber === 3 && 'Confirmar'}
+              </span>
+            </div>
+            {stepNumber < 3 && (
+              <div className={`flex-1 mx-4 h-0.5 ${
+                step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
+              }`} />
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Schema de validación
 const checkoutSchema = z.object({
@@ -39,7 +72,7 @@ interface UnifiedCheckoutProps {
   onOrderComplete?: (orderId: string) => void;
 }
 
-export default function UnifiedCheckout({ user, cartItems, onOrderComplete }: UnifiedCheckoutProps) {
+export default function UnifiedCheckout({ user, cartItems, onOrderComplete }: Readonly<UnifiedCheckoutProps>) {
   const [step, setStep] = useState(1);
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'stripe' | 'paypal' | null>(null);
@@ -172,44 +205,13 @@ export default function UnifiedCheckout({ user, cartItems, onOrderComplete }: Un
     }
   };
 
-  // Indicador de progreso
-  const ProgressIndicator = () => (
-    <div className="mb-8">
-      <div className="flex items-center justify-center">
-        {[1, 2, 3].map((stepNumber) => (
-          <React.Fragment key={stepNumber}>
-            <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
-              step >= stepNumber ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-400'
-            }`}>
-              {step > stepNumber ? <Check size={20} /> : stepNumber}
-            </div>
-            <div className={`text-sm mt-2 ${
-              step >= stepNumber ? 'text-blue-600 font-medium' : 'text-gray-400'
-            }`}>
-              <span>
-                {stepNumber === 1 && 'Envío'}
-                {stepNumber === 2 && 'Pago'}
-                {stepNumber === 3 && 'Confirmar'}
-              </span>
-            </div>
-            {stepNumber < 3 && (
-              <div className={`flex-1 mx-4 h-0.5 ${
-                step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-              }`} />
-            )}
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-  );
-
   return (
     <div className="max-w-6xl mx-auto p-6">
       <Form {...form}>
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Formulario principal */}
           <div className="lg:col-span-2 space-y-6">
-            <ProgressIndicator />
+            <ProgressIndicator step={step} />
 
             {/* Paso 1: Información de Envío */}
             {step === 1 && (

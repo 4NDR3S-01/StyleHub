@@ -10,8 +10,7 @@ function ConfirmEmailPageContent() {
   const [status, setStatus] = React.useState<'pending'|'success'|'error'|'unauthorized'>('pending');
   const [emailToResend, setEmailToResend] = React.useState<string | null>(null);
   const [resendMsg, setResendMsg] = React.useState<string>("");
-  const [token, setToken] = React.useState<string | null>(null);
-  const [email, setEmail] = React.useState<string | null>(null);
+
   const [showEmailInput, setShowEmailInput] = React.useState(false);
 
   useEffect(() => {
@@ -19,15 +18,12 @@ function ConfirmEmailPageContent() {
     let _email = searchParams.get("email");
 
     // Si no están, intenta obtener del hash
-    if (!_token) {
-      if (typeof window !== "undefined" && window.location.hash) {
-        const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
-        _token = hashParams.get("access_token");
-        _email = hashParams.get("email");
-      }
+    if (!_token && typeof window !== "undefined" && window.location.hash) {
+      const hashParams = new URLSearchParams(window.location.hash.replace('#', ''));
+      _token = hashParams.get("access_token");
+      _email = hashParams.get("email");
     }
-    setToken(_token);
-    setEmail(_email);
+
 
     if (!_token) {
       setStatus('unauthorized');
@@ -36,29 +32,24 @@ function ConfirmEmailPageContent() {
     }
     if (_email) setEmailToResend(_email);
 
-    // Forzar a string porque ya validamos que no es null
-    const safeToken = _token as string;
-    const safeEmail = _email as string;
-
     // Confirmar email con Supabase
-    const confirm = async () => {
+    const confirm = async (token: string, email: string) => {
       try {
-        // Supabase requiere email y token como string
-        if (_email) {
-          const { error } = await supabase.auth.verifyOtp({ type: 'email', token: safeToken, email: safeEmail });
-          if (error) {
-            setStatus('error');
-          } else {
-            setStatus('success');
-          }
-        } else {
+        const { error } = await supabase.auth.verifyOtp({ type: 'email', token, email });
+        if (error) {
           setStatus('error');
+        } else {
+          setStatus('success');
         }
       } catch {
         setStatus('error');
       }
     };
-    confirm();
+    if (_token && _email) {
+      confirm(_token, _email);
+    } else {
+      setStatus('error');
+    }
   }, [searchParams]);
 
   // Redirección automática tras éxito
