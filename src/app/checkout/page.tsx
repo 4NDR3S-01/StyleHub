@@ -49,6 +49,7 @@ export default function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [pendingPayment, setPendingPayment] = useState(false);
+  const [checkoutData, setCheckoutData] = useState<any>(null);
   
   // Calcular subtotal de productos
   const subtotal = state.items.reduce((sum, item) => sum + (item.producto.price * item.quantity), 0);
@@ -147,12 +148,13 @@ export default function CheckoutPage() {
 
   // Procesar orden con método de pago guardado
   const processOrderWithSavedPayment = async () => {
-    const checkoutData = buildCheckoutData();
+    const checkoutDataBuilt = buildCheckoutData();
+    setCheckoutData(checkoutDataBuilt); // Guardar en el estado
     
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(checkoutData),
+      body: JSON.stringify(checkoutDataBuilt),
     });
 
     const result = await response.json();
@@ -170,12 +172,13 @@ export default function CheckoutPage() {
 
   // Procesar flujo de PayPal
   const processPayPalFlow = async () => {
-    const checkoutData = buildCheckoutData();
+    const checkoutDataBuilt = buildCheckoutData();
+    setCheckoutData(checkoutDataBuilt); // Guardar en el estado
     
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(checkoutData),
+      body: JSON.stringify(checkoutDataBuilt),
     });
 
     const result = await response.json();
@@ -204,14 +207,15 @@ export default function CheckoutPage() {
     }
     
     // Construir datos de checkout
-    const checkoutData = buildCheckoutData();
+    const checkoutDataBuilt = buildCheckoutData();
+    setCheckoutData(checkoutDataBuilt); // Guardar en el estado
     
     // Usar el servicio de checkout ético que procesa pago ANTES de crear orden
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        ...checkoutData,
+        ...checkoutDataBuilt,
         paymentMethod: {
           type: 'stripe',
           savedMethodId: 'new-card' // Indica que es una nueva tarjeta
@@ -231,16 +235,16 @@ export default function CheckoutPage() {
       console.log('💾 Guardando datos de pago:', {
         clientSecret: result.clientSecret ? 'presente' : 'ausente',
         paymentIntentId: result.paymentIntentId,
-        checkoutData: checkoutData ? 'presente' : 'ausente'
+        checkoutData: checkoutDataBuilt ? 'presente' : 'ausente'
       });
       
       // Guardar en localStorage como backup en caso de que se pierda el estado
-      localStorage.setItem(`checkout_${result.paymentIntentId}`, JSON.stringify(checkoutData));
+      localStorage.setItem(`checkout_${result.paymentIntentId}`, JSON.stringify(checkoutDataBuilt));
       
       setPaymentData({
         clientSecret: result.clientSecret,
         paymentIntentId: result.paymentIntentId,
-        checkoutData: checkoutData, // Datos para crear orden después
+        checkoutData: checkoutDataBuilt, // Datos para crear orden después
         type: 'card',
         requiresForm: true
       });
@@ -254,12 +258,13 @@ export default function CheckoutPage() {
 
   // Procesar checkout general (fallback)
   const processGeneralCheckout = async () => {
-    const checkoutData = buildCheckoutData();
+    const checkoutDataBuilt = buildCheckoutData();
+    setCheckoutData(checkoutDataBuilt); // Guardar en el estado
     
     const response = await fetch('/api/checkout', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(checkoutData),
+      body: JSON.stringify(checkoutDataBuilt),
     });
 
     const result = await response.json();
@@ -521,10 +526,11 @@ export default function CheckoutPage() {
                         <PayPalPayment
                           orderId={orderId!}
                           amount={total}
-                          onSuccess={(paymentData) => {
-                            console.log('Pago PayPal exitoso:', paymentData);
+                          checkoutData={checkoutData}
+                          onSuccess={(result) => {
+                            console.log('Pago PayPal exitoso:', result);
                             clearCart();
-                            window.location.href = `/orden-confirmada?orderId=${orderId}`;
+                            window.location.href = `/orden-confirmada?orderId=${result.orderId}`;
                           }}
                           onError={(error) => {
                             console.error('Error en pago PayPal:', error);

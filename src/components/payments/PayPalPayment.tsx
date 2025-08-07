@@ -3,12 +3,14 @@
 import { PayPalScriptProvider, PayPalButtons } from '@paypal/react-paypal-js';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface PayPalPaymentProps {
   amount: number;
   currency?: string;
   orderId: string;
-  onSuccess: (paymentData: any) => void;
+  checkoutData: any;
+  onSuccess: (result: { orderId: string; transactionId: string }) => void;
   onError: (error: string) => void;
   savePaymentMethod?: boolean;
 }
@@ -17,11 +19,13 @@ export default function PayPalPayment({
   amount,
   currency = 'USD',
   orderId,
+  checkoutData,
   onSuccess,
   onError,
   savePaymentMethod = false
 }: Readonly<PayPalPaymentProps>) {
   const { user } = useAuth();
+  const [isProcessing, setIsProcessing] = useState(false);
   const clientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!;
 
   const savePayPalPaymentMethod = async (paymentData: any) => {
@@ -89,6 +93,7 @@ export default function PayPalPayment({
               label: 'paypal',
               height: 40
             }}
+            disabled={isProcessing}
             createOrder={(data, actions) => {
               return actions.order.create({
                 intent: 'CAPTURE',
@@ -104,6 +109,9 @@ export default function PayPalPayment({
               });
             }}
             onApprove={async (data, actions) => {
+              if (isProcessing) return;
+              setIsProcessing(true);
+
               try {
                 if (!actions.order) return;
                 
@@ -113,24 +121,51 @@ export default function PayPalPayment({
                 // Guardar método de pago si es necesario
                 await savePayPalPaymentMethod(details);
 
-                // Llamar callback de éxito
-                onSuccess({
-                  type: 'paypal',
-                  transaction_id: details.id,
-                  amount: amount,
-                  currency: currency,
-                  status: details.status,
-                  payment_source: details.payment_source,
+                // Confirmar el pago en nuestro backend (igual que Stripe)
+                const response = await fetch('/api/checkout/confirm-paypal-payment', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    paymentData: {
+                      transaction_id: details.id,
+                      status: details.status,
+                      amount: amount,
+                      currency: currency,
+                      payment_source: details.payment_source,
+                    },
+                    checkoutData,
+                  }),
                 });
+
+                const result = await response.json();
+
+                if (!response.ok || !result.success) {
+                  throw new Error(result.error || 'Error al procesar el checkout');
+                }
 
                 toast({
                   title: 'Pago exitoso',
                   description: 'Tu pago con PayPal ha sido procesado correctamente',
                 });
 
+                // Llamar callback de éxito con la misma estructura que Stripe
+                onSuccess({
+                  orderId: result.orderId,
+                  transactionId: result.transactionId
+                });
+
               } catch (error: any) {
                 console.error('Error capturing PayPal payment:', error);
                 onError(error.message || 'Error al procesar el pago con PayPal');
+                toast({
+                  title: 'Error en el pago',
+                  description: error.message || 'Error al procesar el pago con PayPal',
+                  variant: 'destructive',
+                });
+              } finally {
+                setIsProcessing(false);
               }
             }}
             onCancel={() => {

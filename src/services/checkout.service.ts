@@ -90,12 +90,11 @@ class CheckoutService {
         };
       }
 
-      // 3c. Si es PayPal, devolver approvalUrl
-      if (paymentResult.approvalUrl) {
+      // 3c. Si es PayPal, devolver success - el frontend manejará la orden
+      if (checkoutData.paymentMethod.type === 'paypal') {
         return {
           success: true,
-          paymentIntentId: paymentResult.paymentIntentId,
-          approvalUrl: paymentResult.approvalUrl
+          paymentIntentId: 'paypal-pending' // Placeholder
         };
       }
 
@@ -302,7 +301,12 @@ class CheckoutService {
       case 'stripe':
         return this.processStripeCheckout(data);
       case 'paypal':
-        return this.processPayPalCheckout(data);
+        // PayPal es manejado completamente por el frontend usando @paypal/react-paypal-js
+        // El backend solo necesita crear la orden después de la confirmación
+        return {
+          success: true,
+          paymentIntentId: 'paypal-frontend-handled'
+        };
       default:
         return {
           success: false,

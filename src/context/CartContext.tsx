@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
 export interface CartItem {
@@ -160,6 +160,7 @@ export function CartProvider({ children }: { readonly children: React.ReactNode 
     items: [],
     isOpen: false,
   });
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Load cart from storage on mount
   useEffect(() => {
@@ -167,12 +168,15 @@ export function CartProvider({ children }: { readonly children: React.ReactNode 
     if (savedCart.length > 0) {
       dispatch({ type: 'LOAD_CART', payload: savedCart });
     }
+    setIsInitialized(true);
   }, []);
 
-  // Save cart to storage whenever it changes
+  // Save cart to storage whenever it changes (only after initialization)
   useEffect(() => {
-    saveCartToStorage(state.items);
-  }, [state.items]);
+    if (isInitialized) {
+      saveCartToStorage(state.items);
+    }
+  }, [state.items, isInitialized]);
 
   const addItem = (item: CartItem) => {
     // Validate item

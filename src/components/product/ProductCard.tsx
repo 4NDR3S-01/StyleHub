@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { formatPriceSimple } from '@/utils/currency'
 import { useRouter } from 'next/navigation'
 import { toast } from '@/hooks/use-toast'
+import { useIsClient } from '@/hooks/useIsClient'
 
 interface ProductCardProps {
   readonly product: any
@@ -26,21 +27,24 @@ export default function ProductCard({ product, viewMode = 'grid' }: Readonly<Pro
   const { addItem } = useCart()
   const router = useRouter()
   const [isAddingToCart, setIsAddingToCart] = useState(false)
+  const isClient = useIsClient()
   
-  const inWishlist = useMemo(() => isInWishlist(product.id), [product.id, isInWishlist])
+  const inWishlist = useMemo(() => isClient ? isInWishlist(product.id) : false, [product.id, isInWishlist, isClient])
   const primaryImage = product.images?.[0] || product.product_variants?.[0]?.image || '/placeholder_light_gray_block.png'
 
   const handleWishlistClick = (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
-    toggleWishlist(product.id)
+    if (isClient) {
+      toggleWishlist(product.id)
+    }
   }
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault()
     e.stopPropagation()
     
-    if (isAddingToCart) return
+    if (!isClient || isAddingToCart) return
 
     // Verificar si el producto tiene variantes
     const variants = product.product_variants || []
