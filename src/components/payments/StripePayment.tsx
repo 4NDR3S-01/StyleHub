@@ -8,7 +8,8 @@ import { PaymentService } from '@/services/payment.service';
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface StripePaymentFormProps {
-  readonly orderId: string;
+  readonly orderId?: string; // Opcional para compatibilidad
+  readonly clientSecret?: string; // Nuevo: para flujo ético
   readonly total: number;
   readonly customerEmail: string;
   readonly onSuccess: (paymentIntent: any) => void;
@@ -18,7 +19,8 @@ interface StripePaymentFormProps {
 }
 
 function StripePaymentForm({ 
-  orderId, 
+  orderId,
+  clientSecret: providedClientSecret,
   total, 
   customerEmail,
   onSuccess, 
@@ -32,6 +34,11 @@ function StripePaymentForm({
   const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const createPaymentIntent = async () => {
+    // Solo crear Payment Intent si no se proporcionó clientSecret (compatibilidad con flujo antiguo)
+    if (!orderId) {
+      throw new Error('orderId requerido para crear Payment Intent');
+    }
+    
     const response = await fetch('/api/create-stripe-session', {
       method: 'POST',
       headers: {
@@ -94,7 +101,8 @@ function StripePaymentForm({
     setPaymentError(null);
 
     try {
-      const clientSecret = await createPaymentIntent();
+      // Usar clientSecret proporcionado (flujo ético) o crear uno nuevo (compatibilidad)
+      const clientSecret = providedClientSecret || await createPaymentIntent();
       const paymentIntent = await confirmStripePayment(clientSecret, cardElement);
 
       if (paymentIntent.status === 'succeeded') {
@@ -229,7 +237,8 @@ function StripePaymentForm({
 }
 
 interface StripePaymentProps {
-  readonly orderId: string;
+  readonly orderId?: string; // Opcional para compatibilidad
+  readonly clientSecret?: string; // Nuevo: para flujo ético
   readonly total: number;
   readonly customerEmail: string;
   readonly onSuccess: (paymentIntent: any) => void;

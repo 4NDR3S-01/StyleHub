@@ -1,4 +1,5 @@
 import supabase from '@/lib/supabaseClient';
+import supabaseAdmin from '@/lib/supabaseAdmin';
 import Stripe from 'stripe';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -21,6 +22,8 @@ export interface CheckoutData {
     state: string;
     postal_code: string;
     country: string;
+    name: string;
+    phone?: string;
   };
   paymentMethod: {
     type: 'card' | 'paypal' | 'stripe';
@@ -41,6 +44,7 @@ export interface PaymentResult {
   orderId?: string;
   error?: string;
   approvalUrl?: string; // Para PayPal
+  clientSecret?: string; // Para Stripe nuevos métodos
 }
 
 class CheckoutService {
@@ -48,7 +52,7 @@ class CheckoutService {
    * Procesa el checkout completo siguiendo el flujo ético:
    * 1. Valida datos
    * 2. Procesa el pago
-   * 3. Solo si el pago es exitoso, crea la orden
+   * 3. Solo si el pago es exitoso O requiere confirmación, procede
    */
   async processCheckout(checkoutData: CheckoutData): Promise<PaymentResult> {
     try {
@@ -67,13 +71,37 @@ class CheckoutService {
         return paymentResult;
       }
 
-      // 3. Solo si el pago es exitoso, crear la orden
-      const orderId = await this.createOrder(checkoutData, paymentResult.paymentIntentId!);
+      // 3a. Si el pago requiere confirmación (nueva tarjeta), devolver clientSecret
+      if (paymentResult.clientSecret) {
+        return {
+          success: true,
+          paymentIntentId: paymentResult.paymentIntentId,
+          clientSecret: paymentResult.clientSecret
+        };
+      }
+
+      // 3b. Si el pago fue exitoso inmediatamente (método guardado), crear la orden
+      if (paymentResult.paymentIntentId) {
+        const orderId = await this.createOrder(checkoutData, paymentResult.paymentIntentId);
+        return {
+          success: true,
+          orderId,
+          paymentIntentId: paymentResult.paymentIntentId
+        };
+      }
+
+      // 3c. Si es PayPal, devolver approvalUrl
+      if (paymentResult.approvalUrl) {
+        return {
+          success: true,
+          paymentIntentId: paymentResult.paymentIntentId,
+          approvalUrl: paymentResult.approvalUrl
+        };
+      }
 
       return {
-        success: true,
-        orderId,
-        paymentIntentId: paymentResult.paymentIntentId
+        success: false,
+        error: 'Resultado de pago inesperado'
       };
 
     } catch (error) {
@@ -99,17 +127,36 @@ class CheckoutService {
         }
       };
 
-      // Si es un método guardado
-      if (checkoutData.paymentMethod.savedMethodId) {
-        paymentIntentData.payment_method = checkoutData.paymentMethod.savedMethodId;
-        paymentIntentData.confirm = true;
-        paymentIntentData.return_url = `${process.env.NEXT_PUBLIC_APP_URL}/orden-confirmada`;
+      // Si es un método guardado de Stripe
+      if (checkoutData.paymentMethod.savedMethodId && 
+          checkoutData.paymentMethod.savedMethodId !== 'new-card' &&
+          checkoutData.paymentMethod.savedMethodId !== 'new-paypal') {
+        
+        // Obtener el external_id del método guardado
+        const { data: savedMethod, error: methodError } = await supabase
+          .from('user_payment_methods')
+          .select('external_id, type')
+          .eq('id', checkoutData.paymentMethod.savedMethodId)
+          .eq('user_id', checkoutData.userId)
+          .single();
+
+        if (methodError || !savedMethod) {
+          throw new Error('Método de pago guardado no encontrado');
+        }
+
+        // Para métodos de Stripe (tarjetas), usar el external_id como payment_method
+        if (savedMethod.type === 'stripe') {
+          paymentIntentData.payment_method = savedMethod.external_id;
+          paymentIntentData.confirm = true;
+          paymentIntentData.return_url = `${process.env.NEXT_PUBLIC_APP_URL}/orden-confirmada`;
+        }
       }
 
       const paymentIntent = await stripe.paymentIntents.create(paymentIntentData);
 
       // Si es método guardado y se confirma automáticamente
-      if (checkoutData.paymentMethod.savedMethodId && paymentIntent.status === 'succeeded') {
+      if (checkoutData.paymentMethod.savedMethodId && 
+          paymentIntent.status === 'succeeded') {
         return {
           success: true,
           paymentIntentId: paymentIntent.id
@@ -120,7 +167,7 @@ class CheckoutService {
       return {
         success: true,
         paymentIntentId: paymentIntent.id,
-        // Nota: client_secret se manejará en el frontend
+        clientSecret: paymentIntent.client_secret || undefined
       };
 
     } catch (error) {
@@ -266,30 +313,83 @@ class CheckoutService {
 
   /**
    * Crea la orden en la base de datos SOLO después de que el pago sea exitoso
+   * MÉTODO PÚBLICO para uso desde API de confirmación
    */
-  private async createOrder(data: CheckoutData, paymentIntentId: string): Promise<string> {
-    const { data: order, error } = await supabase
+  async createOrder(data: CheckoutData, paymentIntentId: string): Promise<string> {
+    console.log('🏪 Iniciando creación de orden con datos:', JSON.stringify({
+      userId: data.userId,
+      itemsCount: data.items?.length,
+      total: data.total,
+      shippingAddress: data.shippingAddress,
+      paymentMethod: data.paymentMethod
+    }, null, 2));
+
+    // Validar datos requeridos
+    if (!data.userId) {
+      throw new Error('userId es requerido');
+    }
+    if (!data.items || data.items.length === 0) {
+      throw new Error('items son requeridos');
+    }
+    if (!data.shippingAddress) {
+      throw new Error('shippingAddress es requerida');
+    }
+    if (!paymentIntentId) {
+      throw new Error('paymentIntentId es requerido');
+    }
+
+    // Generar número de orden único
+    const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substring(2, 11).toUpperCase()}`;
+    
+    const orderData = {
+      user_id: data.userId,
+      order_number: orderNumber,
+      status: 'confirmed', // Estado de orden: confirmada después de pago exitoso
+      total: data.total || 0, // Campo correcto según esquema
+      subtotal: data.subtotal || 0,
+      shipping: data.shipping || 0, // Campo correcto según esquema
+      tax: data.tax || 0, // Campo correcto según esquema
+      discount: data.couponDiscount || 0, // Campo correcto según esquema
+      payment_intent_id: paymentIntentId,
+      payment_status: 'paid', // Estado de pago: pagado
+      payment_method: data.paymentMethod.type === 'card' ? 'stripe' : data.paymentMethod.type,
+      // Usar address como JSONB según el esquema
+      address: {
+        name: data.shippingAddress.name,
+        phone: data.shippingAddress.phone,
+        street: data.shippingAddress.street,
+        city: data.shippingAddress.city,
+        state: data.shippingAddress.state,
+        postal_code: data.shippingAddress.postal_code,
+        country: data.shippingAddress.country
+      },
+      // También guardar en shipping_address para compatibilidad
+      shipping_address: {
+        name: data.shippingAddress.name,
+        phone: data.shippingAddress.phone,
+        street: data.shippingAddress.street,
+        city: data.shippingAddress.city,
+        state: data.shippingAddress.state,
+        postal_code: data.shippingAddress.postal_code,
+        country: data.shippingAddress.country
+      },
+      created_at: new Date().toISOString()
+    };
+
+    console.log('📝 Datos de orden a insertar:', JSON.stringify(orderData, null, 2));
+    
+    const { data: order, error } = await supabaseAdmin
       .from('orders')
-      .insert({
-        user_id: data.userId,
-        status: 'paid', // Importante: solo creamos órdenes pagadas
-        total_amount: data.total,
-        subtotal: data.subtotal,
-        shipping_cost: data.shipping,
-        tax_amount: data.tax,
-        coupon_code: data.couponCode,
-        coupon_discount: data.couponDiscount,
-        payment_intent_id: paymentIntentId,
-        payment_status: 'completed',
-        shipping_address: data.shippingAddress,
-        created_at: new Date().toISOString()
-      })
+      .insert(orderData)
       .select('id')
       .single();
 
     if (error) {
-      throw new Error(`Error al crear la orden: ${error.message}`);
+      console.error('❌ Error al insertar orden:', error);
+      throw new Error(`Error al crear la orden: ${error.message || 'Error desconocido'}`);
     }
+
+    console.log('✅ Orden creada exitosamente con ID:', order.id);
 
     // Crear los items de la orden
     const orderItems = data.items.map(item => ({
@@ -305,19 +405,31 @@ class CheckoutService {
       total: item.price * item.quantity
     }));
 
-    const { error: itemsError } = await supabase
+    console.log('📋 Insertando items de orden:', JSON.stringify(orderItems, null, 2));
+
+    const { error: itemsError } = await supabaseAdmin
       .from('order_items')
       .insert(orderItems);
 
     if (itemsError) {
-      throw new Error(`Error al crear los items de la orden: ${itemsError.message}`);
+      console.error('❌ Error al insertar items de orden:', itemsError);
+      throw new Error(`Error al crear los items de la orden: ${itemsError.message || 'Error desconocido'}`);
+    }
+
+    console.log('✅ Items de orden creados exitosamente');
+
+    // Registrar uso de cupón si se aplicó uno
+    if (data.couponCode && data.couponDiscount && data.couponDiscount > 0) {
+      console.log('🎫 Registrando uso de cupón:', data.couponCode);
+      await this.recordCouponUsage(data.couponCode, data.userId, order.id, data.couponDiscount);
     }
 
     // Actualizar inventario de variantes
+    console.log('📦 Actualizando inventario...');
     for (const item of data.items) {
       if (item.variant_id) {
         // Decrementar stock de forma atómica
-        const { data: currentVariant, error: fetchError } = await supabase
+        const { data: currentVariant, error: fetchError } = await supabaseAdmin
           .from('product_variants')
           .select('stock')
           .eq('id', item.variant_id)
@@ -330,7 +442,7 @@ class CheckoutService {
         
         const newStock = Math.max(0, currentVariant.stock - item.quantity);
         
-        const { error: stockError } = await supabase
+        const { error: stockError } = await supabaseAdmin
           .from('product_variants')
           .update({ 
             stock: newStock,
@@ -344,6 +456,7 @@ class CheckoutService {
       }
     }
 
+    console.log('🎉 Orden completada exitosamente con ID:', order.id);
     return order.id;
   }
 
@@ -366,6 +479,68 @@ class CheckoutService {
 
     const data = await response.json();
     return data.access_token;
+  }
+
+  /**
+   * Registra el uso de un cupón en la tabla coupon_usage
+   */
+  private async recordCouponUsage(couponCode: string, userId: string, orderId: string, discountAmount: number): Promise<void> {
+    try {
+      // Buscar el cupón por código
+      const { data: coupon, error: couponError } = await supabaseAdmin
+        .from('coupons')
+        .select('id')
+        .eq('code', couponCode)
+        .eq('active', true)
+        .single();
+
+      if (couponError || !coupon) {
+        console.error('Cupón no encontrado:', couponCode);
+        return;
+      }
+
+      // Registrar el uso del cupón
+      const { error: usageError } = await supabaseAdmin
+        .from('coupon_usage')
+        .insert({
+          coupon_id: coupon.id,
+          user_id: userId,
+          order_id: orderId,
+          discount_amount: discountAmount,
+          used_at: new Date().toISOString()
+        });
+
+      if (usageError) {
+        console.error('Error registrando uso de cupón:', usageError);
+      }
+
+      // Incrementar contador de uso del cupón
+      const { error: updateError } = await supabaseAdmin
+        .rpc('increment_coupon_usage', { coupon_id: coupon.id });
+
+      if (updateError) {
+        console.error('Error actualizando contador de cupón:', updateError);
+        // Fallback: usar una consulta manual para obtener el contador actual
+        const { data: currentCoupon } = await supabaseAdmin
+          .from('coupons')
+          .select('used_count')
+          .eq('id', coupon.id)
+          .single();
+        
+        if (currentCoupon) {
+          await supabaseAdmin
+            .from('coupons')
+            .update({ 
+              used_count: currentCoupon.used_count + 1,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', coupon.id);
+        }
+      }
+
+    } catch (error) {
+      console.error('Error en recordCouponUsage:', error);
+    }
   }
 
   /**

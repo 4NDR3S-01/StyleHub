@@ -112,68 +112,30 @@ export default function CheckoutPage() {
       console.log('PaymentData actual:', paymentData);
       console.log('SelectedPaymentMethod actual:', selectedPaymentMethod);
       
-      // Usar el servicio ético de checkout
-      const checkoutData = {
-        userId: user.id,
-        items: state.items.map((item: any) => {
-          const mappedItem = {
-            id: item.producto.id,
-            quantity: item.quantity,
-            price: item.producto.price,
-            variant_id: item.variant?.id,
-            color: item.variant?.color,
-            size: item.variant?.size
-          };
-          console.log('Item mapeado:', mappedItem);
-          return mappedItem;
-        }),
-        shippingAddress: {
-          street: selectedAddress.address,
-          city: selectedAddress.city,
-          state: selectedAddress.state || '',
-          postal_code: selectedAddress.zip_code || '',
-          country: selectedAddress.country
-        },
-        paymentMethod: {
-          type: paymentData?.type || 'card',
-          savedMethodId: paymentData?.savedMethodId || selectedPaymentMethod
-        },
-        total,
-        subtotal,
-        shipping: shippingCost,
-        tax: taxAmount,
-        couponCode: appliedCoupon?.code,
-        couponDiscount: couponDiscount
-      };
-
-      console.log('CheckoutData final a enviar:', checkoutData);
-
-      // Procesar checkout ético: pago primero, orden después usando la API
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(checkoutData),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || 'Error al procesar el checkout');
-      }
-
-      // Si es PayPal y necesita aprobación
-      if (result.approvalUrl) {
-        window.location.href = result.approvalUrl;
+      // Determinar el flujo según el tipo de método de pago
+      const isNewCard = selectedPaymentMethod === 'new-card' || paymentData?.isNew;
+      const isSavedMethod = paymentData?.savedMethodId && !paymentData?.isNew;
+      
+      // Para métodos guardados (tarjetas o PayPal), procesar directamente
+      if (isSavedMethod && paymentData?.type !== 'paypal') {
+        await processOrderWithSavedPayment();
         return;
       }
-
-      // Si el pago fue exitoso, limpiar carrito y redirigir
-      if (result.orderId) {
-        clearCart();
-        router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
+      
+      // Para PayPal (nuevo o guardado), manejar el flujo de aprobación
+      if (paymentData?.type === 'paypal') {
+        await processPayPalFlow();
+        return;
       }
+      
+      // Para nuevas tarjetas, crear orden y mostrar formulario de pago
+      if (isNewCard) {
+        await createOrderForNewCard();
+        return;
+      }
+      
+      // Fallback - procesamiento general
+      await processGeneralCheckout();
       
     } catch (error) {
       console.error('Error in checkout:', error);
@@ -181,6 +143,177 @@ export default function CheckoutPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Procesar orden con método de pago guardado
+  const processOrderWithSavedPayment = async () => {
+    const checkoutData = buildCheckoutData();
+    
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checkoutData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Error al procesar el checkout con método guardado');
+    }
+
+    // Pago exitoso con método guardado - limpiar carrito y redirigir
+    if (result.orderId) {
+      clearCart();
+      router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
+    }
+  };
+
+  // Procesar flujo de PayPal
+  const processPayPalFlow = async () => {
+    const checkoutData = buildCheckoutData();
+    
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checkoutData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Error al procesar el checkout con PayPal');
+    }
+
+    // Redirigir a PayPal para aprobación
+    if (result.approvalUrl) {
+      window.location.href = result.approvalUrl;
+      return;
+    }
+
+    // Si ya fue aprobado, proceder con la confirmación
+    if (result.orderId) {
+      clearCart();
+      router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
+    }
+  };
+
+  // Procesar checkout ético para nueva tarjeta: PAGO PRIMERO, ORDEN DESPUÉS
+  const createOrderForNewCard = async () => {
+    if (!user || !selectedAddress) {
+      throw new Error('Usuario y dirección requeridos');
+    }
+    
+    // Construir datos de checkout
+    const checkoutData = buildCheckoutData();
+    
+    // Usar el servicio de checkout ético que procesa pago ANTES de crear orden
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...checkoutData,
+        paymentMethod: {
+          type: 'stripe',
+          savedMethodId: 'new-card' // Indica que es una nueva tarjeta
+        }
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Error al procesar el checkout');
+    }
+
+    // Si necesita confirmación en frontend (nueva tarjeta)
+    if (result.clientSecret) {
+      // Guardar los datos de checkout para usar después de la confirmación
+      console.log('💾 Guardando datos de pago:', {
+        clientSecret: result.clientSecret ? 'presente' : 'ausente',
+        paymentIntentId: result.paymentIntentId,
+        checkoutData: checkoutData ? 'presente' : 'ausente'
+      });
+      
+      // Guardar en localStorage como backup en caso de que se pierda el estado
+      localStorage.setItem(`checkout_${result.paymentIntentId}`, JSON.stringify(checkoutData));
+      
+      setPaymentData({
+        clientSecret: result.clientSecret,
+        paymentIntentId: result.paymentIntentId,
+        checkoutData: checkoutData, // Datos para crear orden después
+        type: 'card',
+        requiresForm: true
+      });
+      setPendingPayment(true);
+    } else if (result.orderId) {
+      // Pago exitoso y orden creada (caso de método guardado)
+      clearCart();
+      router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
+    }
+  };
+
+  // Procesar checkout general (fallback)
+  const processGeneralCheckout = async () => {
+    const checkoutData = buildCheckoutData();
+    
+    const response = await fetch('/api/checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(checkoutData),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.error || 'Error al procesar el checkout');
+    }
+
+    if (result.orderId) {
+      clearCart();
+      router.push(`/orden-confirmada?orderId=${result.orderId}&paymentIntent=${result.paymentIntentId}`);
+    }
+  };
+
+  // Construir datos de checkout
+  const buildCheckoutData = () => {
+    if (!selectedAddress) {
+      throw new Error('Dirección de envío requerida');
+    }
+    
+    if (!user) {
+      throw new Error('Usuario no autenticado');
+    }
+    
+    return {
+      userId: user.id,
+      items: state.items.map((item: any) => ({
+        id: item.producto.id,
+        quantity: item.quantity,
+        price: item.producto.price,
+        variant_id: item.variant?.id,
+        color: item.variant?.color,
+        size: item.variant?.size
+      })),
+      shippingAddress: {
+        street: selectedAddress.address,
+        city: selectedAddress.city,
+        state: selectedAddress.state || '',
+        postal_code: selectedAddress.zip_code || '',
+        country: selectedAddress.country,
+        name: selectedAddress.name,
+        phone: selectedAddress.phone
+      },
+      paymentMethod: {
+        type: paymentData?.type || 'card',
+        savedMethodId: paymentData?.savedMethodId !== 'new-card' ? paymentData?.savedMethodId : undefined
+      },
+      total,
+      subtotal,
+      shipping: shippingCost,
+      tax: taxAmount,
+      couponCode: appliedCoupon?.code,
+      couponDiscount: couponDiscount
+    };
   };
 
   if (state.items.length === 0) {
@@ -287,6 +420,42 @@ export default function CheckoutPage() {
                 setPaymentData(data);
               }}
             />
+
+            {/* Mostrar información del método seleccionado */}
+            {selectedPaymentMethod && paymentData && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                    <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-blue-900">Método de pago seleccionado</h4>
+                    <p className="text-sm text-blue-700">
+                      {(() => {
+                        if (paymentData.isNew && paymentData.type === 'card') {
+                          return 'Se te redirigirá al formulario de pago seguro de Stripe para ingresar los datos de tu tarjeta.';
+                        }
+                        if (paymentData.isNew && paymentData.type === 'paypal') {
+                          return 'Se te redirigirá a PayPal para completar el pago con tu cuenta.';
+                        }
+                        if (paymentData.savedMethodId && !paymentData.isNew) {
+                          let method = 'método guardado';
+                          if (paymentData.cardBrand) {
+                            method = `tarjeta ${paymentData.cardBrand} terminada en ${paymentData.cardLastFour}`;
+                          } else if (paymentData.paypalEmail) {
+                            method = `cuenta de PayPal (${paymentData.paypalEmail})`;
+                          }
+                          return `Se procesará el pago automáticamente usando tu ${method}.`;
+                        }
+                        return 'Método de pago configurado correctamente.';
+                      })()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Columna derecha: Resumen */}
@@ -345,15 +514,16 @@ export default function CheckoutPage() {
               <div className="mt-6">
                 {/* Extraer la lógica de renderizado de pago en una variable */}
                 {(() => {
-                  if (orderId && pendingPayment) {
+                  if (pendingPayment && paymentData) {
                     let paymentComponent;
                     if (paymentData?.type === 'paypal') {
                       paymentComponent = (
                         <PayPalPayment
-                          orderId={orderId}
+                          orderId={orderId!}
                           amount={total}
                           onSuccess={(paymentData) => {
                             console.log('Pago PayPal exitoso:', paymentData);
+                            clearCart();
                             window.location.href = `/orden-confirmada?orderId=${orderId}`;
                           }}
                           onError={(error) => {
@@ -364,22 +534,77 @@ export default function CheckoutPage() {
                           savePaymentMethod={true}
                         />
                       );
-                    } else if (paymentData?.type === 'card' && !paymentData?.savedMethodId) {
+                    } else if (paymentData?.type === 'card' && paymentData?.requiresForm && paymentData?.clientSecret) {
+                      // Nuevo flujo ético: usar clientSecret, NO orderId
                       paymentComponent = (
                         <StripePayment
-                          orderId={orderId}
+                          clientSecret={paymentData.clientSecret}
                           total={total}
                           customerEmail={user?.email || ''}
                           userId={user?.id}
                           savePaymentMethod={true}
-                          onSuccess={(paymentIntent) => {
-                            console.log('Pago exitoso:', paymentIntent);
-                            window.location.href = `/orden-confirmada?orderId=${orderId}`;
+                          onSuccess={async (paymentIntent) => {
+                            console.log('Pago exitoso, creando orden...', paymentIntent);
+                            
+                            // AHORA sí crear la orden porque el pago fue exitoso
+                            try {
+                              console.log('💳 Pago exitoso, verificando datos...');
+                              console.log('paymentData completo:', paymentData);
+                              console.log('paymentData.checkoutData:', paymentData.checkoutData);
+                              
+                              // Intentar obtener checkoutData del estado o localStorage
+                              let checkoutDataToUse = paymentData.checkoutData;
+                              
+                              if (!checkoutDataToUse) {
+                                console.log('⚠️ checkoutData no encontrado en estado, intentando localStorage...');
+                                const storedData = localStorage.getItem(`checkout_${paymentIntent.id}`);
+                                if (storedData) {
+                                  checkoutDataToUse = JSON.parse(storedData);
+                                  console.log('✅ Datos recuperados de localStorage');
+                                }
+                              }
+                              
+                              if (!checkoutDataToUse) {
+                                console.error('❌ checkoutData es undefined en ambos lugares!');
+                                alert('Error: No se encontraron los datos de checkout. Contacta soporte.');
+                                return;
+                              }
+
+                              console.log('📦 Enviando datos para crear orden:', {
+                                paymentIntentId: paymentIntent.id,
+                                checkoutData: checkoutDataToUse
+                              });
+
+                              const response = await fetch('/api/checkout/confirm-stripe-payment', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  paymentIntentId: paymentIntent.id,
+                                  checkoutData: checkoutDataToUse
+                                })
+                              });
+                              
+                              const result = await response.json();
+                              console.log('📋 Respuesta del servidor:', result);
+                              
+                              if (result.success) {
+                                // Limpiar localStorage
+                                localStorage.removeItem(`checkout_${paymentIntent.id}`);
+                                clearCart();
+                                window.location.href = `/orden-confirmada?orderId=${result.orderId}&paymentIntent=${paymentIntent.id}`;
+                              } else {
+                                console.error('Error creando orden:', result.error);
+                                alert(`Pago exitoso pero error al crear orden: ${result.error}. Contacta soporte.`);
+                              }
+                            } catch (error) {
+                              console.error('Error confirmando orden:', error);
+                              alert('Pago exitoso pero error al procesar orden. Contacta soporte.');
+                            }
                           }}
                           onError={(error) => {
                             console.error('Error en el pago:', error);
                             setPendingPayment(false);
-                            setOrderId(null);
+                            setPaymentData(null);
                           }}
                         />
                       );
@@ -392,13 +617,38 @@ export default function CheckoutPage() {
                     }
                     return <div className="space-y-4">{paymentComponent}</div>;
                   } else {
+                    // Determinar el texto del botón según el método de pago
+                    const getButtonText = () => {
+                      if (loading) return 'Procesando...';
+                      
+                      if (paymentData?.isNew && paymentData?.type === 'card') {
+                        return `Continuar al pago - ${formatPriceSimple(total)}`;
+                      }
+                      
+                      if (paymentData?.isNew && paymentData?.type === 'paypal') {
+                        return `Pagar con PayPal - ${formatPriceSimple(total)}`;
+                      }
+                      
+                      if (paymentData?.savedMethodId && !paymentData?.isNew) {
+                        let method = 'método guardado';
+                        if (paymentData?.cardBrand) {
+                          method = `${paymentData.cardBrand} ••••${paymentData.cardLastFour}`;
+                        } else if (paymentData?.paypalEmail) {
+                          method = `PayPal (${paymentData.paypalEmail})`;
+                        }
+                        return `Pagar con ${method} - ${formatPriceSimple(total)}`;
+                      }
+                      
+                      return `Crear orden - ${formatPriceSimple(total)}`;
+                    };
+
                     return (
                       <button
                         onClick={handleSubmit}
                         disabled={loading || !user || !selectedAddress || !selectedShipping || !selectedPaymentMethod}
                         className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
                       >
-                        {loading ? 'Procesando...' : `Crear orden - ${formatPriceSimple(total)}`}
+                        {getButtonText()}
                       </button>
                     );
                   }
