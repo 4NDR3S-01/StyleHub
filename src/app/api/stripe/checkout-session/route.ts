@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // Validate cart items structure
     const line_items = cartItems.map((item: any, index: number) => {
-      if (!item.producto || !item.producto.name || !item.producto.price) {
+      if (!item.producto?.name || !item.producto?.price) {
         throw new Error(`Invalid product data at index ${index}`);
       }
 

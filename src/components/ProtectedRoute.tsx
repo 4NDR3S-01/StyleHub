@@ -5,8 +5,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useRouter } from 'next/navigation'
 
 interface Props {
-  children: React.ReactNode
-  requiredRole?: string
+  readonly children: React.ReactNode
+  readonly requiredRole?: string
 }
 
 /**
@@ -19,9 +19,7 @@ export default function ProtectedRoute({ children, requiredRole = 'admin' }: Pro
   const router = useRouter()
 
   useEffect(() => {
-    if (!user) {
-      router.push('/')
-    } else if (requiredRole && user.role !== requiredRole) {
+    if (!user || (requiredRole && user.role !== requiredRole)) {
       router.push('/')
     }
   }, [user, requiredRole, router])

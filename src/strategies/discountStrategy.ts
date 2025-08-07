@@ -6,7 +6,7 @@
  * sin modificar el código existente y mantiene el principio abierto/cerrado.
  */
 
-import { Product, CartItem } from '@/types';
+import { CartItem } from '@/types';
 
 // ============================================================================
 // INTERFACES Y TIPOS
@@ -301,12 +301,23 @@ export class BOGODiscountStrategy implements DiscountStrategy {
   }
 
   private isItemApplicable(item: CartItem, config: DiscountConfig): boolean {
+    // Si ambos están definidos, el producto debe estar en la lista y la categoría también
+    if (config.applicableProducts?.length && config.applicableCategories?.length) {
+      return (
+        config.applicableProducts.includes(item.product_id) &&
+        !!item.product?.category_id &&
+        config.applicableCategories.includes(item.product.category_id)
+      );
+    }
+    // Solo productos
     if (config.applicableProducts?.length) {
       return config.applicableProducts.includes(item.product_id);
     }
+    // Solo categorías
     if (config.applicableCategories?.length && item.product?.category_id) {
       return config.applicableCategories.includes(item.product.category_id);
     }
+    // Si no hay restricciones, es aplicable
     return true;
   }
 }
@@ -433,7 +444,7 @@ export class FirstPurchaseDiscountStrategy implements DiscountStrategy {
  * - Facilita el testing de cada estrategia por separado
  */
 export class DiscountCalculator {
-  private strategies: Map<string, DiscountStrategy> = new Map();
+  private readonly strategies: Map<string, DiscountStrategy> = new Map();
 
   constructor() {
     // Registrar estrategias disponibles
